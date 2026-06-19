@@ -618,6 +618,7 @@ export default function App() {
                       if (hasSubmenus) {
                         setSelectedMainCat(isSelected ? null : cat.key);
                       } else if (cat.targetId) {
+                        setSelectedMainCat(null);
                         handleOpenTab(cat.targetId, cat.title, cat.iconName || 'Folder');
                       }
                     }}

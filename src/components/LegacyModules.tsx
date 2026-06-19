@@ -22,7 +22,6 @@ export default function LegacyModules({ moduleId, moduleIdLabel }: LegacyModules
           </div>
           <div>
             <h2 className="text-base font-black text-gray-900 dark:text-white">{moduleIdLabel}</h2>
-            <p className="text-[11px] text-gray-400 dark:text-gray-500">کد ماژول: {moduleId}</p>
           </div>
         </div>
         <div className="text-center py-12 text-gray-400">
