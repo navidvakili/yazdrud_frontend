@@ -598,7 +598,7 @@ export default function App() {
         <div className="border-l border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shrink-0 flex h-full z-45">
           {/* Narrow bar */}
           <div className="w-24 flex flex-col justify-between items-center py-4 border-l border-gray-50 dark:border-gray-850 shrink-0 select-none h-full overflow-y-auto custom-scrollbar">
-            <div className="space-y-3 w-full px-1 flex flex-col items-center">
+            <div className="w-full px-1 flex flex-col items-center">
               {navLoading && filteredCategories.length === 0 ? (
                 <div className="flex flex-col items-center gap-2 pt-6">
                   <div className="w-5 h-5 border-2 border-teal-500/20 border-t-teal-500 rounded-full animate-spin" />
@@ -638,17 +638,11 @@ export default function App() {
           </div>
 
           {/* Submenu drawer — only shown when selected category has submenus */}
-          <AnimatePresence>
             {selectedMainCat && (() => {
               const selectedCat = filteredCategories.find(c => c.key === selectedMainCat);
               if (!selectedCat || selectedCat.submenus.length === 0) return null;
               return (
-              <motion.div
-                initial={{ width: 0, opacity: 0 }}
-                animate={{ width: 210, opacity: 1 }}
-                exit={{ width: 0, opacity: 0 }}
-                className="overflow-hidden h-full flex flex-col bg-gray-50/50 dark:bg-gray-950/20 w-[210px]"
-              >
+              <div className="overflow-hidden h-full flex flex-col bg-gray-50/50 dark:bg-gray-950/20 w-[210px]">
                 <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between whitespace-nowrap">
                   <span className="text-xs font-black text-gray-800 dark:text-gray-200">
                     {filteredCategories.find(c => c.key === selectedMainCat)?.title}
@@ -702,10 +696,9 @@ export default function App() {
                     });
                   })()}
                 </div>
-              </motion.div>
+              </div>
             );
             })()}
-          </AnimatePresence>
         </div>
 
         {/* ===== Column B: Main Workspace ===== */}
