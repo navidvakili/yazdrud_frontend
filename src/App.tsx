@@ -43,7 +43,7 @@ import {
   AlertCircle,
   type LucideIcon,
 } from 'lucide-react';
-import type { User as UserType, Tab, PortalNotification, NavItem } from '@/src/types';
+import type { User as UserType, Tab, PortalNotification, NavItem, RoleInfo } from '@/src/types';
 import api from '@/src/api';
 import LoginForm from '@/src/components/LoginForm';
 import DashboardModule from '@/src/components/DashboardModule';
@@ -175,7 +175,7 @@ export default function App() {
 
   // Navigation state — fetched dynamically from API
   const [navItems, setNavItems] = useState<NavItem[]>([]);
-  const [userRoles, setUserRoles] = useState<string[]>([]);
+  const [userRoles, setUserRoles] = useState<RoleInfo[]>([]);
   const [navLoading, setNavLoading] = useState(false);
 
   // ========== Effects ==========
@@ -240,6 +240,16 @@ export default function App() {
   // ========== Handlers ==========
   const handleLoginSuccess = (userProfile: UserType) => {
     setUser(userProfile);
+    // Convert roles from login response (string[]) to RoleInfo[] format
+    // fetchNavigation() will later replace with proper labeled data from API
+    if (userProfile.roles && userProfile.roles.length > 0) {
+      setUserRoles(userProfile.roles.map((r, i) => ({
+        id: i,
+        role: r,
+        label: r,
+        active: r === userProfile.role ? 1 : 0,
+      })));
+    }
     setViewState('authenticated');
   };
 
@@ -261,13 +271,16 @@ export default function App() {
     setTheme(prev => (prev === 'light' ? 'dark' : 'light'));
   };
 
-  const handleChangeRole = (newRole: 'student' | 'professor' | 'admin') => {
+  const handleChangeRole = async (newRole: string) => {
     if (!user) return;
-    const updatedUser: UserType = { ...user, role: newRole };
-    setUser(updatedUser);
-    localStorage.setItem('portal_user', JSON.stringify(updatedUser));
-    // Re-fetch navigation for the new role context
-    fetchNavigation();
+    try {
+      const updatedUser = await api.switchRole(newRole);
+      setUser(updatedUser);
+      // Re-fetch navigation for the new role context
+      fetchNavigation();
+    } catch (err) {
+      console.warn('Failed to switch role:', err);
+    }
   };
 
   // Tab management
@@ -480,7 +493,7 @@ export default function App() {
                 <span className="text-xs font-black text-gray-900 dark:text-white flex items-center gap-1.5">
                   {user.fname} {user.lname}
                   <span className="text-[9px] px-1.5 py-0.5 rounded bg-teal-500/10 text-teal-600 dark:text-teal-400 font-bold font-sans">
-                    {user.role === 'admin' ? 'مدیر سیستم' : user.role === 'professor' ? 'استاد' : 'دانشجو'}
+                    {userRoles.find(r => r.active === 1)?.label || user.role}
                   </span>
                 </span>
                 <span className="text-[9px] text-gray-500 font-mono mt-0.5">{user.email}</span>
@@ -519,28 +532,29 @@ export default function App() {
                       </span>
                     </button>
 
-                    {/* Role switching */}
-                    <div className="border-t border-b border-gray-100 dark:border-white/5 py-2 px-3 bg-gray-50/50 dark:bg-white/[0.02]">
-                      <span className="block text-[9px] text-gray-400 font-extrabold mb-1.5 pr-1">تغییر نقش کاربری:</span>
-                      <div className="flex flex-col gap-1">
-                        {(['student', 'professor', 'admin'] as const).map((r) => {
-                          const isActive = user.role === r;
-                          const lbl = r === 'admin' ? 'مدیر سیستم' : r === 'professor' ? 'استاد' : 'دانشجو';
-                          return (
-                            <button
-                              key={r}
-                              onClick={() => { handleChangeRole(r); setShowUserDropdown(false); }}
-                              className={`px-2 py-1 text-[10px] rounded-lg flex items-center justify-between w-full text-right transition-colors cursor-pointer ${
-                                isActive ? 'bg-teal-500/10 text-teal-600 dark:text-teal-400 font-extrabold' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5'
-                              }`}
-                            >
-                              <span>{lbl}</span>
-                              {isActive && <Check className="w-3.5 h-3.5" />}
-                            </button>
-                          );
-                        })}
+                    {/* Role switching — only show when user has more than 1 role (مطابق Enums::getMyRoles) */}
+                    {userRoles.length > 1 && (
+                      <div className="border-t border-b border-gray-100 dark:border-white/5 py-2 px-3 bg-gray-50/50 dark:bg-white/[0.02]">
+                        <span className="block text-[9px] text-gray-400 font-extrabold mb-1.5 pr-1">تغییر نقش کاربری:</span>
+                        <div className="flex flex-col gap-1">
+                          {userRoles.map((r: RoleInfo) => {
+                            const isActive = user.role === r.role;
+                            return (
+                              <button
+                                key={r.id}
+                                onClick={() => { handleChangeRole(r.role); setShowUserDropdown(false); }}
+                                className={`px-2 py-1 text-[10px] rounded-lg flex items-center justify-between w-full text-right transition-colors cursor-pointer ${
+                                  isActive ? 'bg-teal-500/10 text-teal-600 dark:text-teal-400 font-extrabold' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5'
+                                }`}
+                              >
+                                <span>{r.label}</span>
+                                {isActive && <Check className="w-3.5 h-3.5" />}
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
-                    </div>
+                    )}
 
                     <button
                       onClick={() => { setShowUserDropdown(false); handleLogout(); }}

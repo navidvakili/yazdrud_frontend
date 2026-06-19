@@ -12,6 +12,8 @@ export interface User {
   mobile: string;
   email: string;
   role: UserRole;
+  /** All roles from the roles table (array of role names) */
+  roles?: string[];
   sign?: string | null;
   /** Derived full name from fname + lname */
   name: string;
@@ -58,10 +60,17 @@ export interface NavResponse {
   data: NavItem[];
 }
 
+export interface RoleInfo {
+  id: number;
+  role: string;
+  label: string;
+  active: number; // 1=active (current primary), 0=not active
+}
+
 export interface UserRolesResponse {
   data: {
     primary_role: string;
-    all_roles: string[];
+    all_roles: RoleInfo[];
   };
 }
 

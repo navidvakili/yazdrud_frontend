@@ -2,7 +2,7 @@
 // API Service — ارتباط با بک‌اند لاراول
 // ============================================================
 
-import type { AuthResponse, LoginCredentials, User, UserRole, NavResponse, UserRolesResponse, PermissionsResponse } from '@/src/types';
+import type { AuthResponse, LoginCredentials, User, UserRole, NavResponse, UserRolesResponse, PermissionsResponse, RoleInfo } from '@/src/types';
 
 const API_BASE = 'http://localhost:8000/api';
 
@@ -38,6 +38,7 @@ class ApiService {
       mobile: backendUser.mobile || '',
       email: backendUser.email || '',
       role: (backendUser.role as UserRole) || 'student',
+      roles: backendUser.roles || [],
       sign: backendUser.sign || null,
       name,
       avatar,
@@ -173,7 +174,7 @@ class ApiService {
   /**
    * Fetch the current user's roles (primary + all roles from roles table).
    */
-  async getUserRoles(): Promise<{ primary_role: string; all_roles: string[] }> {
+  async getUserRoles(): Promise<{ primary_role: string; all_roles: RoleInfo[] }> {
     const data = await this.request<UserRolesResponse>('/user/roles');
     return data.data;
   }
@@ -184,6 +185,22 @@ class ApiService {
   async getUserPermissions(): Promise<PermissionItem[]> {
     const data = await this.request<PermissionsResponse>('/user/permissions');
     return data.data;
+  }
+
+  /**
+   * Switch the user's active (primary) role.
+   * The role must exist in the user's roles table.
+   */
+  async switchRole(role: string): Promise<User> {
+    const data = await this.request<any>('/user/switch-role', {
+      method: 'PUT',
+      body: JSON.stringify({ role }),
+    });
+    // data.data contains the updated user from formatUser
+    const updatedUser = this.mapBackendUser(data.data);
+    // Update localStorage with new user info
+    localStorage.setItem('portal_user', JSON.stringify(updatedUser));
+    return updatedUser;
   }
 }
 
