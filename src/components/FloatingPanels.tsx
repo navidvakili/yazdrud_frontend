@@ -46,9 +46,9 @@ export default function FloatingPanels({
 
   return (
     <motion.div
-      initial={{ x: 320, opacity: 0 }}
+      initial={{ x: -320, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
-      exit={{ x: 320, opacity: 0 }}
+      exit={{ x: -320, opacity: 0 }}
       transition={{ type: 'spring', damping: 25, stiffness: 200 }}
       className="absolute left-0 top-0 bottom-0 w-80 bg-white dark:bg-gray-900 border-r border-gray-100 dark:border-gray-800 shadow-2xl z-50 flex flex-col"
     >
