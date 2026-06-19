@@ -178,6 +178,7 @@ export default function App() {
   const [drawerSubmenuFilter, setDrawerSubmenuFilter] = useState('');
   const [showLimitAlert, setShowLimitAlert] = useState(false);
   const [confirmClearActive, setConfirmClearActive] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   // Navigation state — fetched dynamically from API
   const [navItems, setNavItems] = useState<NavItem[]>([]);
@@ -263,17 +264,16 @@ export default function App() {
   };
 
   const handleLogout = async () => {
-    if (confirm('آیا مایل به خروج از حساب کاربری پرتال جامع دانشگاهی کارانت هستید؟')) {
-      try {
-        await api.logout();
-      } catch { /* ignore */ }
-      setUser(null);
-      setTabs([]);
-      setActiveTabId(null);
-      setViewState('login');
-      setActivePanel(null);
-      setSelectedMainCat(null);
-    }
+    try {
+      await api.logout();
+    } catch { /* ignore */ }
+    setUser(null);
+    setTabs([]);
+    setActiveTabId(null);
+    setViewState('login');
+    setActivePanel(null);
+    setSelectedMainCat(null);
+    setShowLogoutModal(false);
   };
 
   const handleToggleTheme = () => {
@@ -575,7 +575,7 @@ export default function App() {
                     )}
 
                     <button
-                      onClick={() => { setShowUserDropdown(false); handleLogout(); }}
+                      onClick={() => { setShowUserDropdown(false); setShowLogoutModal(true); }}
                       className="px-4 py-2 text-[11px] text-rose-500 hover:bg-rose-500/10 flex items-center justify-between w-full text-right cursor-pointer"
                     >
                       <span className="flex items-center gap-2">
@@ -799,7 +799,7 @@ export default function App() {
           </div>
           <div className="px-2">
             <button
-              onClick={handleLogout}
+              onClick={() => setShowLogoutModal(true)}
               className="w-11 h-11 rounded-xl text-rose-500 hover:bg-rose-500/10 transition-colors flex items-center justify-center cursor-pointer"
               title="خروج از حساب"
             >
@@ -841,6 +841,47 @@ export default function App() {
           )}
         </div>
       </footer>
+
+      {/* Logout confirmation modal */}
+      <AnimatePresence>
+        {showLogoutModal && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="p-6 max-w-sm w-full bg-white dark:bg-gray-900 border border-red-500/15 rounded-3xl text-center space-y-4"
+            >
+              <div className="inline-flex p-3 rounded-full bg-red-100 text-rose-600 dark:bg-rose-950/20">
+                <LogOut className="w-10 h-10" />
+              </div>
+              <h4 className="text-sm font-black text-gray-900 dark:text-white">
+                خروج از حساب کاربری
+              </h4>
+              <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed font-sans font-medium">
+                آیا مایل به خروج از حساب کاربری پرتال جامع دانشگاهی کارانت هستید؟
+              </p>
+
+              <div className="pt-3 border-t border-red-500/10 dark:border-red-500/5 space-y-2">
+                <button
+                  onClick={handleLogout}
+                  className="w-full py-2.5 px-3 rounded-xl bg-red-600 hover:bg-red-700 text-white text-[11px] font-black transition-all cursor-pointer"
+                >
+                  <LogOut className="w-3.5 h-3.5 inline-block ml-1 -mt-0.5" />
+                  بله، خارج شو
+                </button>
+              </div>
+
+              <button
+                onClick={() => setShowLogoutModal(false)}
+                className="w-full py-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold text-xs cursor-pointer"
+              >
+                انصراف (بازگشت)
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Tab limit alert — modal */}
       <AnimatePresence>
