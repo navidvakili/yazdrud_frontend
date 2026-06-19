@@ -22,3 +22,6 @@ export const COMPANY_NAME = 'پرتال جامع دانشگاهی کارانت';
 
 /** مسیر ذخیره‌سازی امضاها (برای آواتار) */
 export const SIGNS_STORAGE_PATH = `${BACKEND_API_URL}/storage/signs`;
+
+/** حداکثر تعداد تب‌های همزمان مجاز */
+export const MAX_TABS = 6;

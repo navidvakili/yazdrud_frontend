@@ -12,7 +12,6 @@ import {
   DollarSign,
   Calendar,
   Award,
-  Bell,
   CheckCircle,
   AlertTriangle,
   Clock,
@@ -20,6 +19,7 @@ import {
   BookMarked,
 } from 'lucide-react';
 import type { User as UserType } from '@/src/types';
+import { MAX_TABS } from '@/src/lib/constants';
 
 interface DashboardModuleProps {
   user: UserType | null;
@@ -83,9 +83,15 @@ export default function DashboardModule({ user, onNavigate, openTabsCount }: Das
               به پیشخوان کاربری خود خوش آمدید. نقش فعلی: <span className="font-bold text-teal-600 dark:text-teal-400">{roleLabel}</span>
             </p>
           </div>
-          <div className="hidden sm:flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500">
-            <Bell className="w-4 h-4" />
-            <span>{openTabsCount} تب باز</span>
+          <div className="hidden sm:flex items-center gap-3">
+            <div className="p-3 rounded-2xl bg-white/70 dark:bg-white/5 backdrop-blur-md border border-gray-200/50 dark:border-white/10 text-center min-w-[80px] shadow-xs">
+              <span className="block text-lg sm:text-xl font-black font-mono leading-none text-gray-900 dark:text-white">{MAX_TABS}</span>
+              <span className="text-[8px] text-gray-500 dark:text-gray-400 font-bold block mt-1">تب همزمان مجاز</span>
+            </div>
+            <div className="p-3 rounded-2xl bg-white/70 dark:bg-white/5 backdrop-blur-md border border-gray-200/50 dark:border-white/10 text-center min-w-[80px] shadow-xs">
+              <span className="block text-lg sm:text-xl font-black font-mono leading-none text-teal-600 dark:text-teal-400">{openTabsCount}</span>
+              <span className="text-[8px] text-gray-500 dark:text-gray-400 font-bold block mt-1">تب فعال فعلی</span>
+            </div>
           </div>
         </div>
       </motion.div>
