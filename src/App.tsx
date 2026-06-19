@@ -227,14 +227,12 @@ export default function App() {
     localStorage.setItem('portal_theme', theme);
   }, [theme]);
 
-  // Restore session on cold start
+  // Restore session on cold start — default to dashboard (no tab)
   useEffect(() => {
     const storedUser = api.getStoredUser();
     if (storedUser) {
       setUser(storedUser);
       setViewState('authenticated');
-      setTabs([{ id: 'profile', title: 'مشخصات پروفایل', iconName: 'User' }]);
-      setActiveTabId('profile');
     }
   }, []);
 
@@ -242,8 +240,6 @@ export default function App() {
   const handleLoginSuccess = (userProfile: UserType) => {
     setUser(userProfile);
     setViewState('authenticated');
-    setTabs([{ id: 'profile', title: 'مشخصات پروفایل', iconName: 'User' }]);
-    setActiveTabId('profile');
   };
 
   const handleLogout = async () => {
@@ -497,6 +493,7 @@ export default function App() {
                 src={user.avatar}
                 alt={user.name}
                 referrerPolicy="no-referrer"
+                onError={(e) => { (e.target as HTMLImageElement).src = '/default-avatar.svg'; }}
                 className="w-9 h-9 rounded-full object-cover border border-gray-200 dark:border-gray-750 shadow-xs"
               />
             </button>

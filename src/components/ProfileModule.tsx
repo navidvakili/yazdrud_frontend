@@ -74,6 +74,7 @@ export default function ProfileModule({ user, onUpdateUser }: ProfileModuleProps
             <img
               src={user.avatar}
               alt={user.name}
+              onError={(e) => { (e.target as HTMLImageElement).src = '/default-avatar.svg'; }}
               className="w-16 h-16 rounded-full object-cover border border-gray-200 dark:border-gray-700"
             />
             <div>
