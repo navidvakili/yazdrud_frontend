@@ -1,0 +1,24 @@
+// ============================================================
+// Constants — مقادیر ثابت برنامه (مطابق الگوی sau_public)
+// ============================================================
+
+/** آدرس سرور بک‌اند لاراول */
+export const BACKEND_API_URL = 'http://localhost:8000';
+
+/** پیشوند API (BACKEND_API_URL + /api) */
+export const API_BASE_URL = `${BACKEND_API_URL}/api`;
+
+/** کلید ذخیره‌سازی توکن در localStorage */
+export const TOKEN_STRING = 'portal_token';
+
+/** کلید ذخیره‌سازی اطلاعات کاربر در localStorage */
+export const USER_STRING = 'portal_user';
+
+/** کلید ذخیره‌سازی تم در localStorage */
+export const THEME_STRING = 'portal_theme';
+
+/** نام شرکت / دانشگاه */
+export const COMPANY_NAME = 'پرتال جامع دانشگاهی کارانت';
+
+/** مسیر ذخیره‌سازی امضاها (برای آواتار) */
+export const SIGNS_STORAGE_PATH = `${BACKEND_API_URL}/storage/signs`;

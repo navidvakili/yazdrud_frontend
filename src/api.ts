@@ -2,21 +2,12 @@
 // API Service — ارتباط با بک‌اند لاراول
 // ============================================================
 
+import { API } from '@/src/lib/functions';
+import { TOKEN_STRING, USER_STRING } from '@/src/lib/constants';
 import type { AuthResponse, LoginCredentials, User, UserRole, NavResponse, UserRolesResponse, PermissionsResponse, RoleInfo } from '@/src/types';
-
-const API_BASE = 'http://localhost:8000/api';
+import { getAvatarUrl } from '@/src/lib/functions';
 
 class ApiService {
-  private baseUrl: string;
-
-  constructor(baseUrl: string) {
-    this.baseUrl = baseUrl;
-  }
-
-  private getToken(): string | null {
-    return localStorage.getItem('portal_token');
-  }
-
   /**
    * Map backend user format to frontend User type.
    * Backend returns: { username, fname, lname, full_name, kodmeli, mobile, email, role, roles, sign, ... }
@@ -25,10 +16,7 @@ class ApiService {
   private mapBackendUser(backendUser: any): User {
     const name = backendUser.full_name || `${backendUser.fname || ''} ${backendUser.lname || ''}`.trim();
     // Build avatar URL: use backend sign if available, otherwise use local default avatar
-    let avatar = '/default-avatar.svg';
-    if (backendUser.sign) {
-      avatar = `http://localhost:8000/storage/signs/${backendUser.sign}`;
-    }
+    const avatar = getAvatarUrl(backendUser.sign);
 
     return {
       username: backendUser.username || '',
@@ -45,103 +33,53 @@ class ApiService {
     };
   }
 
-  private async request<T>(
-    endpoint: string,
-    options: RequestInit = {}
-  ): Promise<T> {
-    const token = this.getToken();
-    const headers: Record<string, string> = {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json',
-      ...(options.headers as Record<string, string>),
-    };
-
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-
-    const response = await fetch(`${this.baseUrl}${endpoint}`, {
-      ...options,
-      headers,
-    });
-
-    // Handle 401 Unauthorized — but NOT for login (let LoginForm handle it gracefully)
-    if (response.status === 401 && !endpoint.includes('/login')) {
-      localStorage.removeItem('portal_token');
-      localStorage.removeItem('portal_user');
-      window.location.reload();
-      throw new Error('جلسه کاربری شما منقضی شده است. لطفاً دوباره وارد شوید.');
-    }
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      const errorMessage = data.message || 'خطایی در ارتباط با سرور رخ داد';
-      const error = new Error(errorMessage) as any;
-      error.status = response.status;
-      error.errors = data.errors;
-      throw error;
-    }
-
-    return data;
-  }
-
   // ========== Authentication ==========
 
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
-    const data = await this.request<any>('/login', {
-      method: 'POST',
-      body: JSON.stringify(credentials),
-    });
+    const data = await API<any>('login', credentials, 'POST');
     // Backend returns: { message: "...", data: { user: {...}, access_token: "...", token_type: "..." } }
     const responseData = data.data;
     const user = this.mapBackendUser(responseData.user);
     const token: string = responseData.access_token;
     // Store token and user
-    localStorage.setItem('portal_token', token);
-    localStorage.setItem('portal_user', JSON.stringify(user));
+    localStorage.setItem(TOKEN_STRING, token);
+    localStorage.setItem(USER_STRING, JSON.stringify(user));
     return { token, user };
   }
 
   async logout(): Promise<void> {
     try {
-      await this.request('/logout', { method: 'POST' });
+      await API('logout', {}, 'POST');
     } finally {
-      localStorage.removeItem('portal_token');
-      localStorage.removeItem('portal_user');
+      localStorage.removeItem(TOKEN_STRING);
+      localStorage.removeItem(USER_STRING);
     }
   }
 
   async getUser(): Promise<User> {
-    const data = await this.request<any>('/user');
+    const data = await API<any>('user');
     // Backend returns: { data: { username, fname, ... } }
     return this.mapBackendUser(data.data);
   }
 
   async updateProfile(profileData: Partial<User>): Promise<User> {
-    const data = await this.request<any>('/user/profile', {
-      method: 'PUT',
-      body: JSON.stringify(profileData),
-    });
+    const data = await API<any>('user/profile', profileData, 'PUT');
     return this.mapBackendUser(data.data);
   }
 
   async changePassword(currentPassword: string, newPassword: string): Promise<{ message: string }> {
-    const data = await this.request<any>('/user/password', {
-      method: 'PUT',
-      body: JSON.stringify({
-        current_password: currentPassword,
-        password: newPassword,
-        password_confirmation: newPassword,
-      }),
-    });
+    const data = await API<any>('user/password', {
+      current_password: currentPassword,
+      password: newPassword,
+      password_confirmation: newPassword,
+    }, 'PUT');
     return data;
   }
 
   // ========== Restore session from localStorage ==========
 
   getStoredUser(): User | null {
-    const stored = localStorage.getItem('portal_user');
+    const stored = localStorage.getItem(USER_STRING);
     if (stored) {
       try {
         return JSON.parse(stored);
@@ -153,7 +91,7 @@ class ApiService {
   }
 
   getStoredToken(): string | null {
-    return localStorage.getItem('portal_token');
+    return localStorage.getItem(TOKEN_STRING);
   }
 
   isAuthenticated(): boolean {
@@ -167,7 +105,7 @@ class ApiService {
    * The backend filters menu items based on user roles automatically.
    */
   async getNavigation(): Promise<NavItem[]> {
-    const data = await this.request<NavResponse>('/navigation');
+    const data = await API<NavResponse>('navigation');
     return data.data;
   }
 
@@ -175,7 +113,7 @@ class ApiService {
    * Fetch the current user's roles (primary + all roles from roles table).
    */
   async getUserRoles(): Promise<{ primary_role: string; all_roles: RoleInfo[] }> {
-    const data = await this.request<UserRolesResponse>('/user/roles');
+    const data = await API<UserRolesResponse>('user/roles');
     return data.data;
   }
 
@@ -183,7 +121,7 @@ class ApiService {
    * Fetch all permission entries for the current user.
    */
   async getUserPermissions(): Promise<PermissionItem[]> {
-    const data = await this.request<PermissionsResponse>('/user/permissions');
+    const data = await API<PermissionsResponse>('user/permissions');
     return data.data;
   }
 
@@ -192,17 +130,14 @@ class ApiService {
    * The role must exist in the user's roles table.
    */
   async switchRole(role: string): Promise<User> {
-    const data = await this.request<any>('/user/switch-role', {
-      method: 'PUT',
-      body: JSON.stringify({ role }),
-    });
+    const data = await API<any>('user/switch-role', { role }, 'PUT');
     // data.data contains the updated user from formatUser
     const updatedUser = this.mapBackendUser(data.data);
     // Update localStorage with new user info
-    localStorage.setItem('portal_user', JSON.stringify(updatedUser));
+    localStorage.setItem(USER_STRING, JSON.stringify(updatedUser));
     return updatedUser;
   }
 }
 
-export const api = new ApiService(API_BASE);
+export const api = new ApiService();
 export default api;

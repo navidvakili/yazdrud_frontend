@@ -45,6 +45,7 @@ import {
 } from 'lucide-react';
 import type { User as UserType, Tab, PortalNotification, NavItem, RoleInfo } from '@/src/types';
 import api from '@/src/api';
+import { THEME_STRING, USER_STRING } from '@/src/lib/constants';
 import LoginForm from '@/src/components/LoginForm';
 import DashboardModule from '@/src/components/DashboardModule';
 import ProfileModule from '@/src/components/ProfileModule';
@@ -157,7 +158,7 @@ export default function App() {
   // ========== Core State ==========
   const [viewState, setViewState] = useState<'login' | 'authenticated'>('login');
   const [theme, setTheme] = useState<'light' | 'dark'>(
-    () => (localStorage.getItem('portal_theme') as 'light' | 'dark') || 'light'
+    () => (localStorage.getItem(THEME_STRING) as 'light' | 'dark') || 'light'
   );
   const [user, setUser] = useState<UserType | null>(null);
   const [tabs, setTabs] = useState<Tab[]>([]);
@@ -186,7 +187,7 @@ export default function App() {
     } else {
       root.classList.remove('dark');
     }
-    localStorage.setItem('portal_theme', theme);
+    localStorage.setItem(THEME_STRING, theme);
   }, [theme]);
 
   // Restore session on cold start — default to dashboard (no tab)
@@ -350,7 +351,7 @@ export default function App() {
             user={user}
             onUpdateUser={(updated) => {
               setUser(updated);
-              localStorage.setItem('portal_user', JSON.stringify(updated));
+              localStorage.setItem(USER_STRING, JSON.stringify(updated));
             }}
           />
         ) : null;
