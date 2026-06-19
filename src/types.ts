@@ -35,6 +35,53 @@ export interface PortalNotification {
   type: 'info' | 'success' | 'warning' | 'error';
 }
 
+// ============================================================
+// Navigation & Permission Types (از API بک‌اند)
+// ============================================================
+
+export interface NavChild {
+  title: string;
+  url: string;
+  icon: string;
+}
+
+export interface NavItem {
+  id: number;
+  title: string;
+  url: string;
+  icon: string;
+  ordering: number;
+  children: NavChild[];
+}
+
+export interface NavResponse {
+  data: NavItem[];
+}
+
+export interface UserRolesResponse {
+  data: {
+    primary_role: string;
+    all_roles: string[];
+  };
+}
+
+export interface PermissionItem {
+  id: number;
+  parent: string | number;
+  title: string;
+  url: string;
+  icon: string;
+  roles: string;
+  ordering: number;
+  active: number;
+}
+
+export interface PermissionsResponse {
+  data: PermissionItem[];
+}
+
+// ============================================================
+
 export interface Student {
   id: string;
   firstName: string;

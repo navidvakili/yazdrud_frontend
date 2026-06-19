@@ -2,7 +2,7 @@
 // API Service — ارتباط با بک‌اند لاراول
 // ============================================================
 
-import type { AuthResponse, LoginCredentials, User, UserRole } from '@/src/types';
+import type { AuthResponse, LoginCredentials, User, UserRole, NavResponse, UserRolesResponse, PermissionsResponse } from '@/src/types';
 
 const API_BASE = 'http://localhost:8000/api';
 
@@ -157,6 +157,33 @@ class ApiService {
 
   isAuthenticated(): boolean {
     return !!this.getStoredToken() && !!this.getStoredUser();
+  }
+
+  // ========== Navigation & Permissions ==========
+
+  /**
+   * Fetch the hierarchical navigation menu for the current user.
+   * The backend filters menu items based on user roles automatically.
+   */
+  async getNavigation(): Promise<NavItem[]> {
+    const data = await this.request<NavResponse>('/navigation');
+    return data.data;
+  }
+
+  /**
+   * Fetch the current user's roles (primary + all roles from roles table).
+   */
+  async getUserRoles(): Promise<{ primary_role: string; all_roles: string[] }> {
+    const data = await this.request<UserRolesResponse>('/user/roles');
+    return data.data;
+  }
+
+  /**
+   * Fetch all permission entries for the current user.
+   */
+  async getUserPermissions(): Promise<PermissionItem[]> {
+    const data = await this.request<PermissionsResponse>('/user/permissions');
+    return data.data;
   }
 }
 

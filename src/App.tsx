@@ -2,7 +2,7 @@
 // App — کامپوننت اصلی برنامه
 // ============================================================
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   GraduationCap,
@@ -43,7 +43,7 @@ import {
   AlertCircle,
   type LucideIcon,
 } from 'lucide-react';
-import type { User as UserType, Tab, PortalNotification } from '@/src/types';
+import type { User as UserType, Tab, PortalNotification, NavItem } from '@/src/types';
 import api from '@/src/api';
 import LoginForm from '@/src/components/LoginForm';
 import DashboardModule from '@/src/components/DashboardModule';
@@ -65,117 +65,74 @@ interface SubmenuItem {
   targetId: string;
   title: string;
   iconName: string;
-  roles: Array<'student' | 'professor' | 'admin'>;
 }
 
 interface MenuCategory {
   key: string;
   title: string;
   icon: LucideIcon;
-  roles?: Array<'student' | 'professor' | 'admin'>;
   submenus: SubmenuItem[];
 }
 
-const rightMenuCategories: MenuCategory[] = [
-  {
-    key: 'account',
-    title: 'داشبورد و حساب',
-    icon: Home,
-    roles: ['student', 'professor', 'admin'],
-    submenus: [
-      { label: 'مشخصات و پرونده پرسنلی', targetId: 'profile', title: 'مشخصات پروفایل', iconName: 'User', roles: ['student', 'professor', 'admin'] },
-      { label: 'تغییر گذرواژه ورود', targetId: 'change-password', title: 'تغییر کلمه عبور', iconName: 'Lock', roles: ['student', 'professor', 'admin'] },
-    ],
-  },
-  {
-    key: 'users',
-    title: 'مدیریت کاربران',
-    icon: Users,
-    roles: ['student', 'professor', 'admin'],
-    submenus: [
-      { label: 'لیست کاربران فعال', targetId: 'users-list', title: 'مدیریت کاربران', iconName: 'Users', roles: ['student', 'professor', 'admin'] },
-      { label: 'ورود اکسلی دانشجویان', targetId: 'users-import', title: 'ورود اطلاعات از اکسل', iconName: 'Upload', roles: ['student', 'professor', 'admin'] },
-    ],
-  },
-  {
-    key: 'theses_new',
-    title: 'پایان‌نامه',
-    icon: Briefcase,
-    roles: ['student', 'professor', 'admin'],
-    submenus: [
-      { label: 'پیشخوان پایان‌نامه', targetId: 'theses', title: 'مدیریت پایان نامه‌ها', iconName: 'Briefcase', roles: ['student', 'professor', 'admin'] },
-      { label: 'فهرست پرداخت‌های اسکان و داوری', targetId: 'theses-mali', title: 'فهرست پرداخت‌ها', iconName: 'DollarSign', roles: ['student', 'professor', 'admin'] },
-      { label: 'کدهای رهگیری همانندجویی ایرانداک', targetId: 'theses-irandoc', title: 'استعلام ایرانداک', iconName: 'ShieldCheck', roles: ['student', 'professor', 'admin'] },
-    ],
-  },
-  {
-    key: 'phd',
-    title: 'مصاحبه دکتری',
-    icon: GraduationCap,
-    roles: ['student', 'professor', 'admin'],
-    submenus: [
-      { label: 'درخواست‌های مصاحبه علمی', targetId: 'phd-list', title: 'درخواست‌های مصاحبه دکتری', iconName: 'GraduationCap', roles: ['student', 'professor', 'admin'] },
-      { label: 'سهمیه نخبگان و استعدادهای درخشان', targetId: 'phd-talent', title: 'استعدادهای درخشان دکتری', iconName: 'Award', roles: ['student', 'professor', 'admin'] },
-      { label: 'گروه‌های آموزشی مصاحبه‌کننده', targetId: 'phd-groups', title: 'گروه‌های آموزشی دکتری', iconName: 'Users', roles: ['student', 'professor', 'admin'] },
-    ],
-  },
-  {
-    key: 'tuition',
-    title: 'مدیریت شهریه‌ها',
-    icon: DollarSign,
-    roles: ['student', 'professor', 'admin'],
-    submenus: [
-      { label: 'فهرست مصوب شهریه رشته‌ها', targetId: 'tuition-list', title: 'مدیریت شهریه‌ها', iconName: 'DollarSign', roles: ['student', 'professor', 'admin'] },
-    ],
-  },
-  {
-    key: 'tuts',
-    title: 'دوره‌های آموزشی',
-    icon: Calendar,
-    roles: ['student', 'professor', 'admin'],
-    submenus: [
-      { label: 'پیش‌ثبت‌نام کارگاه‌ها و دوره‌ها', targetId: 'tuts-list', title: 'دوره های آموزشی آزاد', iconName: 'Calendar', roles: ['student', 'professor', 'admin'] },
-      { label: 'گزارشات و آمارهای ثبت نامی‌ها', targetId: 'tuts-reports', title: 'آمار کارگاه‌ها', iconName: 'FileText', roles: ['student', 'professor', 'admin'] },
-    ],
-  },
-  {
-    key: 'dorms',
-    title: 'خوابگاه کوثر',
-    icon: Building,
-    roles: ['student', 'professor', 'admin'],
-    submenus: [
-      { label: 'متقاضیان خوابگاه ترمیک دانشجو', targetId: 'dorm-termic', title: 'خوابگاه ترمیک', iconName: 'Building', roles: ['student', 'professor', 'admin'] },
-      { label: 'فهرست ساکنین موقت شب‌خواب', targetId: 'dorm-shabkhab', title: 'فهرست شب خواب ها', iconName: 'Home', roles: ['student', 'professor', 'admin'] },
-    ],
-  },
-  {
-    key: 'support',
-    title: 'درخواست‌های دانشجو',
-    icon: HelpCircle,
-    roles: ['student', 'professor', 'admin'],
-    submenus: [
-      { label: 'ارسال و پیگیری تیکت اداری', targetId: 'support-list', title: 'درخواست پشتیبانی', iconName: 'HelpCircle', roles: ['student', 'professor', 'admin'] },
-    ],
-  },
-  {
-    key: 'finance_history',
-    title: 'گزارشات پرداخت',
-    icon: CreditCard,
-    roles: ['student', 'professor', 'admin'],
-    submenus: [
-      { label: 'فهرست کل تراکنش‌های درگاه شتاب', targetId: 'finance-history', title: 'گزارش پرداخت های سامانه', iconName: 'CreditCard', roles: ['student', 'professor', 'admin'] },
-    ],
-  },
-  {
-    key: 'health',
-    title: 'سلامت روان',
-    icon: Heart,
-    roles: ['student', 'professor', 'admin'],
-    submenus: [
-      { label: 'فهرست ثبت‌نام غربالگری سلامت', targetId: 'health-list', title: 'سنجش سلامت روان', iconName: 'Heart', roles: ['student', 'professor', 'admin'] },
-    ],
-  },
-];
+// ========== FontAwesome → Lucide icon name mapping ==========
+const faToLucideName: Record<string, string> = {
+  'fa fa-user': 'User',
+  'fa fa-users': 'Users',
+  'fa fa-lock': 'Lock',
+  'fa fa-book': 'BookOpen',
+  'fa fa-graduation-cap': 'GraduationCap',
+  'fa fa-dollar': 'DollarSign',
+  'fa fa-money': 'DollarSign',
+  'fa fa-file-text': 'FileText',
+  'fa fa-calendar': 'Calendar',
+  'fa fa-home': 'Home',
+  'fa fa-building': 'Building',
+  'fa fa-heart': 'Heart',
+  'fa fa-credit-card': 'CreditCard',
+  'fa fa-bell': 'Bell',
+  'fa fa-cog': 'Settings',
+  'fa fa-gear': 'Settings',
+  'fa fa-search': 'Search',
+  'fa fa-plus': 'Plus',
+  'fa fa-check': 'Check',
+  'fa fa-times': 'X',
+  'fa fa-close': 'X',
+  'fa fa-info-circle': 'HelpCircle',
+  'fa fa-question-circle': 'HelpCircle',
+  'fa fa-exclamation-triangle': 'AlertCircle',
+  'fa fa-envelope': 'MessageSquare',
+  'fa fa-comment': 'MessageSquare',
+  'fa fa-comments': 'MessageSquare',
+  'fa fa-folder': 'Folder',
+  'fa fa-folder-open': 'Folder',
+  'fa fa-upload': 'Upload',
+  'fa fa-download': 'Upload',
+  'fa fa-shield': 'ShieldCheck',
+  'fa fa-layers': 'Layers',
+  'fa fa-clock': 'Clock',
+  'fa fa-award': 'Award',
+  'fa fa-briefcase': 'Briefcase',
+  'fa fa-check-circle': 'CheckCircle',
+  'fa fa-smile': 'Smile',
+  'fa fa-sparkles': 'Sparkles',
+  'fa fa-flag': 'Folder',
+};
+
+/** Extract a module targetId from a URL path.
+ *  e.g. "/thesis/mali" → "thesis-mali",  "#" → fallback slug from title */
+function urlToTargetId(url: string, titleFallback?: string): string {
+  const path = url.split('?')[0].replace(/^\//, '');
+  if (path) return path;
+  // For "#" URLs, generate a slug from the title
+  if (titleFallback) {
+    return titleFallback
+      .replace(/[^آ-یa-zA-Z0-9\s_-]/g, '')
+      .trim()
+      .replace(/\s+/g, '-')
+      .toLowerCase();
+  }
+  return 'home';
+}
 
 // Notification templates
 const defaultNotifications: PortalNotification[] = [
@@ -216,6 +173,11 @@ export default function App() {
   const [showLimitAlert, setShowLimitAlert] = useState(false);
   const [confirmClearActive, setConfirmClearActive] = useState(false);
 
+  // Navigation state — fetched dynamically from API
+  const [navItems, setNavItems] = useState<NavItem[]>([]);
+  const [userRoles, setUserRoles] = useState<string[]>([]);
+  const [navLoading, setNavLoading] = useState(false);
+
   // ========== Effects ==========
   useEffect(() => {
     const root = window.document.documentElement;
@@ -235,6 +197,45 @@ export default function App() {
       setViewState('authenticated');
     }
   }, []);
+
+  // Fetch navigation and roles when user is authenticated
+  const fetchNavigation = useCallback(async () => {
+    if (!api.isAuthenticated()) return;
+    setNavLoading(true);
+    try {
+      const [navData, rolesData] = await Promise.all([
+        api.getNavigation(),
+        api.getUserRoles(),
+      ]);
+      setNavItems(navData);
+      setUserRoles(rolesData.all_roles);
+    } catch (err) {
+      console.warn('Failed to load navigation from API:', err);
+    } finally {
+      setNavLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (viewState === 'authenticated') {
+      fetchNavigation();
+    }
+  }, [viewState, fetchNavigation]);
+
+  // Derive MenuCategory[] from NavItem[] (dynamic API data)
+  const menuCategories = useMemo<MenuCategory[]>(() => {
+    return navItems.map(item => ({
+      key: String(item.id),
+      title: item.title,
+      icon: resolveIcon(faToLucideName[item.icon] || 'Folder'),
+      submenus: item.children.map(child => ({
+        label: child.title,
+        targetId: urlToTargetId(child.url, child.title),
+        title: child.title,
+        iconName: faToLucideName[child.icon] || 'Folder',
+      })),
+    }));
+  }, [navItems]);
 
   // ========== Handlers ==========
   const handleLoginSuccess = (userProfile: UserType) => {
@@ -265,6 +266,8 @@ export default function App() {
     const updatedUser: UserType = { ...user, role: newRole };
     setUser(updatedUser);
     localStorage.setItem('portal_user', JSON.stringify(updatedUser));
+    // Re-fetch navigation for the new role context
+    fetchNavigation();
   };
 
   // Tab management
@@ -354,7 +357,7 @@ export default function App() {
         return <ThesisManagement userRole={user?.role || 'student'} initialView={moduleType} />;
       default:
         if (activeTabId) {
-          const activeSub = rightMenuCategories
+          const activeSub = menuCategories
             .flatMap(cat => cat.submenus || [])
             .find(sub => sub.targetId === moduleType);
           const label = activeSub ? activeSub.label : 'خدمات الکترونیکی پورتال';
@@ -375,13 +378,8 @@ export default function App() {
 
   // ========== Authenticated Layout ==========
 
-  // Filter menu categories based on user role
-  const filteredCategories = rightMenuCategories
-    .map(cat => {
-      const filteredSubs = cat.submenus.filter(sub => !sub.roles || (user && sub.roles.includes(user.role)));
-      return { ...cat, submenus: filteredSubs };
-    })
-    .filter(cat => cat.submenus.length > 0 && (!cat.roles || (user && cat.roles.includes(user.role))));
+  // Menu categories — already filtered by role from the API
+  const filteredCategories = menuCategories;
 
   return (
     <div className={`${theme} h-screen overflow-hidden bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100 flex flex-col transition-colors duration-300`}>
@@ -424,11 +422,9 @@ export default function App() {
                 {(() => {
                   const query = menuSearchQuery.toLowerCase().trim();
                   const matched: Array<{ category: string; categoryKey: string; submenu: SubmenuItem }> = [];
-                  for (const cat of rightMenuCategories) {
-                    if (cat.roles && user && !cat.roles.includes(user.role)) continue;
+                  for (const cat of menuCategories) {
                     const catMatches = cat.title.toLowerCase().includes(query);
                     for (const sub of cat.submenus) {
-                      if (sub.roles && user && !sub.roles.includes(user.role)) continue;
                       if (catMatches || sub.label.toLowerCase().includes(query) || sub.title.toLowerCase().includes(query)) {
                         matched.push({ category: cat.title, categoryKey: cat.key, submenu: sub });
                       }
@@ -571,7 +567,15 @@ export default function App() {
           {/* Narrow bar */}
           <div className="w-24 flex flex-col justify-between items-center py-4 border-l border-gray-50 dark:border-gray-850 shrink-0 select-none h-full overflow-y-auto custom-scrollbar">
             <div className="space-y-3 w-full px-1 flex flex-col items-center">
-              {filteredCategories.map((cat) => {
+              {navLoading && filteredCategories.length === 0 ? (
+                <div className="flex flex-col items-center gap-2 pt-6">
+                  <div className="w-5 h-5 border-2 border-teal-500/30 border-t-teal-500 rounded-full animate-spin" />
+                  <span className="text-[9px] text-gray-400">بارگذاری...</span>
+                </div>
+              ) : filteredCategories.length === 0 ? (
+                <span className="text-[9px] text-gray-400 pt-6 text-center px-1">منویی یافت نشد</span>
+              ) : (
+                filteredCategories.map((cat) => {
                 const isSelected = selectedMainCat === cat.key;
                 const CatIcon = cat.icon;
                 return (
@@ -590,7 +594,7 @@ export default function App() {
                     </span>
                   </button>
                 );
-              })}
+              }))}
             </div>
             <div className="pt-4">
               <ThemeToggle theme={theme} onToggle={handleToggleTheme} />
