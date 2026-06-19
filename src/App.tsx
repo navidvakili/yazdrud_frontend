@@ -493,6 +493,11 @@ export default function App() {
           </div>
         </div>
 
+        {/* Theme toggle */}
+        <div className="flex items-center">
+          <ThemeToggle theme={theme} onToggle={handleToggleTheme} />
+        </div>
+
         {/* User capsule */}
         {user && (
           <div className="relative">
@@ -627,9 +632,6 @@ export default function App() {
                   </button>
                 );
               }))}
-            </div>
-            <div className="pt-4">
-              <ThemeToggle theme={theme} onToggle={handleToggleTheme} />
             </div>
           </div>
 
