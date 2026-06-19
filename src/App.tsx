@@ -45,7 +45,7 @@ import {
 } from 'lucide-react';
 import type { User as UserType, Tab, PortalNotification, NavItem, RoleInfo } from '@/src/types';
 import api from '@/src/api';
-import { THEME_STRING, USER_STRING } from '@/src/lib/constants';
+import { THEME_STRING, USER_STRING, getRoleAccentName, DEFAULT_ACCENT, ACCENT_COLORS } from '@/src/lib/constants';
 import LoginForm from '@/src/components/LoginForm';
 import DashboardModule from '@/src/components/DashboardModule';
 import ProfileModule from '@/src/components/ProfileModule';
@@ -277,6 +277,10 @@ export default function App() {
     try {
       const updatedUser = await api.switchRole(newRole);
       setUser(updatedUser);
+      // Clear all tabs so the new role's navigation is shown without stale tabs
+      setTabs([]);
+      setActiveTabId(null);
+      setSelectedMainCat(null);
       // Re-fetch navigation for the new role context
       fetchNavigation();
     } catch (err) {
@@ -395,13 +399,36 @@ export default function App() {
   // Menu categories — already filtered by role from the API
   const filteredCategories = menuCategories;
 
+  // ========== Role Accent Color ==========
+  const accentName = user ? getRoleAccentName(user.role) : DEFAULT_ACCENT;
+  const accentColor = ACCENT_COLORS[accentName];
+  const accentStyle: React.CSSProperties = {
+    '--a-h': `${accentColor.hue}`,
+    '--a-s': `${accentColor.sat}%`,
+    '--a-l': `${accentColor.light}%`,
+    '--a': 'hsl(var(--a-h) var(--a-s) var(--a-l))',
+    '--a-50': 'hsl(var(--a-h) var(--a-s) calc(var(--a-l) + 47%))',
+    '--a-100': 'hsl(var(--a-h) var(--a-s) calc(var(--a-l) + 42%))',
+    '--a-200': 'hsl(var(--a-h) var(--a-s) calc(var(--a-l) + 32%))',
+    '--a-300': 'hsl(var(--a-h) var(--a-s) calc(var(--a-l) + 20%))',
+    '--a-400': 'hsl(var(--a-h) var(--a-s) calc(var(--a-l) + 10%))',
+    '--a-500': 'var(--a)',
+    '--a-600': 'hsl(var(--a-h) var(--a-s) calc(var(--a-l) - 5%))',
+    '--a-700': 'hsl(var(--a-h) var(--a-s) calc(var(--a-l) - 10%))',
+    '--a-800': 'hsl(var(--a-h) var(--a-s) calc(var(--a-l) - 16%))',
+    '--a-900': 'hsl(var(--a-h) var(--a-s) calc(var(--a-l) - 22%))',
+    '--a-950': 'hsl(var(--a-h) var(--a-s) calc(var(--a-l) - 28%))',
+    '--a-bg': 'hsla(var(--a-h) var(--a-s) var(--a-l), 0.12)',
+    '--a-border': 'hsla(var(--a-h) var(--a-s) var(--a-l), 0.3)',
+  };
+
   return (
-    <div className={`${theme} h-screen overflow-hidden bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100 flex flex-col transition-colors duration-300`}>
+    <div className={`${theme} h-screen overflow-hidden bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100 flex flex-col transition-colors duration-300`} data-accent={accentName} style={accentStyle}>
       
       {/* ===== 1. Header Bar ===== */}
       <header className="p-3.5 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 shrink-0 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-teal-600/10 text-teal-600 dark:text-teal-400 border border-teal-500/15">
+          <div className="p-2.5 rounded-xl bg-[var(--a-bg)] text-[var(--a)] dark:text-[var(--a-400)] border border-[var(--a-border)]">
             <GraduationCap className="w-6 h-6" />
           </div>
           <div>
@@ -418,7 +445,7 @@ export default function App() {
               placeholder="جستجوی فوق‌سریع در منوها و زیرمنوها..."
               value={menuSearchQuery}
               onChange={(e) => setMenuSearchQuery(e.target.value)}
-              className="w-full bg-gray-50 dark:bg-gray-850 text-right pr-9 pl-8 py-2 text-xs rounded-xl border border-gray-150 dark:border-gray-800/80 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 font-sans transition-all"
+              className="w-full bg-gray-50 dark:bg-gray-850 text-right pr-9 pl-8 py-2 text-xs rounded-xl border border-gray-150 dark:border-gray-800/80 focus:outline-none focus:ring-2 focus:ring-[var(--a)]/20 focus:border-[var(--a)] font-sans transition-all"
             />
             <Search className="w-4 h-4 text-gray-400 absolute right-3 top-2.5" />
             {menuSearchQuery && (
@@ -584,7 +611,7 @@ export default function App() {
             <div className="space-y-3 w-full px-1 flex flex-col items-center">
               {navLoading && filteredCategories.length === 0 ? (
                 <div className="flex flex-col items-center gap-2 pt-6">
-                  <div className="w-5 h-5 border-2 border-teal-500/30 border-t-teal-500 rounded-full animate-spin" />
+                  <div className="w-5 h-5 border-2 border-[var(--a-border)] border-t-[var(--a)] rounded-full animate-spin" />
                   <span className="text-[9px] text-gray-400">بارگذاری...</span>
                 </div>
               ) : filteredCategories.length === 0 ? (
@@ -599,7 +626,7 @@ export default function App() {
                     onClick={() => setSelectedMainCat(isSelected ? null : cat.key)}
                     className={`w-20 h-18 rounded-xl transition-all duration-300 hover:scale-105 flex flex-col gap-1.5 items-center justify-center cursor-pointer p-1.5 ${
                       isSelected
-                        ? 'bg-teal-600 text-white shadow-md shadow-teal-600/10'
+                        ? 'bg-[var(--a)] text-white shadow-md shadow-[var(--a)]/10'
                         : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-850'
                     }`}
                   >
@@ -640,7 +667,7 @@ export default function App() {
                       placeholder="فیلتر گزینه‌های منو..."
                       value={drawerSubmenuFilter}
                       onChange={(e) => setDrawerSubmenuFilter(e.target.value)}
-                      className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-right pr-8 pl-3 py-1.5 text-[10px] rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500/20 font-sans"
+                      className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-right pr-8 pl-3 py-1.5 text-[10px] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--a)]/20 font-sans"
                     />
                     <Search className="w-3.5 h-3.5 text-gray-400 absolute right-2.5 top-2.5" />
                   </div>
@@ -660,16 +687,16 @@ export default function App() {
                           <button
                             onClick={() => handleOpenTab(sub.targetId, sub.title, sub.iconName)}
                             className={`flex-1 text-right py-2 rounded text-[11px] leading-relaxed transition-all whitespace-normal cursor-pointer ${
-                              isTabActive ? 'text-teal-700 dark:text-teal-400 font-black' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-250'
+                              isTabActive ? 'text-[var(--a-700)] dark:text-[var(--a-400)] font-black' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-250'
                             }`}
                           >
                             <span>{sub.label}</span>
-                            {isTabOpen && <span className="inline-block h-1.5 w-1.5 rounded-full bg-teal-500 mr-2 align-middle" title="دارای تب باز"></span>}
+                            {isTabOpen && <span className="inline-block h-1.5 w-1.5 rounded-full bg-[var(--a)] mr-2 align-middle" title="دارای تب باز"></span>}
                           </button>
                           <button
                             onClick={(e) => { e.stopPropagation(); handleOpenTab(sub.targetId, sub.title, sub.iconName, true); }}
                             title="باز کردن یک تب مجزای جدید"
-                            className="p-1 rounded bg-teal-500/10 hover:bg-teal-500 hover:text-white text-teal-600 dark:text-teal-400 opacity-0 group-hover/item:opacity-100 transition-all duration-200 cursor-pointer flex items-center justify-center shrink-0 w-5 h-5"
+                            className="p-1 rounded bg-[var(--a-bg)] hover:bg-[var(--a)] hover:text-white text-[var(--a-600)] dark:text-[var(--a-400)] opacity-0 group-hover/item:opacity-100 transition-all duration-200 cursor-pointer flex items-center justify-center shrink-0 w-5 h-5"
                           >
                             <Plus className="w-3.5 h-3.5" />
                           </button>
@@ -691,7 +718,7 @@ export default function App() {
               onClick={() => setActiveTabId(null)}
               className={`px-3 py-1.5 rounded-xl border text-[11px] font-black cursor-pointer transition-all duration-205 flex items-center gap-1.5 shrink-0 ${
                 activeTabId === null
-                  ? 'bg-teal-600 hover:bg-teal-700 text-white border-teal-600 shadow-sm font-black'
+                  ? 'bg-[var(--a)] hover:bg-[var(--a-700)] text-white border-[var(--a)] shadow-sm font-black'
                   : 'bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 border-gray-200/60 dark:border-gray-700 text-gray-700 dark:text-gray-300'
               }`}
             >
@@ -711,7 +738,7 @@ export default function App() {
                   onClick={() => setActiveTabId(tab.id)}
                   className={`px-3.5 py-1.5 rounded-xl border text-[11px] font-bold cursor-pointer transition-all duration-200 flex items-center gap-1.5 shrink-0 ${
                     isActive
-                      ? 'bg-slate-100 hover:bg-slate-200 dark:bg-teal-950/20 text-teal-700 dark:text-teal-400 border-teal-500/30'
+                      ? 'bg-slate-100 hover:bg-slate-200 dark:bg-[var(--a-bg)] text-[var(--a-700)] dark:text-[var(--a-400)] border-[var(--a-border)]'
                       : 'bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 border-gray-200/60 dark:border-gray-700 text-gray-650 dark:text-gray-400'
                   }`}
                 >
@@ -719,7 +746,7 @@ export default function App() {
                   <button
                     onClick={(e) => handleCloseTab(tab.id, e)}
                     className={`p-0.5 rounded-full hover:bg-black/10 dark:hover:bg-white/10 shrink-0 cursor-pointer ${
-                      isActive ? 'text-teal-700 dark:text-teal-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-200'
+                      isActive ? 'text-[var(--a-700)] dark:text-[var(--a-400)]' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-200'
                     }`}
                   >
                     <X className="w-3.5 h-3.5" />
