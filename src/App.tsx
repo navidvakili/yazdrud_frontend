@@ -68,9 +68,11 @@ export default function App() {
       root.classList.remove('dark');
     }
     localStorage.setItem(THEME_STRING, theme);
-    // Persist theme to backend profile (silently)
-    api.updateTheme(theme).catch(() => { /* ignore */ });
-  }, [theme]);
+    // Persist theme to backend profile (silently, only when authenticated)
+    if (viewState === 'authenticated') {
+      api.updateTheme(theme).catch(() => { /* ignore */ });
+    }
+  }, [theme, viewState]);
 
   // Restore session on cold start — default to dashboard (no tab)
   useEffect(() => {
@@ -338,11 +340,11 @@ export default function App() {
             activeTabId={tabId}
             moduleId={moduleType === 'tuts' || moduleType === 'tuts-list' ? 'tuts-list'
               : moduleType === 'tuts/reports' ? 'tuts-reports'
-              : moduleType === 'tuts/bank-receipts' ? 'tuts-receipts'
-              : moduleType === 'tuts/statistics' ? 'tuts-stats'
-              : moduleType === 'course-surveys' ? 'tuts-surveys'
-              : moduleType === 'course-surveys/statistics' ? 'tuts-surveys-stats'
-              : moduleType}
+                : moduleType === 'tuts/bank-receipts' ? 'tuts-receipts'
+                  : moduleType === 'tuts/statistics' ? 'tuts-stats'
+                    : moduleType === 'course-surveys' ? 'tuts-surveys'
+                      : moduleType === 'course-surveys/statistics' ? 'tuts-surveys-stats'
+                        : moduleType}
             onOpenTab={handleOpenTab}
           />
         ) : null;
@@ -377,7 +379,7 @@ export default function App() {
 
   return (
     <div className={`${theme} h-screen overflow-hidden bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100 flex flex-col transition-colors duration-300`}>
-      
+
       {/* ===== 1. Header Bar ===== */}
       <Header
         user={user}
@@ -444,9 +446,8 @@ export default function App() {
           <div className="space-y-4 px-2">
             <button
               onClick={() => setActivePanel(activePanel === 'chat' ? null : 'chat')}
-              className={`w-11 h-11 rounded-xl transition-all duration-200 hover:scale-105 flex items-center justify-center cursor-pointer relative ${
-                activePanel === 'chat' ? 'bg-teal-600 text-white' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-850'
-              }`}
+              className={`w-11 h-11 rounded-xl transition-all duration-200 hover:scale-105 flex items-center justify-center cursor-pointer relative ${activePanel === 'chat' ? 'bg-teal-600 text-white' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-850'
+                }`}
               title="چت پشتیبانی"
             >
               <MessageSquare className="w-5 h-5" />
@@ -454,9 +455,8 @@ export default function App() {
             </button>
             <button
               onClick={() => setActivePanel(activePanel === 'notifications' ? null : 'notifications')}
-              className={`w-11 h-11 rounded-xl transition-all duration-200 hover:scale-105 flex items-center justify-center cursor-pointer relative ${
-                activePanel === 'notifications' ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-850'
-              }`}
+              className={`w-11 h-11 rounded-xl transition-all duration-200 hover:scale-105 flex items-center justify-center cursor-pointer relative ${activePanel === 'notifications' ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-850'
+                }`}
               title="اعلان‌های سیستم"
             >
               <Bell className="w-5 h-5" />
@@ -468,9 +468,8 @@ export default function App() {
             </button>
             <button
               onClick={() => setActivePanel(activePanel === 'help' ? null : 'help')}
-              className={`w-11 h-11 rounded-xl transition-all duration-200 hover:scale-105 flex items-center justify-center cursor-pointer relative ${
-                activePanel === 'help' ? 'bg-amber-500 text-white' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-850'
-              }`}
+              className={`w-11 h-11 rounded-xl transition-all duration-200 hover:scale-105 flex items-center justify-center cursor-pointer relative ${activePanel === 'help' ? 'bg-amber-500 text-white' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-850'
+                }`}
               title="راهنمای کاربر"
             >
               <HelpCircle className="w-5 h-5" />
