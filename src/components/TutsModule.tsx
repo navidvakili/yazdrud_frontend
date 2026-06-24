@@ -71,13 +71,18 @@ interface TutCourse {
 interface TutRegistrant {
   id: string;
   name: string;
+  nationalCode: string;
   studentCode: string;
+  mobile: string;
+  typeText: string;
   courseId: string;
   courseTitle: string;
   date: string;
+  verifiedAt: string;
   amount: number;
-  referenceCode: string;
-  bank: string;
+  paymentMethod: string;
+  trackingCode: string;
+  bankReceipt: string;
   status: 'pending' | 'verified' | 'rejected';
   rejectionReason?: string;
 }
@@ -205,14 +210,25 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
   const mapRegistrant = (r: any): TutRegistrant => ({
     id: String(r.id),
     name: r.fullname || r.full_name || '',
+    nationalCode: r.kodmeli || '',
     studentCode: r.id_edu || r.kodmeli || '',
+    mobile: r.mobile || '',
+    typeText: r.type_text || '',
     courseId: String(r.course_id),
     courseTitle: r.course_title || '',
     date: r.created_at ? r.created_at.split(' ')[0].replace(/-/g, '/') : '',
+    verifiedAt: r.verified_at || '',
     amount: parseInt(String(r.amount)) || 0,
-    referenceCode: '',
-    bank: r.payment_method_text || '',
-    status: r.status === 'verified' ? 'verified' : r.status === 'rejected' ? 'rejected' : 'pending',
+    paymentMethod: r.payment_method_text || '',
+    trackingCode: r.tracking_code || r.bank_receipt_filename || '',
+    bankReceipt: r.bank_receipt || '',
+    // Backend returns: 'paid' (online success), 'approved' (receipt verified),
+    // 'rejected', 'pending'. Map 'paid'/'approved' to 'verified' for frontend.
+    status: (r.status === 'approved' || r.status === 'paid' || r.status === 'verified')
+      ? 'verified'
+      : r.status === 'rejected'
+        ? 'rejected'
+        : 'pending',
     rejectionReason: r.rejection_reason || undefined
   });
 
@@ -953,6 +969,31 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
   // Course Report selection
   const [selectedCourseReport, setSelectedCourseReport] = useState<TutCourse | null>(null);
 
+  // ===== Fetch registrations on-demand when course report dialog opens =====
+  useEffect(() => {
+    if (!selectedCourseReport) return;
+    // Only fetch if registrants array is empty OR this course's data is missing
+    const hasDataForThisCourse = registrants.some(r => r.courseId === selectedCourseReport.id);
+    if (hasDataForThisCourse) return;
+
+    const courseIdNum = parseInt(selectedCourseReport.id);
+    if (isNaN(courseIdNum)) return;
+
+    setLoadingRegistrants(true);
+    api.getCourseRegistrations(courseIdNum)
+      .then(data => {
+        const mapped = (data || []).map(mapRegistrant);
+        // Merge with existing registrants (avoid duplicates)
+        setRegistrants(prev => {
+          const existingIds = new Set(prev.map(r => r.id));
+          const newOnes = mapped.filter(r => !existingIds.has(r.id));
+          return [...prev, ...newOnes];
+        });
+      })
+      .catch(err => console.error('Error fetching course registrations:', err))
+      .finally(() => setLoadingRegistrants(false));
+  }, [selectedCourseReport]);
+
   const handleUpdateCourse = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingCourse) return;
@@ -1018,11 +1059,12 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
 
     // Generate CSV content with UTF-8 BOM for proper Excel display of Persian text
     let csvContent = '\uFEFF';
-    csvContent += 'شناسه ثبت‌نام,نام دانشجو,کد ملی/دانشجویی,کد پیگیری شتابی,بانک مبدأ,تاریخ ثبت,مبلغ پرداختی (ریال),وضعیت\n';
+    csvContent += 'ردیف,کد ملی,نام و نام خانوادگی,شماره دانشجویی,موبایل,نوع کاربر,دوره آموزشی,مبلغ (ریال),نوع پرداخت,شماره پیگیری,تاریخ ثبت نام,تاریخ تایید,وضعیت\n';
 
-    courseRegs.forEach(r => {
+    courseRegs.forEach((r, idx) => {
       const statusText = r.status === 'verified' ? 'تایید شده' : r.status === 'rejected' ? 'رد شده' : 'در انتظار تایید';
-      csvContent += `"${r.id}","${r.name}","${r.studentCode}","${r.referenceCode}","${r.bank}","${r.date}",${r.amount},"${statusText}"\n`;
+      const verifiedDate = r.verifiedAt ? r.verifiedAt.split(' ')[0].replace(/-/g, '/') : '';
+      csvContent += `"${idx + 1}","${r.nationalCode}","${r.name}","${r.studentCode}","${r.mobile}","${r.typeText}","${r.courseTitle}",${r.amount},"${r.paymentMethod}","${r.trackingCode}","${r.date}","${verifiedDate}","${statusText}"\n`;
     });
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -1227,13 +1269,18 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     const newReg: TutRegistrant & { appliedVoucherCode?: string; discountAmount?: number; installmentsCount?: number } = {
       id: `reg-${Date.now()}`,
       name: studentName,
+      nationalCode: studentIdNum,
       studentCode: studentIdNum,
+      mobile: studentPhone || '',
+      typeText: '',
       courseId: registeringCourse.id,
       courseTitle: registeringCourse.title,
       date: '۱۴۰۵/۰۳/۲۰',
+      verifiedAt: '',
       amount: finalCost,
-      referenceCode: refCodeInput,
-      bank: selectedBank,
+      paymentMethod: 'فیش بانکی',
+      trackingCode: refCodeInput,
+      bankReceipt: '',
       status: 'pending',
       appliedVoucherCode: appliedVoucher ? appliedVoucher.code : undefined,
       discountAmount: voucherDiscountAmount > 0 ? voucherDiscountAmount : undefined,
@@ -1280,8 +1327,10 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
 
   const filteredRegistrants = registrants.filter(reg => {
     const matchText = reg.name.toLowerCase().includes(reportSearch.toLowerCase()) ||
+      reg.nationalCode.includes(reportSearch) ||
       reg.studentCode.includes(reportSearch) ||
-      reg.referenceCode.includes(reportSearch);
+      reg.mobile.includes(reportSearch) ||
+      reg.trackingCode.includes(reportSearch);
     const matchCourse = reportCourseFilter === '' || reg.courseId === reportCourseFilter;
     const matchStatus = reportStatusFilter === '' || reg.status === reportStatusFilter;
     return matchText && matchCourse && matchStatus;
@@ -1639,7 +1688,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                             {/* Admin Controls Section */}
                             {currentUserRole === 'admin' && (
                               <div className="mt-4 pt-3 border-t border-dashed border-gray-100 dark:border-gray-800 flex flex-wrap items-center justify-between gap-2 bg-gray-50/50 dark:bg-gray-950/40 p-2 rounded-2xl">
-                                <span className="text-[10px] font-black text-teal-600 dark:text-teal-400">مدیریت کارشناس:</span>
+                                <span className="text-[10px] font-black text-teal-600 dark:text-teal-400">عملیات:</span>
                                 <div className="flex items-center gap-1.5">
                                   <button
                                     onClick={() => {
@@ -2385,47 +2434,90 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                     </div>
                   </div>
 
-                  {/* Registrants Table */}
-                  <div className="overflow-x-auto rounded-2xl border border-gray-150 dark:border-gray-850 bg-white dark:bg-gray-950 mb-6">
-                    <table className="w-full text-right text-xs">
-                      <thead>
-                        <tr className="bg-gray-50 dark:bg-gray-900/60 text-gray-500 font-bold border-b border-gray-150 dark:border-gray-850">
-                          <th className="p-3.5">نام دانشجو</th>
-                          <th className="p-3.5">کد ملی / دانشجویی</th>
-                          <th className="p-3.5">کد پیگیری شتابی</th>
-                          <th className="p-3.5">بانک مبدأ</th>
-                          <th className="p-3.5">مبلغ پرداختی</th>
-                          <th className="p-3.5">وضعیت سند</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100 dark:divide-gray-900">
-                        {registrants.filter(r => r.courseId === selectedCourseReport.id).length === 0 ? (
-                          <tr>
-                            <td colSpan={6} className="p-8 text-center text-gray-400">
-                              تاکنون هیچ سندی برای پیش‌ثبت‌نام این کارگاه مهارتی آپلود نگردیده است.
-                            </td>
+                  {/* Registrants Table — full columns with independent scroll */}
+                  <div className="rounded-2xl border border-gray-150 dark:border-gray-850 bg-white dark:bg-gray-950 mb-6">
+                    <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
+                      <table className="w-full text-right text-xs">
+                        <thead className="sticky top-0 z-10">
+                          <tr className="bg-gray-50 dark:bg-gray-900/60 text-gray-500 font-bold border-b border-gray-150 dark:border-gray-850">
+                            <th className="p-2 text-center w-10">ردیف</th>
+                            <th className="p-2 whitespace-nowrap">کد ملی</th>
+                            <th className="p-2 whitespace-nowrap">نام و نام خانوادگی</th>
+                            <th className="p-2 whitespace-nowrap">شماره دانشجویی</th>
+                            <th className="p-2 whitespace-nowrap">موبایل</th>
+                            <th className="p-2 whitespace-nowrap">نوع کاربر</th>
+                            <th className="p-2 whitespace-nowrap">دوره آموزشی</th>
+                            <th className="p-2 text-left whitespace-nowrap">مبلغ (ریال)</th>
+                            <th className="p-2 whitespace-nowrap">نوع پرداخت</th>
+                            <th className="p-2 whitespace-nowrap">شماره پیگیری</th>
+                            <th className="p-2 whitespace-nowrap">تاریخ ثبت نام</th>
+                            <th className="p-2 whitespace-nowrap">تاریخ تایید</th>
+                            <th className="p-2 text-center whitespace-nowrap">وضعیت</th>
                           </tr>
-                        ) : (
-                          registrants.filter(r => r.courseId === selectedCourseReport.id).map((reg) => (
-                            <tr key={reg.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-900/40 transition-all font-mono">
-                              <td className="p-3.5 font-sans font-bold text-gray-900 dark:text-white">{reg.name}</td>
-                              <td className="p-3.5">{toPersianDigits(reg.studentCode)}</td>
-                              <td className="p-3.5">{toPersianDigits(reg.referenceCode)}</td>
-                              <td className="p-3.5 font-sans">{reg.bank}</td>
-                              <td className="p-3.5 font-bold text-gray-700 dark:text-gray-300">{formatCurrency(reg.amount)}</td>
-                              <td className="p-3.5">
-                                <span className={`px-2 py-0.5 rounded-md text-[10px] font-sans font-black ${reg.status === 'verified' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' :
-                                  reg.status === 'rejected' ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400' :
-                                    'bg-amber-500/10 text-amber-600 dark:text-amber-400'
-                                  }`}>
-                                  {reg.status === 'verified' ? 'تایید نهایی' : reg.status === 'rejected' ? 'مردود' : 'در انتظار بررسی'}
-                                </span>
-                              </td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100 dark:divide-gray-900">
+                          {(() => {
+                            const courseRegs = registrants.filter(r => r.courseId === selectedCourseReport.id);
+                            return courseRegs.length === 0 ? (
+                              <tr>
+                                <td colSpan={13} className="p-8 text-center text-gray-400">
+                                  تاکنون هیچ سندی برای پیش‌ثبت‌نام این کارگاه مهارتی آپلود نگردیده است.
+                                </td>
+                              </tr>
+                            ) : (
+                              courseRegs.map((reg, idx) => (
+                                <tr key={reg.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-900/40 transition-all">
+                                  <td className="p-2 text-center font-mono font-bold text-gray-400 w-10">
+                                    {toPersianDigits(idx + 1)}
+                                  </td>
+                                  <td className="p-2 font-mono font-bold text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                                    {toPersianDigits(reg.nationalCode)}
+                                  </td>
+                                  <td className="p-2 font-extrabold text-gray-900 dark:text-white whitespace-nowrap">
+                                    {reg.name}
+                                  </td>
+                                  <td className="p-2 font-mono font-bold text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                                    {toPersianDigits(reg.studentCode)}
+                                  </td>
+                                  <td className="p-2 font-mono font-bold text-gray-600 dark:text-gray-400 whitespace-nowrap" dir="ltr">
+                                    {toPersianDigits(reg.mobile)}
+                                  </td>
+                                  <td className="p-2 text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                                    {reg.typeText}
+                                  </td>
+                                  <td className="p-2 text-gray-700 dark:text-gray-300 font-medium max-w-[160px] truncate" title={reg.courseTitle}>
+                                    {reg.courseTitle}
+                                  </td>
+                                  <td className="p-2 font-mono font-bold text-emerald-600 dark:text-emerald-400 text-left whitespace-nowrap">
+                                    {formatCurrency(reg.amount)}
+                                  </td>
+                                  <td className="p-2 whitespace-nowrap">
+                                    <span className="text-gray-700 dark:text-gray-300">{reg.paymentMethod}</span>
+                                  </td>
+                                  <td className="p-2 font-mono font-bold text-gray-800 dark:text-gray-200 whitespace-nowrap" dir="ltr">
+                                    {reg.trackingCode ? toPersianDigits(reg.trackingCode) : '—'}
+                                  </td>
+                                  <td className="p-2 font-mono text-gray-500 whitespace-nowrap">
+                                    {toPersianDigits(reg.date)}
+                                  </td>
+                                  <td className="p-2 font-mono text-gray-500 whitespace-nowrap">
+                                    {reg.verifiedAt ? toPersianDigits(reg.verifiedAt.split(' ')[0].replace(/-/g, '/')) : '—'}
+                                  </td>
+                                  <td className="p-2 text-center whitespace-nowrap">
+                                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold inline-block ${reg.status === 'verified' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' :
+                                      reg.status === 'rejected' ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400' :
+                                        'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                                      }`}>
+                                      {reg.status === 'verified' ? 'تایید نهایی' : reg.status === 'rejected' ? 'مردود' : 'در انتظار بررسی'}
+                                    </span>
+                                  </td>
+                                </tr>
+                              ))
+                            );
+                          })()}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
 
                   <div className="flex justify-between items-center pt-4 border-t border-gray-100 dark:border-gray-800">
@@ -2467,7 +2559,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
               </span>
               <input
                 type="text"
-                placeholder="جستجو با نام دانشجو، شماره دانشجویی، کد پیگیری فیش..."
+                placeholder="جستجو با نام، کد ملی، موبایل، شماره دانشجویی، کد پیگیری..."
                 value={reportSearch}
                 onChange={(e) => { setReportSearch(e.target.value); setReportPage(1); }}
                 className="w-full text-xs pr-10 pl-3.5 py-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none"
@@ -2524,21 +2616,26 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                     <table className="w-full text-right text-xs">
                       <thead>
                         <tr className="bg-gray-55 dark:bg-gray-950 border-b border-gray-100 dark:border-gray-800 text-gray-400 dark:text-gray-500 font-extrabold">
-                          <th className="p-4">شناسه</th>
-                          <th className="p-4">نام دانشجو</th>
-                          <th className="p-4">شماره دانشجویی / کد ملی</th>
-                          <th className="p-4">کارگاه آموزشی</th>
-                          <th className="p-4">مبلغ واریزی</th>
-                          <th className="p-4">کد پیگیری / بانک</th>
-                          <th className="p-4 text-center">تاریخ سند</th>
-                          <th className="p-4 text-center">وضعیت تایید</th>
-                          {currentUserRole === 'admin' && <th className="p-4 text-center">عملیات</th>}
+                          <th className="p-2 text-center w-10">ردیف</th>
+                          <th className="p-2">کد ملی</th>
+                          <th className="p-2">نام و نام خانوادگی</th>
+                          <th className="p-2">شماره دانشجویی</th>
+                          <th className="p-2">موبایل</th>
+                          <th className="p-2">نوع کاربر</th>
+                          <th className="p-2">دوره آموزشی</th>
+                          <th className="p-2 text-left">مبلغ (ریال)</th>
+                          <th className="p-2">نوع پرداخت</th>
+                          <th className="p-2">شماره پیگیری</th>
+                          <th className="p-2">تاریخ ثبت نام</th>
+                          <th className="p-2">تاریخ تایید</th>
+                          <th className="p-2 text-center">وضعیت</th>
+                          {currentUserRole === 'admin' && <th className="p-2 text-center">عملیات</th>}
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100 dark:divide-gray-800/40">
                         {paginatedRegistrants.length === 0 ? (
                           <tr>
-                            <td colSpan={currentUserRole === 'admin' ? 9 : 8} className="p-12 text-center text-gray-400">
+                            <td colSpan={currentUserRole === 'admin' ? 14 : 13} className="p-12 text-center text-gray-400">
                               هیچ پرونده ثبتی یا آماری مطابق با فیلتر شما ثبت نشده است.
                             </td>
                           </tr>
@@ -2549,33 +2646,43 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
 
                             return (
                               <tr key={reg.id} className="hover:bg-gray-55/40 dark:hover:bg-gray-850/10 transition-colors">
-                                <td className="p-4 font-mono font-bold text-gray-400">
+                                <td className="p-2 text-center font-mono font-bold text-gray-400 w-10">
                                   {toPersianDigits(globalIdx)}
                                 </td>
-                                <td className="p-4 font-extrabold text-gray-900 dark:text-white">
+                                <td className="p-2 font-mono font-bold text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                                  {toPersianDigits(reg.nationalCode)}
+                                </td>
+                                <td className="p-2 font-extrabold text-gray-900 dark:text-white whitespace-nowrap">
                                   {reg.name}
                                 </td>
-                                <td className="p-4 font-mono font-bold text-gray-600 dark:text-gray-400">
+                                <td className="p-2 font-mono font-bold text-gray-600 dark:text-gray-400 whitespace-nowrap">
                                   {toPersianDigits(reg.studentCode)}
                                 </td>
-                                <td className="p-4 text-gray-700 dark:text-gray-300 font-medium max-w-xs truncate">
+                                <td className="p-2 font-mono font-bold text-gray-600 dark:text-gray-400 whitespace-nowrap" dir="ltr">
+                                  {toPersianDigits(reg.mobile)}
+                                </td>
+                                <td className="p-2 text-gray-700 dark:text-gray-300">
+                                  {reg.typeText}
+                                </td>
+                                <td className="p-2 text-gray-700 dark:text-gray-300 font-medium max-w-[180px] truncate" title={reg.courseTitle}>
                                   {reg.courseTitle}
                                 </td>
-                                <td className="p-4 font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                                <td className="p-2 font-mono font-bold text-emerald-600 dark:text-emerald-400 text-left whitespace-nowrap">
                                   {formatCurrency(reg.amount)}
                                 </td>
-                                <td className="p-4">
-                                  <div className="font-mono font-bold text-gray-800 dark:text-gray-200">
-                                    {toPersianDigits(reg.referenceCode)}
-                                  </div>
-                                  <div className="text-[10px] text-gray-400 mt-0.5">
-                                    {reg.bank}
-                                  </div>
+                                <td className="p-2 whitespace-nowrap">
+                                  <span className="text-gray-700 dark:text-gray-300">{reg.paymentMethod}</span>
                                 </td>
-                                <td className="p-4 text-center font-mono text-gray-500">
+                                <td className="p-2 font-mono font-bold text-gray-800 dark:text-gray-200 whitespace-nowrap" dir="ltr">
+                                  {reg.trackingCode ? toPersianDigits(reg.trackingCode) : '—'}
+                                </td>
+                                <td className="p-2 font-mono text-gray-500 whitespace-nowrap">
                                   {toPersianDigits(reg.date)}
                                 </td>
-                                <td className="p-4 text-center">
+                                <td className="p-2 font-mono text-gray-500 whitespace-nowrap">
+                                  {reg.verifiedAt ? toPersianDigits(reg.verifiedAt.split(' ')[0].replace(/-/g, '/')) : '—'}
+                                </td>
+                                <td className="p-2 text-center whitespace-nowrap">
                                   <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold inline-block ${reg.status === 'verified' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' :
                                     reg.status === 'rejected' ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400' :
                                       'bg-amber-500/10 text-amber-600'
@@ -2590,7 +2697,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                                   )}
                                 </td>
                                 {currentUserRole === 'admin' && (
-                                  <td className="p-4 text-center">
+                                  <td className="p-2 text-center">
                                     <div className="flex items-center justify-center gap-1.5">
                                       {reg.status === 'pending' && (
                                         <button
@@ -2797,7 +2904,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
 
                     <div className="flex justify-between items-center border-b border-gray-200/40 pb-3 mb-4">
                       <span className="text-[10px] font-bold text-indigo-700 dark:text-indigo-400 uppercase">فیش دیجیتال شتاب</span>
-                      <span className="text-xs font-black text-gray-800 dark:text-gray-200">{selectedReceiptForReview.bank}</span>
+                      <span className="text-xs font-black text-gray-800 dark:text-gray-200">{selectedReceiptForReview.paymentMethod}</span>
                     </div>
 
                     <div className="space-y-2.5 text-xs font-mono">
@@ -2815,7 +2922,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-400 font-sans">کد رهگیری تراکنش (Ref):</span>
-                        <span className="text-gray-900 dark:text-white font-black text-indigo-600 dark:text-indigo-400">{toPersianDigits(selectedReceiptForReview.referenceCode)}</span>
+                        <span className="text-gray-900 dark:text-white font-black text-indigo-600 dark:text-indigo-400">{toPersianDigits(selectedReceiptForReview.trackingCode)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-400 font-sans">تاریخ و زمان تراکنش:</span>
