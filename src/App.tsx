@@ -813,53 +813,6 @@ export default function App() {
           {/* Tabs bar */}
           <div className="px-4 py-2 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 select-none flex items-center gap-1.5 overflow-x-auto min-h-[46px]">
             
-            {/* ===== LEFT SIDE: فقط دکمه‌های Pin و Refresh ===== */}
-            <div className="flex items-center gap-1.5 shrink-0">
-              {/* Pin/Unpin button */}
-              {tabs.length > 0 && activeTabId && (() => {
-                const activeTab = tabs.find(t => t.id === activeTabId);
-                const activeModuleType = activeTab?.moduleType || null;
-                const isPinned = activeModuleType ? pinnedMenus.includes(activeModuleType) : false;
-                const handleTogglePin = async () => {
-                  if (!activeModuleType) return;
-                  if (isPinned) {
-                    await handleUnpinMenu(activeModuleType);
-                  } else {
-                    await handlePinMenu(activeModuleType);
-                  }
-                };
-                return (
-                  <button
-                    onClick={handleTogglePin}
-                    className={`h-7 w-7 rounded-lg border shrink-0 cursor-pointer transition-all flex items-center justify-center ${
-                      isPinned
-                        ? 'bg-teal-500/10 border-teal-500/30 text-teal-600 dark:text-teal-400 hover:bg-teal-500/20'
-                        : 'border-gray-200/60 dark:border-gray-700 bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 text-gray-400 hover:text-gray-800 dark:hover:text-white'
-                    }`}
-                    title={isPinned ? 'لغو پین' : 'پین به داشبورد'}
-                  >
-                    {isPinned ? <PinOff className="w-3.5 h-3.5" /> : <Pin className="w-3.5 h-3.5" />}
-                  </button>
-                );
-              })()}
-
-              {/* Refresh button */}
-              {tabs.length > 0 && activeTabId && (
-                <button
-                  onClick={handleRefreshTab}
-                  className="h-7 w-7 rounded-lg border border-gray-200/60 dark:border-gray-700 bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 text-gray-500 hover:text-gray-800 dark:hover:text-white flex items-center justify-center shrink-0 cursor-pointer transition-all"
-                  title="رفرش تب فعال"
-                >
-                  <RefreshCw className="w-3.5 h-3.5" />
-                </button>
-              )}
-            </div>
-
-            {/* Separator between action buttons and tabs */}
-            {(tabs.length > 0 && activeTabId) && (
-              <div className="h-5 w-[1px] bg-gray-200 dark:bg-gray-750 shrink-0 mx-1.5"></div>
-            )}
-
             {/* ===== RIGHT SIDE: همه تب‌ها (پیشخوان + تب‌های باز) ===== */}
             <div className="flex-1 flex items-center gap-1.5 overflow-hidden">
               {/* Dashboard tab */}
@@ -905,6 +858,53 @@ export default function App() {
                   </div>
                 );
               })}
+            </div>
+
+            {/* Separator between action buttons and tabs */}
+            {(tabs.length > 0 && activeTabId) && (
+              <div className="h-5 w-[1px] bg-gray-200 dark:bg-gray-750 shrink-0 mx-1.5"></div>
+            )}
+
+            {/* ===== LEFT SIDE: فقط دکمه‌های Pin و Refresh ===== */}
+            <div className="flex items-center gap-1.5 shrink-0">
+              {/* Pin/Unpin button */}
+              {tabs.length > 0 && activeTabId && (() => {
+                const activeTab = tabs.find(t => t.id === activeTabId);
+                const activeModuleType = activeTab?.moduleType || null;
+                const isPinned = activeModuleType ? pinnedMenus.includes(activeModuleType) : false;
+                const handleTogglePin = async () => {
+                  if (!activeModuleType) return;
+                  if (isPinned) {
+                    await handleUnpinMenu(activeModuleType);
+                  } else {
+                    await handlePinMenu(activeModuleType);
+                  }
+                };
+                return (
+                  <button
+                    onClick={handleTogglePin}
+                    className={`h-7 w-7 rounded-lg border shrink-0 cursor-pointer transition-all flex items-center justify-center ${
+                      isPinned
+                        ? 'bg-teal-500/10 border-teal-500/30 text-teal-600 dark:text-teal-400 hover:bg-teal-500/20'
+                        : 'border-gray-200/60 dark:border-gray-700 bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 text-gray-400 hover:text-gray-800 dark:hover:text-white'
+                    }`}
+                    title={isPinned ? 'لغو پین' : 'پین به داشبورد'}
+                  >
+                    {isPinned ? <PinOff className="w-3.5 h-3.5" /> : <Pin className="w-3.5 h-3.5" />}
+                  </button>
+                );
+              })()}
+
+              {/* Refresh button */}
+              {tabs.length > 0 && activeTabId && (
+                <button
+                  onClick={handleRefreshTab}
+                  className="h-7 w-7 rounded-lg border border-gray-200/60 dark:border-gray-700 bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 text-gray-500 hover:text-gray-800 dark:hover:text-white flex items-center justify-center shrink-0 cursor-pointer transition-all"
+                  title="رفرش تب فعال"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
           </div>
 
