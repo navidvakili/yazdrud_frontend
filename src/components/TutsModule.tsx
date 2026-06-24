@@ -233,7 +233,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     if (needsCourses && !fetchedRef.current.courses) {
       setLoadingCourses(true);
       fetchedRef.current.courses = true;
-      api.getCourses()
+      api.getCourses({ per_page: 1000 })
         .then(res => {
           const mapped = (res.data || []).map(mapCourse);
           setCourses(mapped);
@@ -245,7 +245,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     if (needsRegistrants && !fetchedRef.current.registrants) {
       setLoadingRegistrants(true);
       fetchedRef.current.registrants = true;
-      api.getAllRegistrations()
+      api.getAllRegistrations({ per_page: 1000 })
         .then(res => {
           const mapped = (res.data || []).map(mapRegistrant);
           setRegistrants(mapped);
@@ -257,7 +257,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     if (needsSurveys && !fetchedRef.current.surveys) {
       setLoadingSurveys(true);
       fetchedRef.current.surveys = true;
-      api.getSurveys()
+      api.getSurveys({ per_page: 1000 })
         .then(res => {
           const rows: any[] = res.data || [];
           setIndividualSurveys(rows.map((s: any) => ({
@@ -313,7 +313,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     if (needsVouchers && !fetchedRef.current.vouchers) {
       setLoadingVouchers(true);
       fetchedRef.current.vouchers = true;
-      api.getCoupons()
+      api.getCoupons({ per_page: 1000 })
         .then(res => {
           const mapped = (res.data || []).map(mapVoucher);
           setVouchers(mapped);

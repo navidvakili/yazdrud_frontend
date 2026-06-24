@@ -39,6 +39,7 @@ import {
   Layers,
   Upload,
   Settings,
+  RefreshCw,
   Clock,
   AlertCircle,
   AlertTriangle,
@@ -178,6 +179,7 @@ export default function App() {
   const [drawerSubmenuFilter, setDrawerSubmenuFilter] = useState('');
   const [showLimitAlert, setShowLimitAlert] = useState(false);
   const [confirmClearActive, setConfirmClearActive] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   // Navigation state — fetched dynamically from API
@@ -295,6 +297,11 @@ export default function App() {
       console.warn('Failed to switch role:', err);
     }
   };
+
+  // Refresh active tab
+  const handleRefreshTab = useCallback(() => {
+    setRefreshKey(prev => prev + 1);
+  }, []);
 
   // Tab management
   const handleOpenTab = useCallback((id: string, title: string, iconName: string, forceNewInstance: boolean = false) => {
@@ -522,11 +529,6 @@ export default function App() {
           </div>
         </div>
 
-        {/* Theme toggle */}
-        <div className="flex items-center">
-          <ThemeToggle theme={theme} onToggle={handleToggleTheme} />
-        </div>
-
         {/* User capsule */}
         {user && (
           <div className="relative">
@@ -576,6 +578,14 @@ export default function App() {
                         <span>پروفایل من</span>
                       </span>
                     </button>
+
+                    {/* Theme toggle */}
+                    <div className="px-4 py-2 border-t border-gray-100 dark:border-white/5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] text-gray-700 dark:text-gray-200">تغییر تم</span>
+                        <ThemeToggle theme={theme} onToggle={handleToggleTheme} />
+                      </div>
+                    </div>
 
                     {/* Role switching — only show when user has more than 1 role (مطابق Enums::getMyRoles) */}
                     {userRoles.length > 1 && (
@@ -749,6 +759,16 @@ export default function App() {
               <div className="h-5 w-[1px] bg-gray-200 dark:bg-gray-750 shrink-0 mx-1.5"></div>
             )}
 
+            {tabs.length > 0 && activeTabId && (
+              <button
+                onClick={handleRefreshTab}
+                className="h-7 w-7 rounded-lg border border-gray-200/60 dark:border-gray-700 bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 text-gray-500 hover:text-gray-800 dark:hover:text-white flex items-center justify-center shrink-0 cursor-pointer transition-all"
+                title="رفرش تب فعال"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+              </button>
+            )}
+
             {tabs.map((tab) => {
               const isActive = activeTabId === tab.id;
               return (
@@ -777,7 +797,9 @@ export default function App() {
 
           {/* Canvas */}
           <main className="flex-1 overflow-y-auto p-4 sm:p-6 pb-20 custom-scrollbar">
-            {renderActiveTabContent()}
+            <div key={refreshKey}>
+              {renderActiveTabContent()}
+            </div>
           </main>
         </div>
 
