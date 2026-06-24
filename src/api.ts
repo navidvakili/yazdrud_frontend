@@ -323,6 +323,47 @@ class ApiService {
     const data = await API<any>('courses/coupons/validate', { code, course_id: courseId }, 'POST');
     return data.data;
   }
+
+  // ========== User Theme Preference ==========
+
+  /**
+   * Save the user's theme preference to the backend.
+   */
+  async updateTheme(theme: 'light' | 'dark'): Promise<void> {
+    await API('user/theme', { theme }, 'PUT');
+  }
+
+  // ========== Dashboard / Quick Access (Pinned Menus) ==========
+
+  /**
+   * Fetch the dashboard data including pinned menus.
+   */
+  async getDashboard(): Promise<{ pinned_menus: string[] }> {
+    const data = await API<any>('dashboard');
+    return data.data;
+  }
+
+  /**
+   * Pin a menu item (by targetId) so it appears on the dashboard quick-access section.
+   */
+  async pinMenu(menuId: string): Promise<void> {
+    await API('dashboard/pin', { menu_id: menuId }, 'POST');
+  }
+
+  /**
+   * Unpin a menu item (by targetId) from the dashboard.
+   */
+  async unpinMenu(menuId: string): Promise<void> {
+    await API('dashboard/unpin', { menu_id: menuId }, 'POST');
+  }
+
+  /**
+   * Get the list of pinned menus for the current user.
+   */
+  async getPinnedMenus(): Promise<string[]> {
+    const data = await API<any>('dashboard/pinned-menus');
+    return data.data;
+  }
 }
 
 export const api = new ApiService();

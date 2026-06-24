@@ -187,7 +187,12 @@ export default function App() {
   const [userRoles, setUserRoles] = useState<RoleInfo[]>([]);
   const [navLoading, setNavLoading] = useState(false);
 
+  // Pinned menus for dashboard quick access
+  const [pinnedMenus, setPinnedMenus] = useState<string[]>([]);
+
   // ========== Effects ==========
+
+  // Apply theme to DOM + persist to localStorage + save to backend profile
   useEffect(() => {
     const root = window.document.documentElement;
     if (theme === 'dark') {
@@ -196,6 +201,8 @@ export default function App() {
       root.classList.remove('dark');
     }
     localStorage.setItem(THEME_STRING, theme);
+    // Persist theme to backend profile (silently)
+    api.updateTheme(theme).catch(() => { /* ignore */ });
   }, [theme]);
 
   // Restore session on cold start — default to dashboard (no tab)
@@ -204,8 +211,17 @@ export default function App() {
     if (storedUser) {
       setUser(storedUser);
       setViewState('authenticated');
+      // Attempt to fetch the user's saved theme from backend (silent)
+      api.getUser().then(profile => {
+        // If backend returns a theme field, apply it
+        if ((profile as any).theme) {
+          setTheme((profile as any).theme as 'light' | 'dark');
+        }
+      }).catch(() => { /* ignore */ });
+      // Fetch pinned menus
+      fetchPinnedMenus();
     }
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fetch navigation and roles when user is authenticated
   const fetchNavigation = useCallback(async () => {
@@ -228,8 +244,9 @@ export default function App() {
   useEffect(() => {
     if (viewState === 'authenticated') {
       fetchNavigation();
+      fetchPinnedMenus();
     }
-  }, [viewState, fetchNavigation]);
+  }, [viewState, fetchNavigation, fetchPinnedMenus]);
 
   // Derive MenuCategory[] from NavItem[] (dynamic API data)
   const menuCategories = useMemo<MenuCategory[]>(() => {
@@ -248,6 +265,50 @@ export default function App() {
       iconName: item.children.length === 0 ? faToLucideName[item.icon] || 'Folder' : undefined,
     }));
   }, [navItems]);
+
+  // Flat list of all menu items for dashboard quick access (derived from API categories)
+  const allMenuItems = useMemo(() => {
+    return menuCategories.flatMap(cat =>
+      cat.submenus.map(sub => ({
+        id: sub.targetId,
+        title: sub.title,
+        icon: resolveIcon(sub.iconName),
+        desc: cat.title,
+        roles: ['student', 'professor', 'admin'] as const,
+      }))
+    );
+  }, [menuCategories]);
+
+  // Fetch pinned menus from backend
+  const fetchPinnedMenus = useCallback(async () => {
+    try {
+      const menus = await api.getPinnedMenus();
+      setPinnedMenus(Array.isArray(menus) ? menus : []);
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  // Pin/unpin handlers
+  const handlePinMenu = useCallback(async (menuId: string) => {
+    setPinnedMenus(prev => prev.includes(menuId) ? prev : [...prev, menuId]);
+    try {
+      await api.pinMenu(menuId);
+    } catch {
+      // Rollback on error
+      setPinnedMenus(prev => prev.filter(id => id !== menuId));
+    }
+  }, []);
+
+  const handleUnpinMenu = useCallback(async (menuId: string) => {
+    setPinnedMenus(prev => prev.filter(id => id !== menuId));
+    try {
+      await api.unpinMenu(menuId);
+    } catch {
+      // Rollback — re-add
+      setPinnedMenus(prev => prev.includes(menuId) ? prev : [...prev, menuId]);
+    }
+  }, []);
 
   // ========== Handlers ==========
   const handleLoginSuccess = (userProfile: UserType) => {
@@ -291,8 +352,9 @@ export default function App() {
       setTabs([]);
       setActiveTabId(null);
       setSelectedMainCat(null);
-      // Re-fetch navigation for the new role context
+      // Re-fetch navigation and pinned menus for the new role context
       fetchNavigation();
+      fetchPinnedMenus();
     } catch (err) {
       console.warn('Failed to switch role:', err);
     }
@@ -350,18 +412,27 @@ export default function App() {
   const unreadNotifCount = notifications.filter(n => !n.read).length;
 
   // ========== Module Renderer ==========
-  const renderActiveTabContent = () => {
-    if (!activeTabId) {
+
+  /**
+   * Render content for a specific tab (or dashboard if tabId is null).
+   * Extracted so each tab's content can be kept alive when switching.
+   */
+  const renderModuleForTab = (tabId: string | null) => {
+    if (!tabId) {
       return (
         <DashboardModule
           user={user}
           onNavigate={handleOpenTab}
           openTabsCount={tabs.length}
+          pinnedMenus={pinnedMenus}
+          allMenuItems={allMenuItems}
+          onPinMenu={handlePinMenu}
+          onUnpinMenu={handleUnpinMenu}
         />
       );
     }
-    const activeTab = tabs.find(t => t.id === activeTabId);
-    const moduleType = activeTab?.moduleType || activeTabId;
+    const tab = tabs.find(t => t.id === tabId);
+    const moduleType = tab?.moduleType || tabId;
 
     switch (moduleType) {
       case 'profile':
@@ -398,7 +469,7 @@ export default function App() {
         return user ? (
           <TutsModule
             user={user}
-            activeTabId={activeTabId}
+            activeTabId={tabId}
             moduleId={moduleType === 'tuts' || moduleType === 'tuts-list' ? 'tuts-list'
               : moduleType === 'tuts/reports' ? 'tuts-reports'
               : moduleType === 'tuts/bank-receipts' ? 'tuts-receipts'
@@ -416,14 +487,11 @@ export default function App() {
       case 'theses-permits':
         return <ThesisManagement userRole={user?.role || 'student'} initialView={moduleType} />;
       default:
-        if (activeTabId) {
-          const activeSub = menuCategories
-            .flatMap(cat => cat.submenus || [])
-            .find(sub => sub.targetId === moduleType);
-          const label = activeSub ? activeSub.label : 'خدمات الکترونیکی پورتال';
-          return <LegacyModules moduleId={activeTabId} moduleIdLabel={label} />;
-        }
-        return <div className="text-center p-12 text-gray-400">ماژول در حال بارگذاری...</div>;
+        const activeSub = menuCategories
+          .flatMap(cat => cat.submenus || [])
+          .find(sub => sub.targetId === moduleType);
+        const label = activeSub ? activeSub.label : 'خدمات الکترونیکی پورتال';
+        return <LegacyModules moduleId={tabId} moduleIdLabel={label} />;
     }
   };
 
@@ -759,16 +827,6 @@ export default function App() {
               <div className="h-5 w-[1px] bg-gray-200 dark:bg-gray-750 shrink-0 mx-1.5"></div>
             )}
 
-            {tabs.length > 0 && activeTabId && (
-              <button
-                onClick={handleRefreshTab}
-                className="h-7 w-7 rounded-lg border border-gray-200/60 dark:border-gray-700 bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 text-gray-500 hover:text-gray-800 dark:hover:text-white flex items-center justify-center shrink-0 cursor-pointer transition-all"
-                title="رفرش تب فعال"
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-              </button>
-            )}
-
             {tabs.map((tab) => {
               const isActive = activeTabId === tab.id;
               return (
@@ -793,12 +851,34 @@ export default function App() {
                 </div>
               );
             })}
+
+            {/* Refresh button at the left end (RTL: left = after all tabs) */}
+            {tabs.length > 0 && activeTabId && (
+              <button
+                onClick={handleRefreshTab}
+                className="h-7 w-7 rounded-lg border border-gray-200/60 dark:border-gray-700 bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 text-gray-500 hover:text-gray-800 dark:hover:text-white flex items-center justify-center shrink-0 cursor-pointer transition-all mr-auto"
+                title="رفرش تب فعال"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
 
-          {/* Canvas */}
+          {/* Canvas — all tabs kept alive, only active one visible */}
           <main className="flex-1 overflow-y-auto p-4 sm:p-6 pb-20 custom-scrollbar">
             <div key={refreshKey}>
-              {renderActiveTabContent()}
+              {/* Dashboard — only when no active tab */}
+              {activeTabId === null && renderModuleForTab(null)}
+
+              {/* All opened tabs kept alive to preserve state on switch */}
+              {tabs.map(tab => (
+                <div
+                  key={tab.id}
+                  className={activeTabId === tab.id ? '' : 'hidden'}
+                >
+                  {renderModuleForTab(tab.id)}
+                </div>
+              ))}
             </div>
           </main>
         </div>

@@ -44,6 +44,7 @@ import {
 } from 'lucide-react';
 import { User as UserType } from '@/src/types';
 import api from '@/src/api';
+import Pagination from '@/src/components/Pagination';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface TutsModuleProps {
@@ -1687,40 +1688,12 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
 
               {/* Pagination Controls for Courses */}
               {filteredCoursesForListing.length > listPerPage && (
-                <div className="flex justify-center items-center gap-1.5 pt-4 border-t border-gray-50 dark:border-gray-850">
-                  <button
-                    disabled={listPage === Math.max(1, Math.ceil(filteredCoursesForListing.length / listPerPage))}
-                    onClick={() => setListPage(prev => Math.min(prev + 1, Math.max(1, Math.ceil(filteredCoursesForListing.length / listPerPage))))}
-                    className="h-8 px-3 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-500 hover:text-gray-800 dark:hover:text-white disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center transition-colors font-mono text-xs"
-                  >
-                    &lt;
-                  </button>
-                  {Array.from({ length: Math.max(1, Math.ceil(filteredCoursesForListing.length / listPerPage)) }).map((_, idx) => {
-                    const p = idx + 1;
-                    const totalPages = Math.max(1, Math.ceil(filteredCoursesForListing.length / listPerPage));
-                    const safePage = Math.min(listPage, totalPages);
-                    return (
-                      <button
-                        key={p}
-                        onClick={() => setListPage(p)}
-                        className={`h-8 w-8 rounded-lg border font-bold transition-all cursor-pointer flex items-center justify-center text-xs font-mono ${
-                          p === safePage
-                            ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                            : 'border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300 hover:bg-gray-55'
-                        }`}
-                      >
-                        {toPersianDigits(p)}
-                      </button>
-                    );
-                  })}
-                  <button
-                    disabled={listPage === 1}
-                    onClick={() => setListPage(prev => Math.max(prev - 1, 1))}
-                    className="h-8 px-3 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-500 hover:text-gray-800 dark:hover:text-white disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center transition-colors font-mono text-xs"
-                  >
-                    &gt;
-                  </button>
-                </div>
+                <Pagination
+                  currentPage={listPage}
+                  totalItems={filteredCoursesForListing.length}
+                  perPage={listPerPage}
+                  onPageChange={setListPage}
+                />
               )}
             </>
           )}
@@ -2640,40 +2613,12 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
 
               {/* Pagination Controls for Registrants */}
               {filteredRegistrants.length > reportPerPage && (
-                <div className="flex justify-center items-center gap-1.5 pt-4">
-                  <button
-                    disabled={reportPage === Math.max(1, Math.ceil(filteredRegistrants.length / reportPerPage))}
-                    onClick={() => setReportPage(prev => Math.min(prev + 1, Math.max(1, Math.ceil(filteredRegistrants.length / reportPerPage))))}
-                    className="h-8 px-3 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-500 hover:text-gray-800 dark:hover:text-white disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center transition-colors font-mono text-xs"
-                  >
-                    &lt;
-                  </button>
-                  {Array.from({ length: Math.max(1, Math.ceil(filteredRegistrants.length / reportPerPage)) }).map((_, idx) => {
-                    const p = idx + 1;
-                    const totalPages = Math.max(1, Math.ceil(filteredRegistrants.length / reportPerPage));
-                    const safePage = Math.min(reportPage, totalPages);
-                    return (
-                      <button
-                        key={p}
-                        onClick={() => setReportPage(p)}
-                        className={`h-8 w-8 rounded-lg border font-bold transition-all cursor-pointer flex items-center justify-center text-xs font-mono ${
-                          p === safePage
-                            ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                            : 'border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300 hover:bg-gray-55'
-                        }`}
-                      >
-                        {toPersianDigits(p)}
-                      </button>
-                    );
-                  })}
-                  <button
-                    disabled={reportPage === 1}
-                    onClick={() => setReportPage(prev => Math.max(prev - 1, 1))}
-                    className="h-8 px-3 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-500 hover:text-gray-800 dark:hover:text-white disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center transition-colors font-mono text-xs"
-                  >
-                    &gt;
-                  </button>
-                </div>
+                <Pagination
+                  currentPage={reportPage}
+                  totalItems={filteredRegistrants.length}
+                  perPage={reportPerPage}
+                  onPageChange={setReportPage}
+                />
               )}
             </>
           )}
@@ -3834,44 +3779,15 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                 </table>
               </div>
 
-              {/* Centered Pagination (RTL aligned flow) */}
-              <div className="flex justify-center items-center gap-1.5 pt-4 border-t border-gray-50 dark:border-gray-850">
-                {/* Prev Page Button (Next in standard LTR layout) */}
-                <button
-                  disabled={safeCurrentPage === totalPagesCount}
-                  onClick={() => setSurveyPage(prev => Math.min(prev + 1, totalPagesCount))}
-                  className="h-8 px-3 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-500 hover:text-gray-800 dark:hover:text-white disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center transition-colors font-mono text-xs"
-                >
-                  &lt;
-                </button>
-
-                {/* Page numbers mapped RTL-friendly inside standard layout */}
-                {Array.from({ length: totalPagesCount }).map((_, idx) => {
-                  const p = idx + 1;
-                  return (
-                    <button
-                      key={p}
-                      onClick={() => setSurveyPage(p)}
-                      className={`h-8 w-8 rounded-lg border font-bold transition-all cursor-pointer flex items-center justify-center text-xs font-mono ${
-                        p === safeCurrentPage
-                          ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                          : 'border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300 hover:bg-gray-55'
-                      }`}
-                    >
-                      {toPersianDigits(p)}
-                    </button>
-                  );
-                })}
-
-                {/* Next Page Button (Prev in standard LTR layout) */}
-                <button
-                  disabled={safeCurrentPage === 1}
-                  onClick={() => setSurveyPage(prev => Math.max(prev - 1, 1))}
-                  className="h-8 px-3 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-500 hover:text-gray-800 dark:hover:text-white disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center transition-colors font-mono text-xs"
-                >
-                  &gt;
-                </button>
-              </div>
+              {/* Pagination Controls for Surveys */}
+              {totalSurveysCount > surveysPerPage && (
+                <Pagination
+                  currentPage={surveyPage}
+                  totalItems={totalSurveysCount}
+                  perPage={surveysPerPage}
+                  onPageChange={setSurveyPage}
+                />
+              )}
             </div>
             )}
 
@@ -4450,40 +4366,12 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
 
                       {/* Pagination Controls for Vouchers */}
                       {vouchers.length > voucherPerPage && (
-                        <div className="flex justify-center items-center gap-1.5 pt-2">
-                          <button
-                            disabled={voucherPage === Math.max(1, Math.ceil(vouchers.length / voucherPerPage))}
-                            onClick={() => setVoucherPage(prev => Math.min(prev + 1, Math.max(1, Math.ceil(vouchers.length / voucherPerPage))))}
-                            className="h-8 px-3 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-500 hover:text-gray-800 dark:hover:text-white disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center transition-colors font-mono text-xs"
-                          >
-                            &lt;
-                          </button>
-                          {Array.from({ length: Math.max(1, Math.ceil(vouchers.length / voucherPerPage)) }).map((_, idx) => {
-                            const p = idx + 1;
-                            const totalPages = Math.max(1, Math.ceil(vouchers.length / voucherPerPage));
-                            const safePage = Math.min(voucherPage, totalPages);
-                            return (
-                              <button
-                                key={p}
-                                onClick={() => setVoucherPage(p)}
-                                className={`h-8 w-8 rounded-lg border font-bold transition-all cursor-pointer flex items-center justify-center text-xs font-mono ${
-                                  p === safePage
-                                    ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                                    : 'border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300 hover:bg-gray-55'
-                                }`}
-                              >
-                                {toPersianDigits(p)}
-                              </button>
-                            );
-                          })}
-                          <button
-                            disabled={voucherPage === 1}
-                            onClick={() => setVoucherPage(prev => Math.max(prev - 1, 1))}
-                            className="h-8 px-3 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-500 hover:text-gray-800 dark:hover:text-white disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center transition-colors font-mono text-xs"
-                          >
-                            &gt;
-                          </button>
-                        </div>
+                        <Pagination
+                          currentPage={voucherPage}
+                          totalItems={vouchers.length}
+                          perPage={voucherPerPage}
+                          onPageChange={setVoucherPage}
+                        />
                       )}
                     </>
                   )}
