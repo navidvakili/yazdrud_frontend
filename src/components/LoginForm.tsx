@@ -5,7 +5,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
-  GraduationCap,
   User,
   Lock,
   Eye,
@@ -82,8 +81,8 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
           
           {/* Logo & Header */}
           <div className="text-center mb-8">
-            <div className="inline-flex p-3.5 rounded-2xl bg-teal-600 text-white shadow-lg shadow-teal-600/20 mb-5">
-              <GraduationCap className="w-8 h-8" />
+            <div className="flex justify-center mb-5">
+              <img src="/logo_nika.png" alt="نیکا" className="h-16 w-auto" />
             </div>
             <h1 className="text-2xl font-black text-gray-900 dark:text-white">
               ورود به پنل کاربری

@@ -4,7 +4,7 @@
 
 import { useState } from 'react';
 import {
-  GraduationCap, Search, X, User, Check, LogOut,
+  Search, X, User, Check, LogOut,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import type { User as UserType, Tab, RoleInfo } from '@/src/types';
@@ -36,9 +36,7 @@ export default function Header({
     <header className="p-3.5 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 shrink-0 flex items-center justify-between">
       {/* Logo */}
       <div className="flex items-center gap-3">
-        <div className="p-2.5 rounded-xl bg-teal-500/10 text-teal-500 dark:text-teal-400 border border-teal-500/20">
-          <GraduationCap className="w-6 h-6" />
-        </div>
+        <img src="/logo_nika.png" alt="نیکا" className="h-9 w-auto" />
         <div>
           <h1 className="font-black text-sm text-gray-900 dark:text-white">پرتال جامع دانشگاهی کارانت</h1>
           <p className="text-[10px] text-gray-400 animate-pulse">پنل یکپارچه مدیریت امور آموزش عالی</p>
