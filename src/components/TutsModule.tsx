@@ -416,6 +416,25 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
   const [surveyPage, setSurveyPage] = useState(1);
   const [selectedSurveyDetails, setSelectedSurveyDetails] = useState<any | null>(null);
 
+  // ===== Pagination States =====
+  const [listPage, setListPage] = useState(1);
+  const listPerPage = 12;
+  const [reportPage, setReportPage] = useState(1);
+  const reportPerPage = 15;
+  const [voucherPage, setVoucherPage] = useState(1);
+  const voucherPerPage = 10;
+
+  // ===== Loading Spinner Component =====
+  const LoadingSpinner = ({ text }: { text?: string }) => (
+    <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+      <svg className="animate-spin h-8 w-8 mb-3 text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+      </svg>
+      <span className="text-sm font-bold">{text || 'در حال بارگذاری...'}</span>
+    </div>
+  );
+
   // States for reporting filters (Target: tuts-stats)
   const [statSelectedYear, setStatSelectedYear] = useState('۱۴۰۵');
   const [statSelectedCourse, setStatSelectedCourse] = useState('all');
@@ -1372,7 +1391,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
         <div>
           <div className="flex items-center gap-2 text-teal-600 dark:text-teal-400 font-bold text-xs uppercase mb-1.5">
             <Sparkles className="w-4 h-4" />
-            <span>سامانه آموزش آزاد و مهارتی کارانت</span>
+            <span>پرتال جامع دانشگاهی کارانت</span>
           </div>
           <h2 className="text-2xl font-black text-gray-900 dark:text-white flex items-center gap-2">
             <BookOpen className="w-6 h-6 text-teal-600 dark:text-teal-400" />
@@ -1451,7 +1470,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                 type="text"
                 placeholder="جستجوی عنوان کارگاه مهارتی، نام مدرس یا سرفصل آموزشی..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => { setSearchQuery(e.target.value); setListPage(1); }}
                 className="w-full text-xs pr-10 pl-3.5 py-3.5 rounded-2xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none focus:ring-1 focus:ring-teal-500/30"
               />
             </div>
@@ -1462,7 +1481,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
               </span>
               <select
                 value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
+                onChange={(e) => { setSelectedCategory(e.target.value); setListPage(1); }}
                 className="w-full text-xs pr-10 pl-3.5 py-3.5 rounded-2xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none focus:ring-1 focus:ring-teal-500/30 appearance-none font-sans"
               >
                 <option value="">دپارتمان و گروه‌های درسی (همه)</option>
@@ -1495,162 +1514,216 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
           </div>
 
           {/* Courses grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredCoursesForListing.length === 0 ? (
-              <div className="col-span-full py-12 text-center text-gray-400">
-                هیچ کارگاه یا دوره آموزشی منطبق با فیلتر شما پیدا نشد.
-              </div>
-            ) : (
-              filteredCoursesForListing.map((course) => {
-                const isFull = course.enrolled >= course.capacity;
-                const regPercent = (course.enrolled / course.capacity) * 100;
-                const myRegistrations = registrants.filter(r => r.courseId === course.id);
-
+          {loadingCourses ? (
+            <LoadingSpinner text="در حال دریافت لیست دوره‌ها..." />
+          ) : (
+            <>
+              {(() => {
+                const totalPages = Math.max(1, Math.ceil(filteredCoursesForListing.length / listPerPage));
+                const safePage = Math.min(listPage, totalPages);
+                const paginatedCourses = filteredCoursesForListing.slice(
+                  (safePage - 1) * listPerPage,
+                  safePage * listPerPage
+                );
                 return (
-                  <div
-                    key={course.id}
-                    className="p-5 rounded-3xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800/80 shadow-xs hover:shadow-xl hover:border-teal-500/25 transition-all duration-300 flex flex-col justify-between group"
-                  >
-                    <div>
-                      <div className="flex items-center justify-between mb-3.5">
-                        <span className="text-[10px] font-black px-2.5 py-1 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
-                          {course.category}
-                        </span>
-                        <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-md ${
-                          course.status === 'active' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' :
-                          course.status === 'completed' ? 'bg-amber-500/10 text-amber-600' :
-                          'bg-gray-100 dark:bg-gray-800 text-gray-500'
-                        }`}>
-                          {course.status === 'active' ? 'ثبت‌نام فعال' :
-                           course.status === 'completed' ? 'تکمیل ظرفیت' : 'برگزار شده'}
-                        </span>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {paginatedCourses.length === 0 ? (
+                      <div className="col-span-full py-12 text-center text-gray-400">
+                        هیچ کارگاه یا دوره آموزشی منطبق با فیلتر شما پیدا نشد.
                       </div>
+                    ) : (
+                      paginatedCourses.map((course) => {
+                        const isFull = course.enrolled >= course.capacity;
+                        const regPercent = (course.enrolled / course.capacity) * 100;
+                        const myRegistrations = registrants.filter(r => r.courseId === course.id);
 
-                      <h3 className="text-sm font-extrabold text-gray-900 dark:text-white leading-snug group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-all mb-3 line-clamp-2 min-h-[40px]">
-                        {course.title}
-                      </h3>
+                        return (
+                          <div
+                            key={course.id}
+                            className="p-5 rounded-3xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800/80 shadow-xs hover:shadow-xl hover:border-teal-500/25 transition-all duration-300 flex flex-col justify-between group"
+                          >
+                            <div>
+                              <div className="flex items-center justify-between mb-3.5">
+                                <span className="text-[10px] font-black px-2.5 py-1 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
+                                  {course.category}
+                                </span>
+                                <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-md ${
+                                  course.status === 'active' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' :
+                                  course.status === 'completed' ? 'bg-amber-500/10 text-amber-600' :
+                                  'bg-gray-100 dark:bg-gray-800 text-gray-500'
+                                }`}>
+                                  {course.status === 'active' ? 'ثبت‌نام فعال' :
+                                   course.status === 'completed' ? 'تکمیل ظرفیت' : 'برگزار شده'}
+                                </span>
+                              </div>
 
-                      <div className="space-y-2 mt-4 pt-3.5 border-t border-gray-50 dark:border-gray-800/40 text-xs text-gray-500 dark:text-gray-400">
-                        <div className="flex items-center justify-between">
-                          <span className="flex items-center gap-1.5">
-                            <User className="w-3.5 h-3.5 text-gray-400" />
-                            مدرس دوره:
-                          </span>
-                          <span className="font-bold text-gray-700 dark:text-gray-300">{course.lecturer}</span>
-                        </div>
-                        <div className="flex items-center justify-between font-mono text-xs">
-                          <span className="flex items-center gap-1.5 font-sans">
-                            <Clock className="w-3.5 h-3.5 text-gray-400" />
-                            طول دوره:
-                          </span>
-                          <span>{toPersianDigits(course.duration)}</span>
-                        </div>
-                        <div className="flex items-center justify-between font-mono text-xs">
-                          <span className="flex items-center gap-1.5 font-sans">
-                            <Calendar className="w-3.5 h-3.5 text-gray-400" />
-                            تاریخ شروع:
-                          </span>
-                          <span>{toPersianDigits(course.startDate)}</span>
-                        </div>
-                      </div>
-                    </div>
+                              <h3 className="text-sm font-extrabold text-gray-900 dark:text-white leading-snug group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-all mb-3 line-clamp-2 min-h-[40px]">
+                                {course.title}
+                              </h3>
 
-                    <div className="mt-5 pt-4 border-t border-gray-50 dark:border-gray-800/40">
-                      {/* Enrolled progress */}
-                      <div className="flex justify-between items-center text-[10px] text-gray-400 dark:text-gray-500 mb-2 font-mono">
-                        <span>ظرفیت: {toPersianDigits(course.enrolled)} از {toPersianDigits(course.capacity)} صندلی</span>
-                        <span>{toPersianDigits(Math.round(regPercent))}٪ تکمیل</span>
-                      </div>
-                      <div className="w-full h-1.5 rounded-full bg-gray-50 dark:bg-gray-800 overflow-hidden mb-4 relative">
-                        <div
-                          className={`absolute h-full rounded-full transition-all duration-500 ${
-                            isFull ? 'bg-amber-500' : 'bg-gradient-to-r from-teal-500 to-indigo-500'
-                          }`}
-                          style={{ width: `${Math.min(100, regPercent)}%` }}
-                        ></div>
-                      </div>
+                              <div className="space-y-2 mt-4 pt-3.5 border-t border-gray-50 dark:border-gray-800/40 text-xs text-gray-500 dark:text-gray-400">
+                                <div className="flex items-center justify-between">
+                                  <span className="flex items-center gap-1.5">
+                                    <User className="w-3.5 h-3.5 text-gray-400" />
+                                    مدرس دوره:
+                                  </span>
+                                  <span className="font-bold text-gray-700 dark:text-gray-300">{course.lecturer}</span>
+                                </div>
+                                <div className="flex items-center justify-between font-mono text-xs">
+                                  <span className="flex items-center gap-1.5 font-sans">
+                                    <Clock className="w-3.5 h-3.5 text-gray-400" />
+                                    طول دوره:
+                                  </span>
+                                  <span>{toPersianDigits(course.duration)}</span>
+                                </div>
+                                <div className="flex items-center justify-between font-mono text-xs">
+                                  <span className="flex items-center gap-1.5 font-sans">
+                                    <Calendar className="w-3.5 h-3.5 text-gray-400" />
+                                    تاریخ شروع:
+                                  </span>
+                                  <span>{toPersianDigits(course.startDate)}</span>
+                                </div>
+                              </div>
+                            </div>
 
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="text-right">
-                          <span className="text-[9px] text-gray-400 block font-bold">شهریه ثبت‌نام:</span>
-                          <span className="text-sm font-black text-teal-600 dark:text-teal-400 font-mono">
-                            {formatCurrency(course.cost)}
-                          </span>
-                        </div>
+                            <div className="mt-5 pt-4 border-t border-gray-50 dark:border-gray-800/40">
+                              {/* Enrolled progress */}
+                              <div className="flex justify-between items-center text-[10px] text-gray-400 dark:text-gray-500 mb-2 font-mono">
+                                <span>ظرفیت: {toPersianDigits(course.enrolled)} از {toPersianDigits(course.capacity)} صندلی</span>
+                                <span>{toPersianDigits(Math.round(regPercent))}٪ تکمیل</span>
+                              </div>
+                              <div className="w-full h-1.5 rounded-full bg-gray-50 dark:bg-gray-800 overflow-hidden mb-4 relative">
+                                <div
+                                  className={`absolute h-full rounded-full transition-all duration-500 ${
+                                    isFull ? 'bg-amber-500' : 'bg-gradient-to-r from-teal-500 to-indigo-500'
+                                  }`}
+                                  style={{ width: `${Math.min(100, regPercent)}%` }}
+                                ></div>
+                              </div>
 
-                        <div className="flex gap-1.5">
-                          <button
-                            onClick={() => setSelectedCourseForDetail(course)}
-                            className="px-4 py-2 border border-gray-150 dark:border-gray-800 bg-white dark:bg-gray-900 rounded-xl text-[11px] font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all cursor-pointer"
-                          >
-                            جزئیات سرفصل
-                          </button>
-                        </div>
-                      </div>
-                    </div>
+                              <div className="flex items-center justify-between gap-3">
+                                <div className="text-right">
+                                  <span className="text-[9px] text-gray-400 block font-bold">شهریه ثبت‌نام:</span>
+                                  <span className="text-sm font-black text-teal-600 dark:text-teal-400 font-mono">
+                                    {formatCurrency(course.cost)}
+                                  </span>
+                                </div>
 
-                    {/* Admin Controls Section */}
-                    {currentUserRole === 'admin' && (
-                      <div className="mt-4 pt-3 border-t border-dashed border-gray-100 dark:border-gray-800 flex flex-wrap items-center justify-between gap-2 bg-gray-50/50 dark:bg-gray-950/40 p-2 rounded-2xl">
-                        <span className="text-[10px] font-black text-teal-600 dark:text-teal-400">مدیریت کارشناس:</span>
-                        <div className="flex items-center gap-1.5">
-                          <button
-                            onClick={() => {
-                              setEditingCourse(course);
-                              setEditCourseTitle(course.title);
-                              setEditCourseLecturer(course.lecturer);
-                              setEditCourseDuration(course.duration);
-                              setEditCourseCost(course.cost.toString());
-                              setEditCourseCapacity(course.capacity.toString());
-                              setEditCourseStartDate(course.startDate);
-                              setEditCourseCategory(course.category);
-                              setEditCourseDescription(course.description);
-                            }}
-                            className="p-1.5 bg-white dark:bg-gray-900 border border-gray-150 dark:border-gray-800 rounded-lg text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950 transition-all cursor-pointer"
-                            title="ویرایش دوره"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => setSelectedCourseReport(course)}
-                            className="p-1.5 bg-white dark:bg-gray-900 border border-gray-150 dark:border-gray-800 rounded-lg text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950 transition-all cursor-pointer"
-                            title="گزارش ثبت‌نام‌ها"
-                          >
-                            <BarChart2 className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => handleToggleCourseStatus(course.id)}
-                            className={`p-1.5 bg-white dark:bg-gray-900 border border-gray-150 dark:border-gray-800 rounded-lg transition-all cursor-pointer ${
-                              course.status === 'ended' 
-                                ? 'text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950' 
-                                : 'text-emerald-600 hover:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-950'
-                            }`}
-                            title={course.status === 'ended' ? 'فعال کردن دوره' : 'غیرفعال (پایان دوره)'}
-                          >
-                            <Power className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => handleExportSingleCourseExcel(course)}
-                            className="p-1.5 bg-white dark:bg-gray-900 border border-gray-150 dark:border-gray-800 rounded-lg text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950 transition-all cursor-pointer"
-                            title="خروجی اکسل (CSV)"
-                          >
-                            <Download className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteCourse(course.id)}
-                            className="p-1.5 bg-white dark:bg-gray-900 border border-gray-150 dark:border-gray-800 rounded-lg text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950 transition-all cursor-pointer"
-                            title="حذف دوره"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </div>
+                                <div className="flex gap-1.5">
+                                  <button
+                                    onClick={() => setSelectedCourseForDetail(course)}
+                                    className="px-4 py-2 border border-gray-150 dark:border-gray-800 bg-white dark:bg-gray-900 rounded-xl text-[11px] font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all cursor-pointer"
+                                  >
+                                    جزئیات سرفصل
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Admin Controls Section */}
+                            {currentUserRole === 'admin' && (
+                              <div className="mt-4 pt-3 border-t border-dashed border-gray-100 dark:border-gray-800 flex flex-wrap items-center justify-between gap-2 bg-gray-50/50 dark:bg-gray-950/40 p-2 rounded-2xl">
+                                <span className="text-[10px] font-black text-teal-600 dark:text-teal-400">مدیریت کارشناس:</span>
+                                <div className="flex items-center gap-1.5">
+                                  <button
+                                    onClick={() => {
+                                      setEditingCourse(course);
+                                      setEditCourseTitle(course.title);
+                                      setEditCourseLecturer(course.lecturer);
+                                      setEditCourseDuration(course.duration);
+                                      setEditCourseCost(course.cost.toString());
+                                      setEditCourseCapacity(course.capacity.toString());
+                                      setEditCourseStartDate(course.startDate);
+                                      setEditCourseCategory(course.category);
+                                      setEditCourseDescription(course.description);
+                                    }}
+                                    className="p-1.5 bg-white dark:bg-gray-900 border border-gray-150 dark:border-gray-800 rounded-lg text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950 transition-all cursor-pointer"
+                                    title="ویرایش دوره"
+                                  >
+                                    <Edit2 className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => setSelectedCourseReport(course)}
+                                    className="p-1.5 bg-white dark:bg-gray-900 border border-gray-150 dark:border-gray-800 rounded-lg text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950 transition-all cursor-pointer"
+                                    title="گزارش ثبت‌نام‌ها"
+                                  >
+                                    <BarChart2 className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleToggleCourseStatus(course.id)}
+                                    className={`p-1.5 bg-white dark:bg-gray-900 border border-gray-150 dark:border-gray-800 rounded-lg transition-all cursor-pointer ${
+                                      course.status === 'ended' 
+                                        ? 'text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950' 
+                                        : 'text-emerald-600 hover:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-950'
+                                    }`}
+                                    title={course.status === 'ended' ? 'فعال کردن دوره' : 'غیرفعال (پایان دوره)'}
+                                  >
+                                    <Power className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleExportSingleCourseExcel(course)}
+                                    className="p-1.5 bg-white dark:bg-gray-900 border border-gray-150 dark:border-gray-800 rounded-lg text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950 transition-all cursor-pointer"
+                                    title="خروجی اکسل (CSV)"
+                                  >
+                                    <Download className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteCourse(course.id)}
+                                    className="p-1.5 bg-white dark:bg-gray-900 border border-gray-150 dark:border-gray-800 rounded-lg text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950 transition-all cursor-pointer"
+                                    title="حذف دوره"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })
                     )}
                   </div>
                 );
-              })
-            )}
-          </div>
+              })()}
+
+              {/* Pagination Controls for Courses */}
+              {filteredCoursesForListing.length > listPerPage && (
+                <div className="flex justify-center items-center gap-1.5 pt-4 border-t border-gray-50 dark:border-gray-850">
+                  <button
+                    disabled={listPage === Math.max(1, Math.ceil(filteredCoursesForListing.length / listPerPage))}
+                    onClick={() => setListPage(prev => Math.min(prev + 1, Math.max(1, Math.ceil(filteredCoursesForListing.length / listPerPage))))}
+                    className="h-8 px-3 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-500 hover:text-gray-800 dark:hover:text-white disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center transition-colors font-mono text-xs"
+                  >
+                    &lt;
+                  </button>
+                  {Array.from({ length: Math.max(1, Math.ceil(filteredCoursesForListing.length / listPerPage)) }).map((_, idx) => {
+                    const p = idx + 1;
+                    const totalPages = Math.max(1, Math.ceil(filteredCoursesForListing.length / listPerPage));
+                    const safePage = Math.min(listPage, totalPages);
+                    return (
+                      <button
+                        key={p}
+                        onClick={() => setListPage(p)}
+                        className={`h-8 w-8 rounded-lg border font-bold transition-all cursor-pointer flex items-center justify-center text-xs font-mono ${
+                          p === safePage
+                            ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                            : 'border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300 hover:bg-gray-55'
+                        }`}
+                      >
+                        {toPersianDigits(p)}
+                      </button>
+                    );
+                  })}
+                  <button
+                    disabled={listPage === 1}
+                    onClick={() => setListPage(prev => Math.max(prev - 1, 1))}
+                    className="h-8 px-3 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-500 hover:text-gray-800 dark:hover:text-white disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center transition-colors font-mono text-xs"
+                  >
+                    &gt;
+                  </button>
+                </div>
+              )}
+            </>
+          )}
 
           {/* Expandable Course Detail Drawer / Modal */}
           <AnimatePresence>
@@ -2410,7 +2483,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                 type="text"
                 placeholder="جستجو با نام دانشجو، شماره دانشجویی، کد پیگیری فیش..."
                 value={reportSearch}
-                onChange={(e) => setReportSearch(e.target.value)}
+                onChange={(e) => { setReportSearch(e.target.value); setReportPage(1); }}
                 className="w-full text-xs pr-10 pl-3.5 py-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none"
               />
             </div>
@@ -2418,7 +2491,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
             <div className="flex flex-wrap sm:flex-nowrap gap-3 w-full xl:w-auto">
               <select
                 value={reportCourseFilter}
-                onChange={(e) => setReportCourseFilter(e.target.value)}
+                onChange={(e) => { setReportCourseFilter(e.target.value); setReportPage(1); }}
                 className="w-full text-xs px-3.5 py-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none"
               >
                 <option value="">فیلتر کارگاه‌های مهارتی</option>
@@ -2429,7 +2502,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
 
               <select
                 value={reportStatusFilter}
-                onChange={(e) => setReportStatusFilter(e.target.value)}
+                onChange={(e) => { setReportStatusFilter(e.target.value); setReportPage(1); }}
                 className="w-full text-xs px-3.5 py-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none"
               >
                 <option value="">فیلتر وضعیت سند مالی</option>
@@ -2449,106 +2522,161 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
           </div>
 
           {/* Table Container */}
-          <div className="overflow-x-auto rounded-3xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-xs">
-            <table className="w-full text-right text-xs">
-              <thead>
-                <tr className="bg-gray-55 dark:bg-gray-950 border-b border-gray-100 dark:border-gray-800 text-gray-400 dark:text-gray-500 font-extrabold">
-                  <th className="p-4">شناسه</th>
-                  <th className="p-4">نام دانشجو</th>
-                  <th className="p-4">شماره دانشجویی / کد ملی</th>
-                  <th className="p-4">کارگاه آموزشی</th>
-                  <th className="p-4">مبلغ واریزی</th>
-                  <th className="p-4">کد پیگیری / بانک</th>
-                  <th className="p-4 text-center">تاریخ سند</th>
-                  <th className="p-4 text-center">وضعیت تایید</th>
-                  {currentUserRole === 'admin' && <th className="p-4 text-center">عملیات</th>}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-800/40">
-                {filteredRegistrants.length === 0 ? (
-                  <tr>
-                    <td colSpan={currentUserRole === 'admin' ? 9 : 8} className="p-12 text-center text-gray-400">
-                      هیچ پرونده ثبتی یا آماری مطابق با فیلتر شما ثبت نشده است.
-                    </td>
-                  </tr>
-                ) : (
-                  filteredRegistrants.map((reg, idx) => {
-                    const matchedC = courses.find(c => c.id === reg.courseId);
+          {loadingRegistrants ? (
+            <LoadingSpinner text="در حال دریافت گزارش ثبت‌نام‌ها..." />
+          ) : (
+            <>
+              {(() => {
+                const totalPages = Math.max(1, Math.ceil(filteredRegistrants.length / reportPerPage));
+                const safePage = Math.min(reportPage, totalPages);
+                const paginatedRegistrants = filteredRegistrants.slice(
+                  (safePage - 1) * reportPerPage,
+                  safePage * reportPerPage
+                );
+                return (
+                  <div className="overflow-x-auto rounded-3xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-xs">
+                    <table className="w-full text-right text-xs">
+                      <thead>
+                        <tr className="bg-gray-55 dark:bg-gray-950 border-b border-gray-100 dark:border-gray-800 text-gray-400 dark:text-gray-500 font-extrabold">
+                          <th className="p-4">شناسه</th>
+                          <th className="p-4">نام دانشجو</th>
+                          <th className="p-4">شماره دانشجویی / کد ملی</th>
+                          <th className="p-4">کارگاه آموزشی</th>
+                          <th className="p-4">مبلغ واریزی</th>
+                          <th className="p-4">کد پیگیری / بانک</th>
+                          <th className="p-4 text-center">تاریخ سند</th>
+                          <th className="p-4 text-center">وضعیت تایید</th>
+                          {currentUserRole === 'admin' && <th className="p-4 text-center">عملیات</th>}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100 dark:divide-gray-800/40">
+                        {paginatedRegistrants.length === 0 ? (
+                          <tr>
+                            <td colSpan={currentUserRole === 'admin' ? 9 : 8} className="p-12 text-center text-gray-400">
+                              هیچ پرونده ثبتی یا آماری مطابق با فیلتر شما ثبت نشده است.
+                            </td>
+                          </tr>
+                        ) : (
+                          paginatedRegistrants.map((reg, idx) => {
+                            const globalIdx = (safePage - 1) * reportPerPage + idx + 1;
+                            const matchedC = courses.find(c => c.id === reg.courseId);
 
-                    return (
-                      <tr key={reg.id} className="hover:bg-gray-55/40 dark:hover:bg-gray-850/10 transition-colors">
-                        <td className="p-4 font-mono font-bold text-gray-400">
-                          {toPersianDigits(idx + 1)}
-                        </td>
-                        <td className="p-4 font-extrabold text-gray-900 dark:text-white">
-                          {reg.name}
-                        </td>
-                        <td className="p-4 font-mono font-bold text-gray-600 dark:text-gray-400">
-                          {toPersianDigits(reg.studentCode)}
-                        </td>
-                        <td className="p-4 text-gray-700 dark:text-gray-300 font-medium max-w-xs truncate">
-                          {reg.courseTitle}
-                        </td>
-                        <td className="p-4 font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                          {formatCurrency(reg.amount)}
-                        </td>
-                        <td className="p-4">
-                          <div className="font-mono font-bold text-gray-800 dark:text-gray-200">
-                            {toPersianDigits(reg.referenceCode)}
-                          </div>
-                          <div className="text-[10px] text-gray-400 mt-0.5">
-                            {reg.bank}
-                          </div>
-                        </td>
-                        <td className="p-4 text-center font-mono text-gray-500">
-                          {toPersianDigits(reg.date)}
-                        </td>
-                        <td className="p-4 text-center">
-                          <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold inline-block ${
-                            reg.status === 'verified' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' :
-                            reg.status === 'rejected' ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400' :
-                            'bg-amber-500/10 text-amber-600'
-                          }`}>
-                            {reg.status === 'verified' ? 'تایید نهایی شده' :
-                             reg.status === 'rejected' ? 'فیش رد شده' : 'در انتظار بررسی'}
-                          </span>
-                          {reg.status === 'rejected' && reg.rejectionReason && (
-                            <div className="text-[9px] text-rose-500 mt-1 max-w-[150px] mx-auto truncate" title={reg.rejectionReason}>
-                              علت: {reg.rejectionReason}
-                            </div>
-                          )}
-                        </td>
-                        {currentUserRole === 'admin' && (
-                          <td className="p-4 text-center">
-                            <div className="flex items-center justify-center gap-1.5">
-                              {reg.status === 'pending' && (
-                                <button
-                                  onClick={() => {
-                                    setSelectedReceiptForReview(reg);
-                                    setShowRejectBox(false);
-                                  }}
-                                  className="px-2 py-1 text-[10px] bg-teal-500/10 text-teal-600 dark:text-teal-400 rounded-lg font-bold hover:bg-teal-500/20 transition-all cursor-pointer"
-                                >
-                                  بررسی مدارک
-                                </button>
-                              )}
-                              <button
-                                onClick={() => handleDeleteRegistrant(reg.id)}
-                                className="p-1 rounded-lg text-rose-500 hover:bg-rose-500/10 transition-all cursor-pointer"
-                                title="حذف پرونده"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </td>
+                            return (
+                              <tr key={reg.id} className="hover:bg-gray-55/40 dark:hover:bg-gray-850/10 transition-colors">
+                                <td className="p-4 font-mono font-bold text-gray-400">
+                                  {toPersianDigits(globalIdx)}
+                                </td>
+                                <td className="p-4 font-extrabold text-gray-900 dark:text-white">
+                                  {reg.name}
+                                </td>
+                                <td className="p-4 font-mono font-bold text-gray-600 dark:text-gray-400">
+                                  {toPersianDigits(reg.studentCode)}
+                                </td>
+                                <td className="p-4 text-gray-700 dark:text-gray-300 font-medium max-w-xs truncate">
+                                  {reg.courseTitle}
+                                </td>
+                                <td className="p-4 font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                                  {formatCurrency(reg.amount)}
+                                </td>
+                                <td className="p-4">
+                                  <div className="font-mono font-bold text-gray-800 dark:text-gray-200">
+                                    {toPersianDigits(reg.referenceCode)}
+                                  </div>
+                                  <div className="text-[10px] text-gray-400 mt-0.5">
+                                    {reg.bank}
+                                  </div>
+                                </td>
+                                <td className="p-4 text-center font-mono text-gray-500">
+                                  {toPersianDigits(reg.date)}
+                                </td>
+                                <td className="p-4 text-center">
+                                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold inline-block ${
+                                    reg.status === 'verified' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' :
+                                    reg.status === 'rejected' ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400' :
+                                    'bg-amber-500/10 text-amber-600'
+                                  }`}>
+                                    {reg.status === 'verified' ? 'تایید نهایی شده' :
+                                     reg.status === 'rejected' ? 'فیش رد شده' : 'در انتظار بررسی'}
+                                  </span>
+                                  {reg.status === 'rejected' && reg.rejectionReason && (
+                                    <div className="text-[9px] text-rose-500 mt-1 max-w-[150px] mx-auto truncate" title={reg.rejectionReason}>
+                                      علت: {reg.rejectionReason}
+                                    </div>
+                                  )}
+                                </td>
+                                {currentUserRole === 'admin' && (
+                                  <td className="p-4 text-center">
+                                    <div className="flex items-center justify-center gap-1.5">
+                                      {reg.status === 'pending' && (
+                                        <button
+                                          onClick={() => {
+                                            setSelectedReceiptForReview(reg);
+                                            setShowRejectBox(false);
+                                          }}
+                                          className="px-2 py-1 text-[10px] bg-teal-500/10 text-teal-600 dark:text-teal-400 rounded-lg font-bold hover:bg-teal-500/20 transition-all cursor-pointer"
+                                        >
+                                          بررسی مدارک
+                                        </button>
+                                      )}
+                                      <button
+                                        onClick={() => handleDeleteRegistrant(reg.id)}
+                                        className="p-1 rounded-lg text-rose-500 hover:bg-rose-500/10 transition-all cursor-pointer"
+                                        title="حذف پرونده"
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </button>
+                                    </div>
+                                  </td>
+                                )}
+                              </tr>
+                            );
+                          })
                         )}
-                      </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })()}
+
+              {/* Pagination Controls for Registrants */}
+              {filteredRegistrants.length > reportPerPage && (
+                <div className="flex justify-center items-center gap-1.5 pt-4">
+                  <button
+                    disabled={reportPage === Math.max(1, Math.ceil(filteredRegistrants.length / reportPerPage))}
+                    onClick={() => setReportPage(prev => Math.min(prev + 1, Math.max(1, Math.ceil(filteredRegistrants.length / reportPerPage))))}
+                    className="h-8 px-3 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-500 hover:text-gray-800 dark:hover:text-white disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center transition-colors font-mono text-xs"
+                  >
+                    &lt;
+                  </button>
+                  {Array.from({ length: Math.max(1, Math.ceil(filteredRegistrants.length / reportPerPage)) }).map((_, idx) => {
+                    const p = idx + 1;
+                    const totalPages = Math.max(1, Math.ceil(filteredRegistrants.length / reportPerPage));
+                    const safePage = Math.min(reportPage, totalPages);
+                    return (
+                      <button
+                        key={p}
+                        onClick={() => setReportPage(p)}
+                        className={`h-8 w-8 rounded-lg border font-bold transition-all cursor-pointer flex items-center justify-center text-xs font-mono ${
+                          p === safePage
+                            ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                            : 'border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300 hover:bg-gray-55'
+                        }`}
+                      >
+                        {toPersianDigits(p)}
+                      </button>
                     );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
+                  })}
+                  <button
+                    disabled={reportPage === 1}
+                    onClick={() => setReportPage(prev => Math.max(prev - 1, 1))}
+                    className="h-8 px-3 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-500 hover:text-gray-800 dark:hover:text-white disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center transition-colors font-mono text-xs"
+                  >
+                    &gt;
+                  </button>
+                </div>
+              )}
+            </>
+          )}
         </div>
       )}
 
@@ -3534,7 +3662,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                     type="text"
                     placeholder="YYYY/MM/DD"
                     value={surveyToDate}
-                    onChange={(e) => setSurveyToDate(e.target.value)}
+                    onChange={(e) => { setSurveyToDate(e.target.value); setSurveyPage(1); }}
                     className="w-full text-xs text-center px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500/20"
                   />
                 </div>
@@ -3549,7 +3677,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                     type="text"
                     placeholder="YYYY/MM/DD"
                     value={surveyFromDate}
-                    onChange={(e) => setSurveyFromDate(e.target.value)}
+                    onChange={(e) => { setSurveyFromDate(e.target.value); setSurveyPage(1); }}
                     className="w-full text-xs text-center px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500/20"
                   />
                 </div>
@@ -3561,7 +3689,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                     type="text"
                     placeholder="نام، نام خانوادگی یا شماره همراه را وارد کنید"
                     value={surveySearch}
-                    onChange={(e) => setSurveySearch(e.target.value)}
+                    onChange={(e) => { setSurveySearch(e.target.value); setSurveyPage(1); }}
                     className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500/20"
                   />
                 </div>
@@ -3614,22 +3742,25 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
             </div>
 
             {/* List and Table Card */}
-            <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800/80 p-5 rounded-3xl shadow-xs space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-black text-gray-400 font-sans">
-                  {toPersianDigits(filteredSurveys.length)} مورد
-                </span>
-                <span className="text-xs font-black text-gray-950 dark:text-white flex items-center gap-1.5">
-                  <MessageSquare className="w-4 h-4 text-gray-500" />
-                  لیست نظرسنجی ها
-                </span>
-              </div>
+            {loadingSurveys ? (
+              <LoadingSpinner text="در حال دریافت نظرسنجی‌ها..." />
+            ) : (
+              <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800/80 p-5 rounded-3xl shadow-xs space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black text-gray-400 font-sans">
+                    {toPersianDigits(filteredSurveys.length)} مورد
+                  </span>
+                  <span className="text-xs font-black text-gray-950 dark:text-white flex items-center gap-1.5">
+                    <MessageSquare className="w-4 h-4 text-gray-500" />
+                    لیست نظرسنجی ها
+                  </span>
+                </div>
 
-              {/* Table wrapper */}
-              <div className="overflow-x-auto">
-                <table className="w-full text-right text-xs">
-                  <thead>
-                    <tr className="border-b border-gray-100 dark:border-gray-850 text-gray-400 dark:text-gray-500 font-extrabold">
+                {/* Table wrapper */}
+                <div className="overflow-x-auto">
+                  <table className="w-full text-right text-xs">
+                    <thead>
+                      <tr className="border-b border-gray-100 dark:border-gray-850 text-gray-400 dark:text-gray-500 font-extrabold">
                       <th className="p-3 text-center w-16 font-extrabold">شناسه</th>
                       <th className="p-3 font-extrabold">نام و نام خانوادگی</th>
                       <th className="p-3 text-center font-extrabold">شماره همراه</th>
@@ -3742,6 +3873,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                 </button>
               </div>
             </div>
+            )}
 
             {/* Interactive Survey Detail Modal dialog */}
             <AnimatePresence>
@@ -4206,102 +4338,155 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
             <div className="lg:col-span-7 space-y-4">
               {voucherActiveTab === 'list' ? (
                 <div className="space-y-4">
-                  <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800/85 p-5 rounded-3xl space-y-4">
-                    <h5 className="text-xs font-black text-gray-900 dark:text-white">کدهای تخفیف و بن‌های خرید فعال سیستم</h5>
-                    
-                    <div className="divide-y divide-gray-55 dark:divide-gray-800 space-y-4">
-                      {vouchers.map((v) => (
-                        <div key={v.id} className="pt-4 first:pt-0 space-y-3">
-                          <div className="flex justify-between items-start gap-4">
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <span className="font-extrabold text-xs text-gray-900 dark:text-white">{v.title}</span>
-                                <span className="text-[10px] px-2 py-0.5 rounded-md font-mono font-black bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
-                                  {v.code}
-                                </span>
-                              </div>
-                              <p className="text-[10.5px] text-gray-400 mt-1">مناسبت: {v.occasion || 'عمومی / آزاد'}</p>
-                            </div>
+                  {loadingVouchers ? (
+                    <LoadingSpinner text="در حال دریافت بن‌های خرید..." />
+                  ) : (
+                    <>
+                      {(() => {
+                        const totalPages = Math.max(1, Math.ceil(vouchers.length / voucherPerPage));
+                        const safePage = Math.min(voucherPage, totalPages);
+                        const paginatedVouchers = vouchers.slice(
+                          (safePage - 1) * voucherPerPage,
+                          safePage * voucherPerPage
+                        );
+                        return (
+                          <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800/85 p-5 rounded-3xl space-y-4">
+                            <h5 className="text-xs font-black text-gray-900 dark:text-white">کدهای تخفیف و بن‌های خرید فعال سیستم</h5>
+                            <div className="divide-y divide-gray-55 dark:divide-gray-800 space-y-4">
+                              {paginatedVouchers.map((v) => (
+                                <div key={v.id} className="pt-4 first:pt-0 space-y-3">
+                                  <div className="flex justify-between items-start gap-4">
+                                    <div>
+                                      <div className="flex items-center gap-2">
+                                        <span className="font-extrabold text-xs text-gray-900 dark:text-white">{v.title}</span>
+                                        <span className="text-[10px] px-2 py-0.5 rounded-md font-mono font-black bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+                                          {v.code}
+                                        </span>
+                                      </div>
+                                      <p className="text-[10.5px] text-gray-400 mt-1">مناسبت: {v.occasion || 'عمومی / آزاد'}</p>
+                                    </div>
 
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs font-black text-teal-600 dark:text-teal-400 bg-teal-500/10 px-2.5 py-1 rounded-xl">
-                                {v.discountPercent ? `${toPersianDigits(v.discountPercent)}٪ تخفیف` : `${formatCurrency(v.discountAmount || 0)} تخفیف`}
-                              </span>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-xs font-black text-teal-600 dark:text-teal-400 bg-teal-500/10 px-2.5 py-1 rounded-xl">
+                                        {v.discountPercent ? `${toPersianDigits(v.discountPercent)}٪ تخفیف` : `${formatCurrency(v.discountAmount || 0)} تخفیف`}
+                                      </span>
+                                      <button
+                                        onClick={() => {
+                                          if (confirm('آیا مایل به حذف این بن خرید هستید؟')) {
+                                            setVouchers(vouchers.filter(item => item.id !== v.id));
+                                            showToast('بن خرید با موفقیت حذف شد.');
+                                          }
+                                        }}
+                                        className="p-1.5 text-rose-500 hover:bg-rose-500/5 rounded-lg cursor-pointer transition-all"
+                                        title="حذف بن"
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </button>
+                                    </div>
+                                  </div>
+
+                                  {/* Conditions Tags Display */}
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {/* Time */}
+                                    {v.validFrom && (
+                                      <span className="text-[9.5px] bg-amber-500/5 text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded-md border border-amber-500/10 flex items-center gap-1">
+                                        <Clock className="w-3 h-3" />
+                                        <span>اعتبار تا: {toPersianDigits(v.validTo || '')}</span>
+                                      </span>
+                                    )}
+                                    {v.allowedHours && (
+                                      <span className="text-[9.5px] bg-amber-500/5 text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded-md border border-amber-500/10 flex items-center gap-1">
+                                        <Clock className="w-3 h-3" />
+                                        <span>ساعات: {toPersianDigits(v.allowedHours)}</span>
+                                      </span>
+                                    )}
+
+                                    {/* Geo Location */}
+                                    {v.allowedProvince && v.allowedProvince !== 'all' && (
+                                      <span className="text-[9.5px] bg-indigo-500/5 text-indigo-700 dark:text-indigo-400 px-2 py-0.5 rounded-md border border-indigo-500/10 flex items-center gap-1">
+                                        <MapPin className="w-3 h-3" />
+                                        <span>مخصوص: {v.allowedProvince}</span>
+                                      </span>
+                                    )}
+
+                                    {/* Device & Tech */}
+                                    {v.allowedDevice && v.allowedDevice !== 'all' && (
+                                      <span className="text-[9.5px] bg-indigo-500/5 text-indigo-700 dark:text-indigo-400 px-2 py-0.5 rounded-md border border-indigo-500/10 flex items-center gap-1">
+                                        <Laptop className="w-3 h-3" />
+                                        <span>کانال: {v.allowedDevice === 'mobile' ? 'اپ موبایل' : 'مرورگر دسکتاپ'}</span>
+                                      </span>
+                                    )}
+
+                                    {/* First Purchase */}
+                                    {v.firstPurchaseOnly && (
+                                      <span className="text-[9.5px] bg-rose-500/5 text-rose-700 dark:text-rose-400 px-2 py-0.5 rounded-md border border-rose-500/10 flex items-center gap-1">
+                                        <UserPlus className="w-3 h-3" />
+                                        <span>فقط اولین خرید</span>
+                                      </span>
+                                    )}
+
+                                    {/* Installments */}
+                                    {v.allowInstallments && (
+                                      <span className="text-[9.5px] bg-emerald-500/5 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded-md border border-emerald-500/10 flex items-center gap-1">
+                                        <Check className="w-3 h-3" />
+                                        <span>پشتیبانی اقساط ({toPersianDigits(v.installmentCount || 2)} قسطه)</span>
+                                      </span>
+                                    )}
+
+                                    {/* Budget/Cap */}
+                                    {v.globalCap && (
+                                      <span className="text-[9.5px] bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400 px-2 py-0.5 rounded-md flex items-center gap-1">
+                                        <Users className="w-3 h-3" />
+                                        <span>استفاده: {toPersianDigits(v.totalUsed || 0)} از {toPersianDigits(v.globalCap)}</span>
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                      {/* Pagination Controls for Vouchers */}
+                      {vouchers.length > voucherPerPage && (
+                        <div className="flex justify-center items-center gap-1.5 pt-2">
+                          <button
+                            disabled={voucherPage === Math.max(1, Math.ceil(vouchers.length / voucherPerPage))}
+                            onClick={() => setVoucherPage(prev => Math.min(prev + 1, Math.max(1, Math.ceil(vouchers.length / voucherPerPage))))}
+                            className="h-8 px-3 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-500 hover:text-gray-800 dark:hover:text-white disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center transition-colors font-mono text-xs"
+                          >
+                            &lt;
+                          </button>
+                          {Array.from({ length: Math.max(1, Math.ceil(vouchers.length / voucherPerPage)) }).map((_, idx) => {
+                            const p = idx + 1;
+                            const totalPages = Math.max(1, Math.ceil(vouchers.length / voucherPerPage));
+                            const safePage = Math.min(voucherPage, totalPages);
+                            return (
                               <button
-                                onClick={() => {
-                                  if (confirm('آیا مایل به حذف این بن خرید هستید؟')) {
-                                    setVouchers(vouchers.filter(item => item.id !== v.id));
-                                    showToast('بن خرید با موفقیت حذف شد.');
-                                  }
-                                }}
-                                className="p-1.5 text-rose-500 hover:bg-rose-500/5 rounded-lg cursor-pointer transition-all"
-                                title="حذف بن"
+                                key={p}
+                                onClick={() => setVoucherPage(p)}
+                                className={`h-8 w-8 rounded-lg border font-bold transition-all cursor-pointer flex items-center justify-center text-xs font-mono ${
+                                  p === safePage
+                                    ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                                    : 'border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300 hover:bg-gray-55'
+                                }`}
                               >
-                                <Trash2 className="w-4 h-4" />
+                                {toPersianDigits(p)}
                               </button>
-                            </div>
-                          </div>
-
-                          {/* Conditions Tags Display */}
-                          <div className="flex flex-wrap gap-1.5">
-                            {/* Time */}
-                            {v.validFrom && (
-                              <span className="text-[9.5px] bg-amber-500/5 text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded-md border border-amber-500/10 flex items-center gap-1">
-                                <Clock className="w-3 h-3" />
-                                <span>اعتبار تا: {toPersianDigits(v.validTo || '')}</span>
-                              </span>
-                            )}
-                            {v.allowedHours && (
-                              <span className="text-[9.5px] bg-amber-500/5 text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded-md border border-amber-500/10 flex items-center gap-1">
-                                <Clock className="w-3 h-3" />
-                                <span>ساعات: {toPersianDigits(v.allowedHours)}</span>
-                              </span>
-                            )}
-
-                            {/* Geo Location */}
-                            {v.allowedProvince && v.allowedProvince !== 'all' && (
-                              <span className="text-[9.5px] bg-indigo-500/5 text-indigo-700 dark:text-indigo-400 px-2 py-0.5 rounded-md border border-indigo-500/10 flex items-center gap-1">
-                                <MapPin className="w-3 h-3" />
-                                <span>مخصوص: {v.allowedProvince}</span>
-                              </span>
-                            )}
-
-                            {/* Device & Tech */}
-                            {v.allowedDevice && v.allowedDevice !== 'all' && (
-                              <span className="text-[9.5px] bg-indigo-500/5 text-indigo-700 dark:text-indigo-400 px-2 py-0.5 rounded-md border border-indigo-500/10 flex items-center gap-1">
-                                <Laptop className="w-3 h-3" />
-                                <span>کانال: {v.allowedDevice === 'mobile' ? 'اپ موبایل' : 'مرورگر دسکتاپ'}</span>
-                              </span>
-                            )}
-
-                            {/* First Purchase */}
-                            {v.firstPurchaseOnly && (
-                              <span className="text-[9.5px] bg-rose-500/5 text-rose-700 dark:text-rose-400 px-2 py-0.5 rounded-md border border-rose-500/10 flex items-center gap-1">
-                                <UserPlus className="w-3 h-3" />
-                                <span>فقط اولین خرید</span>
-                              </span>
-                            )}
-
-                            {/* Installments */}
-                            {v.allowInstallments && (
-                              <span className="text-[9.5px] bg-emerald-500/5 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded-md border border-emerald-500/10 flex items-center gap-1">
-                                <Check className="w-3 h-3" />
-                                <span>پشتیبانی اقساط ({toPersianDigits(v.installmentCount || 2)} قسطه)</span>
-                              </span>
-                            )}
-
-                            {/* Budget/Cap */}
-                            {v.globalCap && (
-                              <span className="text-[9.5px] bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400 px-2 py-0.5 rounded-md flex items-center gap-1">
-                                <Users className="w-3 h-3" />
-                                <span>استفاده: {toPersianDigits(v.totalUsed || 0)} از {toPersianDigits(v.globalCap)}</span>
-                              </span>
-                            )}
-                          </div>
+                            );
+                          })}
+                          <button
+                            disabled={voucherPage === 1}
+                            onClick={() => setVoucherPage(prev => Math.max(prev - 1, 1))}
+                            className="h-8 px-3 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-500 hover:text-gray-800 dark:hover:text-white disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center transition-colors font-mono text-xs"
+                          >
+                            &gt;
+                          </button>
                         </div>
-                      ))}
-                    </div>
-                  </div>
+                      )}
+                    </>
+                  )}
                 </div>
               ) : (
                 <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800/85 p-6 rounded-3xl">
