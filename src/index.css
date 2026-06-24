@@ -1,4 +1,16 @@
-@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@300;400;500;600;700&display=swap');
+/* Self-hosted fonts via Fontsource (instead of Google CDN) */
+@import '@fontsource/vazirmatn/300.css';
+@import '@fontsource/vazirmatn/400.css';
+@import '@fontsource/vazirmatn/500.css';
+@import '@fontsource/vazirmatn/600.css';
+@import '@fontsource/vazirmatn/700.css';
+@import '@fontsource/vazirmatn/800.css';
+@import '@fontsource/vazirmatn/900.css';
+@import '@fontsource/jetbrains-mono/300.css';
+@import '@fontsource/jetbrains-mono/400.css';
+@import '@fontsource/jetbrains-mono/500.css';
+@import '@fontsource/jetbrains-mono/600.css';
+@import '@fontsource/jetbrains-mono/700.css';
 @import "tailwindcss";
 
 @variant dark (&:where(.dark, .dark *));
@@ -21,7 +33,7 @@
   .dark {
     --color-slate-900: #fafafc;
     --color-slate-950: #fcfcfe;
-    
+
     --color-gray-50: #0a0a0c;
     --color-gray-100: #141417;
     --color-gray-150: #18181c;
@@ -53,24 +65,31 @@
   .dark .bg-white {
     background-color: #121215 !important;
   }
+
   .dark .hover\:bg-gray-50:hover {
     background-color: #1a1a1e !important;
   }
+
   .dark .bg-gray-50 {
     background-color: #0d0d10 !important;
   }
+
   .dark .text-gray-900 {
     color: #fafafc !important;
   }
+
   .dark .text-gray-800 {
     color: #e4e4e6 !important;
   }
+
   .dark .text-gray-700 {
     color: #dededf !important;
   }
+
   .dark .text-gray-600 {
     color: #bcbcbe !important;
   }
+
   .dark .border-gray-100,
   .dark .border-gray-150,
   .dark .border-gray-200,
@@ -78,15 +97,16 @@
     border-color: #222225 !important;
   }
 
-  .dark select, 
-  .dark input, 
+  .dark select,
+  .dark input,
   .dark textarea {
     background-color: rgba(255, 255, 255, 0.04) !important;
     border-color: rgba(255, 255, 255, 0.1) !important;
     color: #e2e8f0 !important;
   }
-  .dark select:focus, 
-  .dark input:focus, 
+
+  .dark select:focus,
+  .dark input:focus,
   .dark textarea:focus {
     border-color: #3b82f6 !important;
     box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.3) !important;
@@ -122,18 +142,23 @@
 
 /* Shimmer animation */
 @keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
 }
 
 .animate-shimmer {
-  background: linear-gradient(90deg, rgba(229,231,235,0.3) 25%, rgba(209,213,219,0.5) 50%, rgba(229,231,235,0.3) 75%);
+  background: linear-gradient(90deg, rgba(229, 231, 235, 0.3) 25%, rgba(209, 213, 219, 0.5) 50%, rgba(229, 231, 235, 0.3) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite linear;
 }
 
 .dark .animate-shimmer {
-  background: linear-gradient(90deg, rgba(31,41,55,0.3) 25%, rgba(55,65,81,0.5) 50%, rgba(31,41,55,0.3) 75%);
+  background: linear-gradient(90deg, rgba(31, 41, 55, 0.3) 25%, rgba(55, 65, 81, 0.5) 50%, rgba(31, 41, 55, 0.3) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite linear;
 }
@@ -147,6 +172,7 @@
 .ltr-dir {
   direction: ltr;
 }
+
 .rtl-dir {
   direction: rtl;
 }
