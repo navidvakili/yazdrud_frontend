@@ -17,10 +17,10 @@ export default function Footer({ user }: FooterProps) {
           <span className="h-1.5 w-1.5 bg-green-500 rounded-full animate-pulse"></span>
           وضعیت شبکه: فعال و بهینه (Online)
         </span>
-        <span className="text-[9px] text-gray-300 dark:text-slate-600 font-mono">Karant Portal v2.0</span>
+        <span className="text-[9px] text-gray-300 dark:text-slate-600 ">Karant Portal v2.0</span>
       </div>
       <div className="flex items-center gap-3">
-        <span className="text-[9px] text-gray-300 dark:text-slate-600 font-mono">API: Connected</span>
+        <span className="text-[9px] text-gray-300 dark:text-slate-600 ">API: Connected</span>
         {user && (
           <span className="text-[9px] text-gray-300 dark:text-slate-600 flex items-center gap-1">
             <User className="w-3 h-3" />

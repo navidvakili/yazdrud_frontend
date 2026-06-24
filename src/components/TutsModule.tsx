@@ -183,7 +183,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     lecturer: c.instructor || 'مربی دوره',
     duration: c.duration_text || '۱۲ ساعت',
     cost: parseInt(String(c.amount)) || 0,
-    enrolled: c.registered_count || 0,
+    enrolled: (c.confirmed_count ?? c.registered_count) || 0,
     capacity: c.capacity || 30,
     startDate: c.start_date ? (c.start_date.includes('/') ? c.start_date : c.start_date.replace(/-/g, '/')) : '۱۴۰۵/۰۱/۰۱',
     status: c.active ? 'active' : 'ended',
@@ -1475,7 +1475,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
         <div className="p-4 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800/80 rounded-2xl flex items-center justify-between shadow-xs">
           <div>
             <span className="text-[10px] text-gray-400 block font-bold mb-1">کل ظرفیت کارگاه‌ها</span>
-            <span className="text-lg font-black font-mono text-gray-900 dark:text-white">
+            <span className="text-lg font-black  text-gray-900 dark:text-white">
               {toPersianDigits(totalEnrolledAllWorkshops)} / {toPersianDigits(totalCapacityAllWorkshops)} <span className="text-xs font-sans font-normal text-gray-400">نفر</span>
             </span>
           </div>
@@ -1487,7 +1487,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
         <div className="p-4 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800/80 rounded-2xl flex items-center justify-between shadow-xs">
           <div>
             <span className="text-[10px] text-gray-400 block font-bold mb-1">درآمد وصول شده (تایید فیش)</span>
-            <span className="text-lg font-black font-mono text-emerald-600 dark:text-emerald-400">
+            <span className="text-lg font-black  text-emerald-600 dark:text-emerald-400">
               {toPersianDigits((totalEstimatedRevenue / 10).toLocaleString('fa-IR'))} <span className="text-xs font-sans font-normal">تومان</span>
             </span>
           </div>
@@ -1499,7 +1499,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
         <div className="p-4 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800/80 rounded-2xl flex items-center justify-between shadow-xs">
           <div>
             <span className="text-[10px] text-gray-400 block font-bold mb-1">فیش‌های در انتظار بررسی</span>
-            <span className="text-lg font-black font-mono text-amber-500">
+            <span className="text-lg font-black  text-amber-500">
               {toPersianDigits(pendingReceiptCount)} <span className="text-xs font-sans font-normal text-gray-400">فقره</span>
             </span>
           </div>
@@ -1511,7 +1511,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
         <div className="p-4 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800/80 rounded-2xl flex items-center justify-between shadow-xs">
           <div>
             <span className="text-[10px] text-gray-400 block font-bold mb-1">تعداد دوره‌های آموزشی</span>
-            <span className="text-lg font-black font-mono text-indigo-500">
+            <span className="text-lg font-black  text-indigo-500">
               {toPersianDigits(courses.length)} <span className="text-xs font-sans font-normal text-gray-400">عنوان</span>
             </span>
           </div>
@@ -1635,14 +1635,14 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                                   </span>
                                   <span className="font-bold text-gray-700 dark:text-gray-300">{course.lecturer}</span>
                                 </div>
-                                <div className="flex items-center justify-between font-mono text-xs">
+                                <div className="flex items-center justify-between  text-xs">
                                   <span className="flex items-center gap-1.5 font-sans">
                                     <Clock className="w-3.5 h-3.5 text-gray-400" />
                                     طول دوره:
                                   </span>
                                   <span>{toPersianDigits(course.duration)}</span>
                                 </div>
-                                <div className="flex items-center justify-between font-mono text-xs">
+                                <div className="flex items-center justify-between  text-xs">
                                   <span className="flex items-center gap-1.5 font-sans">
                                     <Calendar className="w-3.5 h-3.5 text-gray-400" />
                                     تاریخ شروع:
@@ -1654,7 +1654,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
 
                             <div className="mt-5 pt-4 border-t border-gray-50 dark:border-gray-800/40">
                               {/* Enrolled progress */}
-                              <div className="flex justify-between items-center text-[10px] text-gray-400 dark:text-gray-500 mb-2 font-mono">
+                              <div className="flex justify-between items-center text-[10px] text-gray-400 dark:text-gray-500 mb-2 ">
                                 <span>ظرفیت: {toPersianDigits(course.enrolled)} از {toPersianDigits(course.capacity)} صندلی</span>
                                 <span>{toPersianDigits(Math.round(regPercent))}٪ تکمیل</span>
                               </div>
@@ -1669,7 +1669,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                               <div className="flex items-center justify-between gap-3">
                                 <div className="text-right">
                                   <span className="text-[9px] text-gray-400 block font-bold">شهریه ثبت‌نام:</span>
-                                  <span className="text-sm font-black text-teal-600 dark:text-teal-400 font-mono">
+                                  <span className="text-sm font-black text-teal-600 dark:text-teal-400 ">
                                     {formatCurrency(course.cost)}
                                   </span>
                                 </div>
@@ -1790,7 +1790,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                     {selectedCourseForDetail.description}
                   </p>
 
-                  <div className="grid grid-cols-2 gap-4 text-xs mb-6 font-mono">
+                  <div className="grid grid-cols-2 gap-4 text-xs mb-6 ">
                     <div className="p-3 bg-gray-50 dark:bg-gray-950 rounded-xl border border-gray-100 dark:border-gray-850">
                       <span className="text-[10px] text-gray-400 dark:text-gray-500 font-sans block mb-1">مدرس و ارائه‌دهنده:</span>
                       <span className="font-sans font-bold text-gray-800 dark:text-gray-200">{selectedCourseForDetail.lecturer}</span>
@@ -1860,7 +1860,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                   </h3>
 
                   <div className="mb-5 p-4 bg-teal-500/5 rounded-2xl border border-teal-500/10 text-xs text-gray-600 dark:text-gray-400 leading-relaxed text-justify">
-                    جهت تایید نهایی پذیرش در این کارگاه آزاد، مقتضی است مبلغ <strong className="text-teal-600 font-mono font-black">{formatCurrency(registeringCourse.cost)}</strong> را به حساب شماره <strong className="font-mono font-black">{toPersianDigits('۰۱۱۲۳۴۵۶۷۸۹')}</strong> بانک ملی ایران به نام دانشگاه علم و هنر واریز نموده و مشخصات فیش شتابی را در زیر آپلود فرمایید.
+                    جهت تایید نهایی پذیرش در این کارگاه آزاد، مقتضی است مبلغ <strong className="text-teal-600  font-black">{formatCurrency(registeringCourse.cost)}</strong> را به حساب شماره <strong className=" font-black">{toPersianDigits('۰۱۱۲۳۴۵۶۷۸۹')}</strong> بانک ملی ایران به نام دانشگاه علم و هنر واریز نموده و مشخصات فیش شتابی را در زیر آپلود فرمایید.
                   </div>
 
                   <form onSubmit={handleSubmitPreRegister} className="space-y-4 text-right">
@@ -1884,7 +1884,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                           value={studentIdNum}
                           onChange={(e) => setStudentIdNum(e.target.value)}
                           placeholder="مثال: ۴۰۲۱۵۱۴۰۱۵"
-                          className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none font-mono"
+                          className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none "
                         />
                       </div>
                     </div>
@@ -1898,7 +1898,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                           value={studentEmail}
                           onChange={(e) => setStudentEmail(e.target.value)}
                           placeholder="student@example.com"
-                          className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none font-mono text-left"
+                          className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none  text-left"
                         />
                       </div>
                       <div>
@@ -1909,7 +1909,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                           value={studentPhone}
                           onChange={(e) => setStudentPhone(e.target.value)}
                           placeholder="۰۹۱۲۳۴۵۶۷۸۹"
-                          className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none font-mono text-left"
+                          className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none  text-left"
                         />
                       </div>
                     </div>
@@ -1965,7 +1965,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                           value={studentVoucherCode}
                           onChange={(e) => setStudentVoucherCode(e.target.value)}
                           placeholder="مثال: WELCOME_ONLINE یا YALDA1405"
-                          className="flex-1 text-xs p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none font-mono uppercase"
+                          className="flex-1 text-xs p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none  uppercase"
                         />
                         <button
                           type="button"
@@ -1986,12 +1986,12 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                         <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-500/15 text-emerald-700 dark:text-emerald-400 rounded-xl space-y-1">
                           <div className="flex justify-between items-center text-[10.5px]">
                             <span className="font-extrabold">✓ بن تخفیف با موفقیت اعمال شد:</span>
-                            <span className="font-mono bg-emerald-500/10 px-2 py-0.5 rounded text-[9.5px] font-black">{appliedVoucher.code}</span>
+                            <span className=" bg-emerald-500/10 px-2 py-0.5 rounded text-[9.5px] font-black">{appliedVoucher.code}</span>
                           </div>
                           <p className="text-[10px] text-gray-500 dark:text-gray-400 font-medium">{appliedVoucher.title}</p>
                           <div className="flex justify-between items-center text-xs font-black mt-2 pt-1.5 border-t border-emerald-500/10">
                             <span>کاهش شهریه:</span>
-                            <span className="font-mono">-{formatCurrency(voucherDiscountAmount)}</span>
+                            <span className="">-{formatCurrency(voucherDiscountAmount)}</span>
                           </div>
 
                           {appliedVoucher.allowInstallments && appliedVoucher.installmentCount && (
@@ -2013,7 +2013,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                       )}
 
                       {!appliedVoucher && (
-                        <p className="text-[9.5px] text-gray-400">کدهای پیش‌فرض جهت تست: <code className="font-mono text-indigo-500 font-bold">WELCOME_ONLINE</code> (۳۰٪ تخفیف + اقساط) یا <code className="font-mono text-indigo-500 font-bold">YALDA1405</code> (۲۰٪ تخفیف) یا <code className="font-mono text-indigo-500 font-bold">FIRST_BUYER</code> (اولین خرید)</p>
+                        <p className="text-[9.5px] text-gray-400">کدهای پیش‌فرض جهت تست: <code className=" text-indigo-500 font-bold">WELCOME_ONLINE</code> (۳۰٪ تخفیف + اقساط) یا <code className=" text-indigo-500 font-bold">YALDA1405</code> (۲۰٪ تخفیف) یا <code className=" text-indigo-500 font-bold">FIRST_BUYER</code> (اولین خرید)</p>
                       )}
                     </div>
 
@@ -2026,7 +2026,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                           value={refCodeInput}
                           onChange={(e) => setRefCodeInput(e.target.value)}
                           placeholder="کد پیگیری ۶ الی ۱۰ رقمی"
-                          className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none font-mono"
+                          className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none "
                         />
                       </div>
                       <div>
@@ -2068,7 +2068,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                         )}
 
                         {!isUploading && uploadFileName && (
-                          <div className="mt-2 p-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-600 dark:text-emerald-400 font-mono text-[9.5px] flex items-center justify-center gap-1">
+                          <div className="mt-2 p-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-600 dark:text-emerald-400  text-[9.5px] flex items-center justify-center gap-1">
                             <Check className="w-3.5 h-3.5 text-emerald-500" />
                             <span>فایل بارگذاری شد: {uploadFileName}</span>
                           </div>
@@ -2172,7 +2172,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                           value={newCourseDuration}
                           onChange={(e) => setNewCourseDuration(e.target.value)}
                           placeholder="مثال: ۲۴ ساعت"
-                          className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none font-mono"
+                          className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none "
                         />
                       </div>
                       <div>
@@ -2183,7 +2183,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                           value={newCourseCost}
                           onChange={(e) => setNewCourseCost(e.target.value)}
                           placeholder="مثال: ۴,۵۰۰,۰۰۰"
-                          className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none font-mono"
+                          className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none "
                         />
                       </div>
                       <div>
@@ -2193,7 +2193,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                           value={newCourseCapacity}
                           onChange={(e) => setNewCourseCapacity(e.target.value)}
                           placeholder="مثال: ۳۰"
-                          className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none font-mono"
+                          className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none "
                         />
                       </div>
                     </div>
@@ -2206,7 +2206,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                           value={newCourseStartDate}
                           onChange={(e) => setNewCourseStartDate(e.target.value)}
                           placeholder="۱۴۰۵/۰۵/۱۵"
-                          className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none font-mono"
+                          className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none "
                         />
                       </div>
                     </div>
@@ -2312,7 +2312,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                           value={editCourseDuration}
                           onChange={(e) => setEditCourseDuration(e.target.value)}
                           placeholder="مثال: ۲۴ ساعت"
-                          className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none font-mono"
+                          className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none "
                         />
                       </div>
                       <div>
@@ -2323,7 +2323,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                           value={editCourseCost}
                           onChange={(e) => setEditCourseCost(e.target.value)}
                           placeholder="مثال: ۴,۵۰۰,۰۰۰"
-                          className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none font-mono"
+                          className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none "
                         />
                       </div>
                       <div>
@@ -2333,7 +2333,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                           value={editCourseCapacity}
                           onChange={(e) => setEditCourseCapacity(e.target.value)}
                           placeholder="مثال: ۳۰"
-                          className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none font-mono"
+                          className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none "
                         />
                       </div>
                     </div>
@@ -2346,7 +2346,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                           value={editCourseStartDate}
                           onChange={(e) => setEditCourseStartDate(e.target.value)}
                           placeholder="۱۴۰۵/۰۵/۱۵"
-                          className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none font-mono"
+                          className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none "
                         />
                       </div>
                     </div>
@@ -2410,25 +2410,25 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                     <div className="p-3 bg-gray-50 dark:bg-gray-950 rounded-2xl border border-gray-100 dark:border-gray-850">
                       <span className="text-[10px] text-gray-400 block font-bold mb-1">کل پیش‌ثبت‌نام‌ها</span>
-                      <span className="text-base font-black font-mono text-gray-900 dark:text-white">
+                      <span className="text-base font-black  text-gray-900 dark:text-white">
                         {toPersianDigits(registrants.filter(r => r.courseId === selectedCourseReport.id).length)} نفر
                       </span>
                     </div>
                     <div className="p-3 bg-gray-50 dark:bg-gray-950 rounded-2xl border border-gray-100 dark:border-gray-850">
                       <span className="text-[10px] text-gray-400 block font-bold mb-1">تایید شده نهایی</span>
-                      <span className="text-base font-black font-mono text-emerald-600">
+                      <span className="text-base font-black  text-emerald-600">
                         {toPersianDigits(registrants.filter(r => r.courseId === selectedCourseReport.id && r.status === 'verified').length)} نفر
                       </span>
                     </div>
                     <div className="p-3 bg-gray-50 dark:bg-gray-950 rounded-2xl border border-gray-100 dark:border-gray-850">
                       <span className="text-[10px] text-gray-400 block font-bold mb-1">در انتظار بررسی</span>
-                      <span className="text-base font-black font-mono text-amber-500">
+                      <span className="text-base font-black  text-amber-500">
                         {toPersianDigits(registrants.filter(r => r.courseId === selectedCourseReport.id && r.status === 'pending').length)} نفر
                       </span>
                     </div>
                     <div className="p-3 bg-gray-50 dark:bg-gray-950 rounded-2xl border border-gray-100 dark:border-gray-850">
                       <span className="text-[10px] text-gray-400 block font-bold mb-1">درآمد کل دوره (تایید شده)</span>
-                      <span className="text-base font-black font-mono text-teal-600 dark:text-teal-400">
+                      <span className="text-base font-black  text-teal-600 dark:text-teal-400">
                         {formatCurrency(registrants.filter(r => r.courseId === selectedCourseReport.id && r.status === 'verified').reduce((sum, r) => sum + r.amount, 0))}
                       </span>
                     </div>
@@ -2467,19 +2467,19 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                             ) : (
                               courseRegs.map((reg, idx) => (
                                 <tr key={reg.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-900/40 transition-all">
-                                  <td className="p-2 text-center font-mono font-bold text-gray-400 w-10">
+                                  <td className="p-2 text-center  font-bold text-gray-400 w-10">
                                     {toPersianDigits(idx + 1)}
                                   </td>
-                                  <td className="p-2 font-mono font-bold text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                                  <td className="p-2  font-bold text-gray-600 dark:text-gray-400 whitespace-nowrap">
                                     {toPersianDigits(reg.nationalCode)}
                                   </td>
                                   <td className="p-2 font-extrabold text-gray-900 dark:text-white whitespace-nowrap">
                                     {reg.name}
                                   </td>
-                                  <td className="p-2 font-mono font-bold text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                                  <td className="p-2  font-bold text-gray-600 dark:text-gray-400 whitespace-nowrap">
                                     {toPersianDigits(reg.studentCode)}
                                   </td>
-                                  <td className="p-2 font-mono font-bold text-gray-600 dark:text-gray-400 whitespace-nowrap" dir="ltr">
+                                  <td className="p-2  font-bold text-gray-600 dark:text-gray-400 whitespace-nowrap" dir="ltr">
                                     {toPersianDigits(reg.mobile)}
                                   </td>
                                   <td className="p-2 text-gray-700 dark:text-gray-300 whitespace-nowrap">
@@ -2488,19 +2488,19 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                                   <td className="p-2 text-gray-700 dark:text-gray-300 font-medium max-w-[160px] truncate" title={reg.courseTitle}>
                                     {reg.courseTitle}
                                   </td>
-                                  <td className="p-2 font-mono font-bold text-emerald-600 dark:text-emerald-400 text-left whitespace-nowrap">
+                                  <td className="p-2  font-bold text-emerald-600 dark:text-emerald-400 text-left whitespace-nowrap">
                                     {formatCurrency(reg.amount)}
                                   </td>
                                   <td className="p-2 whitespace-nowrap">
                                     <span className="text-gray-700 dark:text-gray-300">{reg.paymentMethod}</span>
                                   </td>
-                                  <td className="p-2 font-mono font-bold text-gray-800 dark:text-gray-200 whitespace-nowrap" dir="ltr">
+                                  <td className="p-2  font-bold text-gray-800 dark:text-gray-200 whitespace-nowrap" dir="ltr">
                                     {reg.trackingCode ? toPersianDigits(reg.trackingCode) : '—'}
                                   </td>
-                                  <td className="p-2 font-mono text-gray-500 whitespace-nowrap">
+                                  <td className="p-2  text-gray-500 whitespace-nowrap">
                                     {toPersianDigits(reg.date)}
                                   </td>
-                                  <td className="p-2 font-mono text-gray-500 whitespace-nowrap">
+                                  <td className="p-2  text-gray-500 whitespace-nowrap">
                                     {reg.verifiedAt ? toPersianDigits(reg.verifiedAt.split(' ')[0].replace(/-/g, '/')) : '—'}
                                   </td>
                                   <td className="p-2 text-center whitespace-nowrap">
@@ -2646,19 +2646,19 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
 
                             return (
                               <tr key={reg.id} className="hover:bg-gray-55/40 dark:hover:bg-gray-850/10 transition-colors">
-                                <td className="p-2 text-center font-mono font-bold text-gray-400 w-10">
+                                <td className="p-2 text-center  font-bold text-gray-400 w-10">
                                   {toPersianDigits(globalIdx)}
                                 </td>
-                                <td className="p-2 font-mono font-bold text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                                <td className="p-2  font-bold text-gray-600 dark:text-gray-400 whitespace-nowrap">
                                   {toPersianDigits(reg.nationalCode)}
                                 </td>
                                 <td className="p-2 font-extrabold text-gray-900 dark:text-white whitespace-nowrap">
                                   {reg.name}
                                 </td>
-                                <td className="p-2 font-mono font-bold text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                                <td className="p-2  font-bold text-gray-600 dark:text-gray-400 whitespace-nowrap">
                                   {toPersianDigits(reg.studentCode)}
                                 </td>
-                                <td className="p-2 font-mono font-bold text-gray-600 dark:text-gray-400 whitespace-nowrap" dir="ltr">
+                                <td className="p-2  font-bold text-gray-600 dark:text-gray-400 whitespace-nowrap" dir="ltr">
                                   {toPersianDigits(reg.mobile)}
                                 </td>
                                 <td className="p-2 text-gray-700 dark:text-gray-300">
@@ -2667,19 +2667,19 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                                 <td className="p-2 text-gray-700 dark:text-gray-300 font-medium max-w-[180px] truncate" title={reg.courseTitle}>
                                   {reg.courseTitle}
                                 </td>
-                                <td className="p-2 font-mono font-bold text-emerald-600 dark:text-emerald-400 text-left whitespace-nowrap">
+                                <td className="p-2  font-bold text-emerald-600 dark:text-emerald-400 text-left whitespace-nowrap">
                                   {formatCurrency(reg.amount)}
                                 </td>
                                 <td className="p-2 whitespace-nowrap">
                                   <span className="text-gray-700 dark:text-gray-300">{reg.paymentMethod}</span>
                                 </td>
-                                <td className="p-2 font-mono font-bold text-gray-800 dark:text-gray-200 whitespace-nowrap" dir="ltr">
+                                <td className="p-2  font-bold text-gray-800 dark:text-gray-200 whitespace-nowrap" dir="ltr">
                                   {reg.trackingCode ? toPersianDigits(reg.trackingCode) : '—'}
                                 </td>
-                                <td className="p-2 font-mono text-gray-500 whitespace-nowrap">
+                                <td className="p-2  text-gray-500 whitespace-nowrap">
                                   {toPersianDigits(reg.date)}
                                 </td>
-                                <td className="p-2 font-mono text-gray-500 whitespace-nowrap">
+                                <td className="p-2  text-gray-500 whitespace-nowrap">
                                   {reg.verifiedAt ? toPersianDigits(reg.verifiedAt.split(' ')[0].replace(/-/g, '/')) : '—'}
                                 </td>
                                 <td className="p-2 text-center whitespace-nowrap">
@@ -2853,7 +2853,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                         <div className="flex justify-between items-start mb-2">
                           <div>
                             <span className="font-extrabold text-xs text-gray-900 dark:text-white block">{reg.name}</span>
-                            <span className="text-[10px] text-gray-400 block mt-0.5 font-mono">کد ملی / دانشجویی: {toPersianDigits(reg.studentCode)}</span>
+                            <span className="text-[10px] text-gray-400 block mt-0.5 ">کد ملی / دانشجویی: {toPersianDigits(reg.studentCode)}</span>
                           </div>
                           <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold ${reg.status === 'verified' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' :
                             reg.status === 'rejected' ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400' :
@@ -2869,8 +2869,8 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                         </div>
 
                         <div className="flex justify-between items-center border-t border-gray-50 dark:border-gray-800/60 pt-2 text-[10px]">
-                          <span className="font-mono text-gray-400">{toPersianDigits(reg.date)}</span>
-                          <span className="font-mono font-black text-teal-600 dark:text-teal-400">{formatCurrency(reg.amount)}</span>
+                          <span className=" text-gray-400">{toPersianDigits(reg.date)}</span>
+                          <span className=" font-black text-teal-600 dark:text-teal-400">{formatCurrency(reg.amount)}</span>
                         </div>
                       </div>
                     );
@@ -2907,7 +2907,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                       <span className="text-xs font-black text-gray-800 dark:text-gray-200">{selectedReceiptForReview.paymentMethod}</span>
                     </div>
 
-                    <div className="space-y-2.5 text-xs font-mono">
+                    <div className="space-y-2.5 text-xs ">
                       <div className="flex justify-between">
                         <span className="text-gray-400 font-sans">بابت ثبت‌نام کارگاه:</span>
                         <span className="text-gray-900 dark:text-white font-sans font-bold text-left truncate max-w-[200px]">{selectedReceiptForReview.courseTitle}</span>
@@ -2934,12 +2934,12 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                         <div className="bg-indigo-500/5 p-2 rounded-xl border border-indigo-500/10 space-y-1 mt-2 text-[11px]">
                           <div className="flex justify-between">
                             <span className="text-indigo-600 dark:text-indigo-400 font-sans">بن تخفیف استفاده شده:</span>
-                            <span className="font-mono font-bold text-indigo-700 dark:text-indigo-300">{(selectedReceiptForReview as any).appliedVoucherCode}</span>
+                            <span className=" font-bold text-indigo-700 dark:text-indigo-300">{(selectedReceiptForReview as any).appliedVoucherCode}</span>
                           </div>
                           {(selectedReceiptForReview as any).discountAmount && (
                             <div className="flex justify-between">
                               <span className="text-gray-400 font-sans">مبلغ تخفیف کسر شده:</span>
-                              <span className="text-rose-500 font-bold font-mono">-{formatCurrency((selectedReceiptForReview as any).discountAmount)}</span>
+                              <span className="text-rose-500 font-bold ">-{formatCurrency((selectedReceiptForReview as any).discountAmount)}</span>
                             </div>
                           )}
                           {(selectedReceiptForReview as any).installmentsCount && (
@@ -3205,7 +3205,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
               <div className="p-4 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-850 rounded-2xl flex items-center justify-between shadow-xs">
                 <div>
                   <span className="text-[10px] text-gray-400 block font-bold mb-1">کل ثبت‌نام‌های تایید شده</span>
-                  <span className="text-xl font-black font-mono text-gray-900 dark:text-white">
+                  <span className="text-xl font-black  text-gray-900 dark:text-white">
                     {toPersianDigits(currentData.totalApproved)} <span className="text-xs font-sans text-gray-400">نفر</span>
                   </span>
                 </div>
@@ -3217,7 +3217,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
               <div className="p-4 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-850 rounded-2xl flex items-center justify-between shadow-xs">
                 <div>
                   <span className="text-[10px] text-gray-400 block font-bold mb-1">کل مبلغ دریافتی (ریال)</span>
-                  <span className="text-lg font-black font-mono text-emerald-600 dark:text-emerald-400">
+                  <span className="text-lg font-black  text-emerald-600 dark:text-emerald-400">
                     {toPersianDigits(currentData.totalAmount.toLocaleString('fa-IR'))}
                   </span>
                 </div>
@@ -3229,7 +3229,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
               <div className="p-4 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-850 rounded-2xl flex items-center justify-between shadow-xs">
                 <div>
                   <span className="text-[10px] text-gray-400 block font-bold mb-1">پرداخت آنلاین</span>
-                  <span className="text-xl font-black font-mono text-blue-600 dark:text-blue-400">
+                  <span className="text-xl font-black  text-blue-600 dark:text-blue-400">
                     {toPersianDigits(currentData.onlinePayment)} <span className="text-xs font-sans text-gray-400">تراکنش</span>
                   </span>
                 </div>
@@ -3241,7 +3241,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
               <div className="p-4 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-850 rounded-2xl flex items-center justify-between shadow-xs">
                 <div>
                   <span className="text-[10px] text-gray-400 block font-bold mb-1">فیش بانکی تایید شده</span>
-                  <span className="text-xl font-black font-mono text-purple-600 dark:text-purple-400">
+                  <span className="text-xl font-black  text-purple-600 dark:text-purple-400">
                     {toPersianDigits(currentData.bankSlips)} <span className="text-xs font-sans text-gray-400">فیش</span>
                   </span>
                 </div>
@@ -3257,7 +3257,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                 <TrendingUp className="w-4 h-4 text-teal-600" />
                 روند ثبت‌نام در ۱۲ ماه اخیر (سال {toPersianDigits(statAppliedYear)})
               </h5>
-              <div className="h-72 w-full font-mono text-xs" dir="ltr">
+              <div className="h-72 w-full  text-xs" dir="ltr">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart
                     data={currentData.months}
@@ -3320,11 +3320,11 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                       {currentData.months.map((m) => (
                         <tr key={m.month} className="hover:bg-gray-55/40 dark:hover:bg-gray-950/40 transition-colors">
                           <td className="p-2.5 text-right font-bold text-gray-800 dark:text-gray-200">{m.month}</td>
-                          <td className="p-2.5 text-center font-mono font-bold">{toPersianDigits(m.count)}</td>
-                          <td className="p-2.5 text-left font-mono text-emerald-600 dark:text-emerald-400 font-bold">{toPersianDigits(m.amount.toLocaleString('fa-IR'))}</td>
-                          <td className="p-2.5 text-center font-mono text-gray-500">{toPersianDigits(m.online)}</td>
-                          <td className="p-2.5 text-center font-mono text-gray-500">{toPersianDigits(m.bankSlip)}</td>
-                          <td className="p-2.5 text-left font-mono">
+                          <td className="p-2.5 text-center  font-bold">{toPersianDigits(m.count)}</td>
+                          <td className="p-2.5 text-left  text-emerald-600 dark:text-emerald-400 font-bold">{toPersianDigits(m.amount.toLocaleString('fa-IR'))}</td>
+                          <td className="p-2.5 text-center  text-gray-500">{toPersianDigits(m.online)}</td>
+                          <td className="p-2.5 text-center  text-gray-500">{toPersianDigits(m.bankSlip)}</td>
+                          <td className="p-2.5 text-left ">
                             <div className="flex items-center justify-end gap-1.5">
                               <span className="text-gray-400 text-[10px]">{toPersianDigits(m.percentage)}٪</span>
                               <div className="w-12 h-1.5 bg-gray-100 dark:bg-gray-850 rounded-full overflow-hidden inline-block relative">
@@ -3336,11 +3336,11 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                       ))}
                       <tr className="bg-gray-50 dark:bg-gray-950 font-black border-t-2 border-gray-200 dark:border-gray-800">
                         <td className="p-3 text-right">جمع کل</td>
-                        <td className="p-3 text-center font-mono">{toPersianDigits(currentData.totalApproved)}</td>
-                        <td className="p-3 text-left font-mono text-emerald-600 dark:text-emerald-400">{toPersianDigits(currentData.totalAmount.toLocaleString('fa-IR'))}</td>
-                        <td className="p-3 text-center font-mono">{toPersianDigits(currentData.onlinePayment)}</td>
-                        <td className="p-3 text-center font-mono">{toPersianDigits(currentData.bankSlips)}</td>
-                        <td className="p-3 text-left font-mono">۱۰۰٪</td>
+                        <td className="p-3 text-center ">{toPersianDigits(currentData.totalApproved)}</td>
+                        <td className="p-3 text-left  text-emerald-600 dark:text-emerald-400">{toPersianDigits(currentData.totalAmount.toLocaleString('fa-IR'))}</td>
+                        <td className="p-3 text-center ">{toPersianDigits(currentData.onlinePayment)}</td>
+                        <td className="p-3 text-center ">{toPersianDigits(currentData.bankSlips)}</td>
+                        <td className="p-3 text-left ">۱۰۰٪</td>
                       </tr>
                     </tbody>
                   </table>
@@ -3357,23 +3357,23 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                   <div className="grid grid-cols-2 gap-3">
                     <div className="p-3 bg-rose-50/40 dark:bg-rose-950/10 border border-rose-500/10 rounded-2xl text-center">
                       <span className="text-[10px] text-rose-500 block font-bold mb-1">بهار</span>
-                      <span className="text-sm font-black font-mono text-rose-600 dark:text-rose-400 block">{toPersianDigits(currentData.seasons.spring.count)} نفر</span>
-                      <span className="text-[9px] font-mono text-gray-400">{toPersianDigits(currentData.seasons.spring.amount.toLocaleString('fa-IR'))} ریال</span>
+                      <span className="text-sm font-black  text-rose-600 dark:text-rose-400 block">{toPersianDigits(currentData.seasons.spring.count)} نفر</span>
+                      <span className="text-[9px]  text-gray-400">{toPersianDigits(currentData.seasons.spring.amount.toLocaleString('fa-IR'))} ریال</span>
                     </div>
                     <div className="p-3 bg-amber-50/40 dark:bg-amber-950/10 border border-amber-500/10 rounded-2xl text-center">
                       <span className="text-[10px] text-amber-500 block font-bold mb-1">تابستان</span>
-                      <span className="text-sm font-black font-mono text-amber-600 dark:text-amber-400 block">{toPersianDigits(currentData.seasons.summer.count)} نفر</span>
-                      <span className="text-[9px] font-mono text-gray-400">{toPersianDigits(currentData.seasons.summer.amount.toLocaleString('fa-IR'))} ریال</span>
+                      <span className="text-sm font-black  text-amber-600 dark:text-amber-400 block">{toPersianDigits(currentData.seasons.summer.count)} نفر</span>
+                      <span className="text-[9px]  text-gray-400">{toPersianDigits(currentData.seasons.summer.amount.toLocaleString('fa-IR'))} ریال</span>
                     </div>
                     <div className="p-3 bg-emerald-50/40 dark:bg-emerald-950/10 border border-emerald-500/10 rounded-2xl text-center">
                       <span className="text-[10px] text-emerald-500 block font-bold mb-1">پاییز</span>
-                      <span className="text-sm font-black font-mono text-emerald-600 dark:text-emerald-400 block">{toPersianDigits(currentData.seasons.autumn.count)} نفر</span>
-                      <span className="text-[9px] font-mono text-gray-400">{toPersianDigits(currentData.seasons.autumn.amount.toLocaleString('fa-IR'))} ریال</span>
+                      <span className="text-sm font-black  text-emerald-600 dark:text-emerald-400 block">{toPersianDigits(currentData.seasons.autumn.count)} نفر</span>
+                      <span className="text-[9px]  text-gray-400">{toPersianDigits(currentData.seasons.autumn.amount.toLocaleString('fa-IR'))} ریال</span>
                     </div>
                     <div className="p-3 bg-indigo-50/40 dark:bg-indigo-950/10 border border-indigo-500/10 rounded-2xl text-center">
                       <span className="text-[10px] text-indigo-500 block font-bold mb-1">زمستان</span>
-                      <span className="text-sm font-black font-mono text-indigo-600 dark:text-indigo-400 block">{toPersianDigits(currentData.seasons.winter.count)} نفر</span>
-                      <span className="text-[9px] font-mono text-gray-400">{toPersianDigits(currentData.seasons.winter.amount.toLocaleString('fa-IR'))} ریال</span>
+                      <span className="text-sm font-black  text-indigo-600 dark:text-indigo-400 block">{toPersianDigits(currentData.seasons.winter.count)} نفر</span>
+                      <span className="text-[9px]  text-gray-400">{toPersianDigits(currentData.seasons.winter.amount.toLocaleString('fa-IR'))} ریال</span>
                     </div>
                   </div>
                 </div>
@@ -3388,7 +3388,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                     <div className="flex items-center gap-2 p-2 bg-white dark:bg-gray-900 rounded-xl border border-teal-500/10">
                       <div className="w-2 h-2 rounded-full bg-teal-500"></div>
                       <span className="text-gray-400 font-bold text-[10px]">میانگین ماهانه ثبت نام:</span>
-                      <span className="font-mono font-black text-gray-800 dark:text-gray-200 mr-auto">{toPersianDigits(currentData.avgMonthly)} نفر</span>
+                      <span className=" font-black text-gray-800 dark:text-gray-200 mr-auto">{toPersianDigits(currentData.avgMonthly)} نفر</span>
                     </div>
                     <div className="flex items-center gap-2 p-2 bg-white dark:bg-gray-900 rounded-xl border border-teal-500/10">
                       <div className="w-2 h-2 rounded-full bg-blue-500"></div>
@@ -3398,7 +3398,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                     <div className="flex items-center gap-2 p-2 bg-white dark:bg-gray-900 rounded-xl border border-teal-500/10">
                       <div className="w-2 h-2 rounded-full bg-pink-500"></div>
                       <span className="text-gray-400 font-bold text-[10px]">مجموع پذیرش دانشجو:</span>
-                      <span className="font-mono font-black text-gray-800 dark:text-gray-200 mr-auto">{toPersianDigits(currentData.totalApproved)} نفر</span>
+                      <span className=" font-black text-gray-800 dark:text-gray-200 mr-auto">{toPersianDigits(currentData.totalApproved)} نفر</span>
                     </div>
                   </div>
                 </div>
@@ -3436,25 +3436,25 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="p-4 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-850 rounded-2xl">
               <span className="text-[10px] text-gray-400 block font-bold mb-1">تعداد کل کارگاه‌ها</span>
-              <span className="text-xl font-black font-mono text-gray-900 dark:text-white">
+              <span className="text-xl font-black  text-gray-900 dark:text-white">
                 {toPersianDigits(courses.length)} <span className="text-xs font-sans text-gray-400">دوره فعال</span>
               </span>
             </div>
             <div className="p-4 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-850 rounded-2xl">
               <span className="text-[10px] text-gray-400 block font-bold mb-1">میانگین ثبت‌نامی‌ها</span>
-              <span className="text-xl font-black font-mono text-teal-600 dark:text-teal-400">
+              <span className="text-xl font-black  text-teal-600 dark:text-teal-400">
                 {toPersianDigits(Math.round(totalEnrolledAllWorkshops / courses.length))} <span className="text-xs font-sans text-gray-400">دانشجو در کلاس</span>
               </span>
             </div>
             <div className="p-4 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-850 rounded-2xl">
               <span className="text-[10px] text-gray-400 block font-bold mb-1">درصد پوشش کل ظرفیت</span>
-              <span className="text-xl font-black font-mono text-indigo-500">
+              <span className="text-xl font-black  text-indigo-500">
                 {toPersianDigits(Math.round((totalEnrolledAllWorkshops / totalCapacityAllWorkshops) * 100))}٪
               </span>
             </div>
             <div className="p-4 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-850 rounded-2xl">
               <span className="text-[10px] text-gray-400 block font-bold mb-1">مجموع گردش ناخالص</span>
-              <span className="text-xl font-black font-mono text-emerald-600 dark:text-emerald-400">
+              <span className="text-xl font-black  text-emerald-600 dark:text-emerald-400">
                 {toPersianDigits((courses.reduce((sum, c) => sum + (c.enrolled * c.cost), 0) / 10).toLocaleString('fa-IR'))} <span className="text-xs font-sans">تومان</span>
               </span>
             </div>
@@ -3475,7 +3475,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                     <div key={c.id} className="space-y-1.5">
                       <div className="flex justify-between items-center text-[10.5px]">
                         <span className="font-bold text-gray-700 dark:text-gray-300 truncate max-w-[280px]">{c.title}</span>
-                        <span className="font-mono text-gray-400">{toPersianDigits(c.enrolled)} از {toPersianDigits(c.capacity)} نفر ({toPersianDigits(Math.round(percent))}٪)</span>
+                        <span className=" text-gray-400">{toPersianDigits(c.enrolled)} از {toPersianDigits(c.capacity)} نفر ({toPersianDigits(Math.round(percent))}٪)</span>
                       </div>
                       <div className="w-full h-3 rounded-full bg-gray-50 dark:bg-gray-950 overflow-hidden relative">
                         <motion.div
@@ -3513,7 +3513,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                     <div key={cat} className="p-3 bg-gray-55 dark:bg-gray-950 rounded-2xl border border-gray-100/50 dark:border-gray-850 space-y-2">
                       <div className="flex justify-between items-center text-[10px]">
                         <span className="font-bold text-gray-700 dark:text-gray-300">{cat}</span>
-                        <span className="font-mono text-gray-500 font-extrabold">{toPersianDigits(catEnrolled)} نفر ({toPersianDigits(sharePercent)}٪)</span>
+                        <span className=" text-gray-500 font-extrabold">{toPersianDigits(catEnrolled)} نفر ({toPersianDigits(sharePercent)}٪)</span>
                       </div>
                       <div className="w-full h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
                         <div className={`h-full ${colorClass} rounded-full`} style={{ width: `${sharePercent}%` }}></div>
@@ -3558,15 +3558,15 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                           {c.category}
                         </td>
                         <td className="p-3 text-center">
-                          <span className="font-mono font-bold text-gray-800 dark:text-gray-200 block">
+                          <span className=" font-bold text-gray-800 dark:text-gray-200 block">
                             {toPersianDigits(c.enrolled)} از {toPersianDigits(c.capacity)}
                           </span>
-                          <span className="text-[10px] text-gray-400 block font-mono">({toPersianDigits(Math.round((c.enrolled / c.capacity) * 100))}٪)</span>
+                          <span className="text-[10px] text-gray-400 block ">({toPersianDigits(Math.round((c.enrolled / c.capacity) * 100))}٪)</span>
                         </td>
-                        <td className="p-3 text-left font-mono font-bold text-gray-700 dark:text-gray-300">
+                        <td className="p-3 text-left  font-bold text-gray-700 dark:text-gray-300">
                           {toPersianDigits((c.cost / 10).toLocaleString('fa-IR'))} <span className="text-[10px] font-sans text-gray-400">تومان</span>
                         </td>
-                        <td className="p-3 text-left font-mono font-black text-emerald-600 dark:text-emerald-400">
+                        <td className="p-3 text-left  font-black text-emerald-600 dark:text-emerald-400">
                           {toPersianDigits((rev / 10).toLocaleString('fa-IR'))} <span className="text-[10px] font-sans font-normal text-gray-400">تومان</span>
                         </td>
                         <td className="p-3 text-center">
@@ -3782,7 +3782,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                   <div className="absolute left-6 top-6 opacity-20">
                     <Calendar className="w-10 h-10" />
                   </div>
-                  <div className="text-3xl font-black font-mono leading-none">
+                  <div className="text-3xl font-black  leading-none">
                     {toPersianDigits(thisMonthCount)}
                   </div>
                   <div className="text-xs font-bold opacity-90">این ماه</div>
@@ -3793,7 +3793,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                   <div className="absolute left-6 top-6 opacity-20">
                     <MessageSquare className="w-10 h-10" />
                   </div>
-                  <div className="text-3xl font-black font-mono leading-none">
+                  <div className="text-3xl font-black  leading-none">
                     {toPersianDigits(filteredSurveys.length)}
                   </div>
                   <div className="text-xs font-bold opacity-90">کل نظرسنجی‌ها</div>
@@ -3840,7 +3840,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                           <tr key={survey.id} className="hover:bg-gray-55/30 dark:hover:bg-gray-950/20 transition-colors">
                             {/* ID Badge */}
                             <td className="p-3 text-center">
-                              <div className="h-7 w-7 bg-blue-600 dark:bg-blue-500 text-white font-mono font-bold text-xs rounded-lg flex items-center justify-center mx-auto shadow-xs">
+                              <div className="h-7 w-7 bg-blue-600 dark:bg-blue-500 text-white  font-bold text-xs rounded-lg flex items-center justify-center mx-auto shadow-xs">
                                 {survey.id}
                               </div>
                             </td>
@@ -3852,14 +3852,14 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
 
                             {/* Mobile Phone */}
                             <td className="p-3 text-center">
-                              <span className="text-blue-600 dark:text-blue-400 font-mono font-bold text-xs flex items-center justify-center gap-1">
+                              <span className="text-blue-600 dark:text-blue-400  font-bold text-xs flex items-center justify-center gap-1">
                                 {survey.phone}
                                 <Phone className="w-3 h-3 text-blue-500" />
                               </span>
                             </td>
 
                             {/* Date of registration */}
-                            <td className="p-3 text-center text-gray-550 dark:text-gray-400 font-mono">
+                            <td className="p-3 text-center text-gray-550 dark:text-gray-400 ">
                               <span className="flex items-center justify-center gap-1.5">
                                 {toPersianDigits(survey.date)}
                                 <Clock className="w-3.5 h-3.5 text-gray-400" />
@@ -3936,7 +3936,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                         </div>
                         <div className="space-y-1 text-left">
                           <span className="text-gray-400 block font-bold">شماره همراه:</span>
-                          <span className="text-blue-600 dark:text-blue-400 font-mono font-bold text-sm flex items-center gap-1 justify-end">
+                          <span className="text-blue-600 dark:text-blue-400  font-bold text-sm flex items-center gap-1 justify-end">
                             <span>{selectedSurveyDetails.phone}</span>
                             <Phone className="w-3.5 h-3.5" />
                           </span>
@@ -3950,7 +3950,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                         </div>
                         <div className="space-y-1 text-left">
                           <span className="text-gray-400 block font-bold">تاریخ و زمان ثبت:</span>
-                          <span className="text-gray-750 dark:text-gray-300 font-mono flex items-center gap-1 justify-end">
+                          <span className="text-gray-750 dark:text-gray-300  flex items-center gap-1 justify-end">
                             <span>{selectedSurveyDetails.date}</span>
                             <Clock className="w-3.5 h-3.5 text-gray-400" />
                           </span>
@@ -3970,7 +3970,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                               ★
                             </span>
                           ))}
-                          <span className="text-gray-550 font-mono text-xs mr-2">({toPersianDigits(selectedSurveyDetails.rating)} از ۵)</span>
+                          <span className="text-gray-550  text-xs mr-2">({toPersianDigits(selectedSurveyDetails.rating)} از ۵)</span>
                         </div>
                       </div>
 
@@ -4033,7 +4033,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                   <span className="text-[10px] text-gray-400 block font-bold mb-1">میانگین امتیاز رضایت‌مندی کاربران</span>
                   {selectedStatCourse === 'all' ? (
                     <div className="flex items-baseline gap-2">
-                      <span className="text-3xl font-black text-gray-900 dark:text-white font-mono">
+                      <span className="text-3xl font-black text-gray-900 dark:text-white ">
                         {toPersianDigits(4.6)}
                       </span>
                       <span className="text-xs text-gray-400 font-sans">از ۵ (مبتنی بر کل نظرات)</span>
@@ -4043,7 +4043,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                       const s = surveys.find(item => item.courseId === selectedStatCourse);
                       return (
                         <div className="flex items-baseline gap-2">
-                          <span className="text-3xl font-black text-gray-900 dark:text-white font-mono">
+                          <span className="text-3xl font-black text-gray-900 dark:text-white ">
                             {toPersianDigits(s?.rating || '۰.۰')}
                           </span>
                           <span className="text-xs text-gray-400 font-sans">از ۵ (مبتنی بر {toPersianDigits(s?.totalResponses || 0)} رای ثبت‌شده)</span>
@@ -4079,7 +4079,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                     ].map((crit, i) => (
                       <div key={i} className="p-4 bg-gray-55 dark:bg-gray-950 border border-gray-100 dark:border-gray-850 rounded-2xl text-center space-y-2">
                         <span className="text-[10.5px] text-gray-400 block font-bold">{crit.title}</span>
-                        <span className={`text-xl font-black font-mono ${crit.color}`}>{toPersianDigits(crit.score)}٪</span>
+                        <span className={`text-xl font-black  ${crit.color}`}>{toPersianDigits(crit.score)}٪</span>
                         <div className="w-full h-1 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden relative">
                           <div className={`absolute h-full ${crit.bg} ${crit.color} left-0`} style={{ width: `${crit.score}%` }}></div>
                         </div>
@@ -4100,7 +4100,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                         ].map((crit, i) => (
                           <div key={i} className="p-4 bg-gray-55 dark:bg-gray-950 border border-gray-100 dark:border-gray-850 rounded-2xl text-center space-y-2">
                             <span className="text-[10.5px] text-gray-400 block font-bold">{crit.title}</span>
-                            <span className={`text-xl font-black font-mono ${crit.color}`}>{toPersianDigits(crit.score)}٪</span>
+                            <span className={`text-xl font-black  ${crit.color}`}>{toPersianDigits(crit.score)}٪</span>
                             <div className="w-full h-1 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden relative">
                               <div className={`absolute h-full ${crit.bg} ${crit.color} left-0`} style={{ width: `${crit.score}%` }}></div>
                             </div>
@@ -4172,7 +4172,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                   <div className="space-y-1">
                     <div className="flex justify-between text-[9px] text-gray-450">
                       <span>محتوای علمی</span>
-                      <span className="font-mono">{toPersianDigits(surveyFormContent)}٪</span>
+                      <span className="">{toPersianDigits(surveyFormContent)}٪</span>
                     </div>
                     <input
                       type="range"
@@ -4188,7 +4188,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                   <div className="space-y-1">
                     <div className="flex justify-between text-[9px] text-gray-450">
                       <span>شیوه تدریس مدرس</span>
-                      <span className="font-mono">{toPersianDigits(surveyFormLecturer)}٪</span>
+                      <span className="">{toPersianDigits(surveyFormLecturer)}٪</span>
                     </div>
                     <input
                       type="range"
@@ -4204,7 +4204,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                   <div className="space-y-1">
                     <div className="flex justify-between text-[9px] text-gray-450">
                       <span>هماهنگی و نظم اجرایی</span>
-                      <span className="font-mono">{toPersianDigits(surveyFormOrg)}٪</span>
+                      <span className="">{toPersianDigits(surveyFormOrg)}٪</span>
                     </div>
                     <input
                       type="range"
@@ -4220,7 +4220,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                   <div className="space-y-1">
                     <div className="flex justify-between text-[9px] text-gray-450">
                       <span>امکانات و پلتفرم وبینار</span>
-                      <span className="font-mono">{toPersianDigits(surveyFormFacilities)}٪</span>
+                      <span className="">{toPersianDigits(surveyFormFacilities)}٪</span>
                     </div>
                     <input
                       type="range"
@@ -4275,7 +4275,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                         <span className="font-extrabold text-xs text-gray-900 dark:text-white block">{comment.user}</span>
                         <span className="text-[9px] text-gray-400 block mt-0.5">{comment.courseTitle}</span>
                       </div>
-                      <div className="flex items-center gap-1.5 font-mono text-xs">
+                      <div className="flex items-center gap-1.5  text-xs">
                         <span className="text-amber-500">★</span>
                         <span>{toPersianDigits(comment.rating)}</span>
                       </div>
@@ -4283,7 +4283,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                     <p className="text-[11.5px] text-gray-650 dark:text-gray-300 leading-relaxed text-justify">
                       {comment.comment}
                     </p>
-                    <div className="text-[9.5px] text-gray-400 text-left font-mono">
+                    <div className="text-[9.5px] text-gray-400 text-left ">
                       {toPersianDigits(comment.date)}
                     </div>
                   </div>
@@ -4332,7 +4332,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
               <span className="text-[10px] text-gray-400 block font-bold mb-1">تعداد بن‌های تعریف شده</span>
               <div className="flex items-center gap-2 justify-start mt-1">
                 <Gift className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-                <span className="text-xl font-black font-mono text-gray-900 dark:text-white">{toPersianDigits(vouchers.length)} طرح</span>
+                <span className="text-xl font-black  text-gray-900 dark:text-white">{toPersianDigits(vouchers.length)} طرح</span>
               </div>
             </div>
 
@@ -4340,7 +4340,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
               <span className="text-[10px] text-gray-400 block font-bold mb-1">کل دفعات استفاده شده</span>
               <div className="flex items-center gap-2 justify-start mt-1">
                 <CheckSquare className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                <span className="text-xl font-black font-mono text-gray-900 dark:text-white">{toPersianDigits(vouchers.reduce((sum, v) => sum + (v.totalUsed || 0), 0))} بار</span>
+                <span className="text-xl font-black  text-gray-900 dark:text-white">{toPersianDigits(vouchers.reduce((sum, v) => sum + (v.totalUsed || 0), 0))} بار</span>
               </div>
             </div>
 
@@ -4348,7 +4348,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
               <span className="text-[10px] text-gray-400 block font-bold mb-1">کل بودجه مصرفی تخفیف</span>
               <div className="flex items-center gap-2 justify-start mt-1">
                 <DollarSign className="w-5 h-5 text-rose-600 dark:text-rose-400" />
-                <span className="text-xl font-black font-mono text-gray-900 dark:text-white">{formatCurrency(vouchers.reduce((sum, v) => sum + (v.budgetUsed || 0), 0))}</span>
+                <span className="text-xl font-black  text-gray-900 dark:text-white">{formatCurrency(vouchers.reduce((sum, v) => sum + (v.budgetUsed || 0), 0))}</span>
               </div>
             </div>
 
@@ -4356,7 +4356,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
               <span className="text-[10px] text-gray-400 block font-bold mb-1">بودجه کل طرح‌ها</span>
               <div className="flex items-center gap-2 justify-start mt-1">
                 <TrendingUp className="w-5 h-5 text-teal-600 dark:text-teal-400" />
-                <span className="text-xl font-black font-mono text-gray-900 dark:text-white">{formatCurrency(vouchers.reduce((sum, v) => sum + (v.budgetLimit || 0), 0))}</span>
+                <span className="text-xl font-black  text-gray-900 dark:text-white">{formatCurrency(vouchers.reduce((sum, v) => sum + (v.budgetLimit || 0), 0))}</span>
               </div>
             </div>
           </div>
@@ -4387,7 +4387,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                                     <div>
                                       <div className="flex items-center gap-2">
                                         <span className="font-extrabold text-xs text-gray-900 dark:text-white">{v.title}</span>
-                                        <span className="text-[10px] px-2 py-0.5 rounded-md font-mono font-black bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+                                        <span className="text-[10px] px-2 py-0.5 rounded-md  font-black bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
                                           {v.code}
                                         </span>
                                       </div>
@@ -4505,7 +4505,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                             value={newVoucherCode}
                             onChange={(e) => setNewVoucherCode(e.target.value)}
                             placeholder="مثال: FALL1405"
-                            className="w-full text-xs p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none font-mono uppercase"
+                            className="w-full text-xs p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none  uppercase"
                           />
                         </div>
                         <div>
@@ -4540,7 +4540,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                             required
                             value={newVoucherDiscountValue}
                             onChange={(e) => setNewVoucherDiscountValue(e.target.value)}
-                            className="w-full text-xs p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none font-mono"
+                            className="w-full text-xs p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none "
                           />
                         </div>
                         <div>
@@ -4566,7 +4566,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                             type="text"
                             value={newVoucherValidFrom}
                             onChange={(e) => setNewVoucherValidFrom(e.target.value)}
-                            className="w-full text-xs p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none font-mono text-center"
+                            className="w-full text-xs p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none  text-center"
                           />
                         </div>
                         <div>
@@ -4575,7 +4575,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                             type="text"
                             value={newVoucherValidTo}
                             onChange={(e) => setNewVoucherValidTo(e.target.value)}
-                            className="w-full text-xs p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none font-mono text-center"
+                            className="w-full text-xs p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none  text-center"
                           />
                         </div>
                         <div>
@@ -4629,7 +4629,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                             type="number"
                             value={newVoucherMinCoursePrice}
                             onChange={(e) => setNewVoucherMinCoursePrice(e.target.value)}
-                            className="w-full text-xs p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none font-mono"
+                            className="w-full text-xs p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none "
                           />
                         </div>
                       </div>
@@ -4645,7 +4645,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                             type="number"
                             value={newVoucherGlobalCap}
                             onChange={(e) => setNewVoucherGlobalCap(e.target.value)}
-                            className="w-full text-xs p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none font-mono"
+                            className="w-full text-xs p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none "
                           />
                         </div>
                         <div>
@@ -4654,7 +4654,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                             type="number"
                             value={newVoucherBudgetLimit}
                             onChange={(e) => setNewVoucherBudgetLimit(e.target.value)}
-                            className="w-full text-xs p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none font-mono"
+                            className="w-full text-xs p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none "
                           />
                         </div>
                         <div>
@@ -4663,7 +4663,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                             type="number"
                             value={newVoucherPerEmailLimit}
                             onChange={(e) => setNewVoucherPerEmailLimit(e.target.value)}
-                            className="w-full text-xs p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none font-mono"
+                            className="w-full text-xs p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none "
                           />
                         </div>
                       </div>
@@ -4695,7 +4695,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                             <select
                               value={newVoucherInstallmentCount}
                               onChange={(e) => setNewVoucherInstallmentCount(e.target.value)}
-                              className="text-[10px] p-1 border rounded bg-gray-50 dark:bg-gray-800 focus:outline-none font-mono"
+                              className="text-[10px] p-1 border rounded bg-gray-50 dark:bg-gray-800 focus:outline-none "
                             >
                               <option value="2">۲ قسط</option>
                               <option value="3">۳ قسط</option>
@@ -4787,7 +4787,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                     <select
                       value={sandboxCode}
                       onChange={(e) => setSandboxCode(e.target.value)}
-                      className="w-full text-xs p-2.5 rounded-xl border border-indigo-200 dark:border-indigo-950/50 bg-white dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none font-mono"
+                      className="w-full text-xs p-2.5 rounded-xl border border-indigo-200 dark:border-indigo-950/50 bg-white dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none "
                     >
                       {vouchers.map(v => (
                         <option key={v.id} value={v.code}>{v.code} - {v.title}</option>
@@ -4815,7 +4815,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                         type="email"
                         value={sandboxEmail}
                         onChange={(e) => setSandboxEmail(e.target.value)}
-                        className="w-full text-xs p-2.5 rounded-xl border border-gray-250 dark:border-gray-800 bg-white dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none font-mono text-left"
+                        className="w-full text-xs p-2.5 rounded-xl border border-gray-250 dark:border-gray-800 bg-white dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none  text-left"
                       />
                     </div>
                     <div>
@@ -4824,7 +4824,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                         type="tel"
                         value={sandboxPhone}
                         onChange={(e) => setSandboxPhone(e.target.value)}
-                        className="w-full text-xs p-2.5 rounded-xl border border-gray-250 dark:border-gray-800 bg-white dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none font-mono text-left"
+                        className="w-full text-xs p-2.5 rounded-xl border border-gray-250 dark:border-gray-800 bg-white dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none  text-left"
                       />
                     </div>
                   </div>
@@ -4895,14 +4895,14 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                     </div>
 
                     {/* Receipt breakdown */}
-                    <div className="space-y-1.5 text-xs font-mono p-3 bg-gray-55 dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-850/80">
+                    <div className="space-y-1.5 text-xs  p-3 bg-gray-55 dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-850/80">
                       <div className="flex justify-between text-[11px]">
                         <span className="text-gray-400 font-sans">شهریه اصلی کارگاه:</span>
                         <span className="text-gray-600 dark:text-gray-300">{formatCurrency(sandboxResult.originalPrice)}</span>
                       </div>
                       <div className="flex justify-between text-[11px]">
                         <span className="text-gray-400 font-sans">مبلغ تخفیف کسر شده:</span>
-                        <span className="text-rose-500 font-extrabold font-mono">-{formatCurrency(sandboxResult.discountAmount)}</span>
+                        <span className="text-rose-500 font-extrabold ">-{formatCurrency(sandboxResult.discountAmount)}</span>
                       </div>
                       <div className="flex justify-between text-xs font-black pt-1.5 border-t border-gray-200/50 mt-1.5">
                         <span className="font-sans">مبلغ پرداختی نهایی:</span>
@@ -4995,7 +4995,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                   {categories.map((cat, idx) => (
                     <div key={cat} className="p-3 flex items-center justify-between text-xs hover:bg-white dark:hover:bg-gray-900/40 transition-all">
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] text-gray-400 font-mono">#{toPersianDigits(idx + 1)}</span>
+                        <span className="text-[10px] text-gray-400 ">#{toPersianDigits(idx + 1)}</span>
                         <span className="font-extrabold text-gray-800 dark:text-gray-200">{cat}</span>
                       </div>
                       <button

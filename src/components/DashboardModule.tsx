@@ -113,11 +113,11 @@ export default function DashboardModule({
           </div>
           <div className="hidden sm:flex items-center gap-3">
             <div className="p-3 rounded-2xl bg-white/70 dark:bg-white/5 backdrop-blur-md border border-gray-200/50 dark:border-white/10 text-center min-w-[80px] shadow-xs">
-              <span className="block text-lg sm:text-xl font-black font-mono leading-none text-gray-900 dark:text-white">{MAX_TABS}</span>
+              <span className="block text-lg sm:text-xl font-black  leading-none text-gray-900 dark:text-white">{MAX_TABS}</span>
               <span className="text-[8px] text-gray-500 dark:text-gray-400 font-bold block mt-1">تب همزمان مجاز</span>
             </div>
             <div className="p-3 rounded-2xl bg-white/70 dark:bg-white/5 backdrop-blur-md border border-gray-200/50 dark:border-white/10 text-center min-w-[80px] shadow-xs">
-              <span className="block text-lg sm:text-xl font-black font-mono leading-none text-teal-600 dark:text-teal-400">{openTabsCount}</span>
+              <span className="block text-lg sm:text-xl font-black  leading-none text-teal-600 dark:text-teal-400">{openTabsCount}</span>
               <span className="text-[8px] text-gray-500 dark:text-gray-400 font-bold block mt-1">تب فعال فعلی</span>
             </div>
           </div>
@@ -149,7 +149,7 @@ export default function DashboardModule({
           <h3 className="text-base font-black text-gray-900 dark:text-white mb-4 flex items-center gap-2">
             <Pin className="w-4 h-4 text-teal-500" />
             <span>میانبرهای منتخب شما</span>
-            <span className="text-[10px] text-gray-400 font-bold font-mono bg-gray-50 dark:bg-gray-850 px-2 py-0.5 rounded-full">
+            <span className="text-[10px] text-gray-400 font-bold  bg-gray-50 dark:bg-gray-850 px-2 py-0.5 rounded-full">
               {toPersianDigits(pinnedMenus.length)}
             </span>
           </h3>

@@ -25,6 +25,7 @@
 @layer base {
   html {
     font-family: var(--font-sans);
+    font-size: 18px;
     scroll-behavior: smooth;
     direction: rtl;
   }

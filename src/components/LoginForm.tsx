@@ -194,7 +194,7 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
             <p className="text-[10px] text-gray-400 dark:text-gray-500 leading-relaxed">
               سامانه جامع آموزش، امور مالی و پژوهشی دانشگاه علم و هنر
             </p>
-            <p className="text-[9px] text-gray-300 dark:text-gray-600 mt-1 font-mono">
+            <p className="text-[9px] text-gray-300 dark:text-gray-600 mt-1 ">
               Karant University Portal v2.0
             </p>
           </div>

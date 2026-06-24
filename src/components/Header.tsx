@@ -132,7 +132,7 @@ export default function Header({
                   {userRoles.find(r => r.active === 1)?.label || user.role}
                 </span>
               </span>
-              <span className="text-[9px] text-gray-500 font-mono mt-0.5">{user.email}</span>
+              <span className="text-[9px] text-gray-500  mt-0.5">{user.email}</span>
             </div>
             <img
               src={user.avatar}
@@ -156,7 +156,7 @@ export default function Header({
                 >
                   <div className="px-4 py-2 border-b border-gray-100 dark:border-white/5 text-right">
                     <span className="block text-[11px] font-black text-gray-900 dark:text-white">{user.fname} {user.lname}</span>
-                    <span className="block text-[8px] text-gray-400 font-mono mt-0.5">{user.email}</span>
+                    <span className="block text-[8px] text-gray-400  mt-0.5">{user.email}</span>
                   </div>
                   <button
                     onClick={() => { handleOpenTab('profile', 'مشخصات پروفایل', 'User'); setShowUserDropdown(false); }}
