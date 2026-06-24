@@ -58,6 +58,7 @@ import CourseCoursework from '@/src/components/CourseCoursework';
 import FinancialManagement from '@/src/components/FinancialManagement';
 import ThesisManagement from '@/src/components/ThesisManagement';
 import LegacyModules from '@/src/components/LegacyModules';
+import TutsModule from '@/src/components/TutsModule';
 import ThemeToggle from '@/src/components/ThemeToggle';
 import FloatingPanels from '@/src/components/FloatingPanels';
 
@@ -374,8 +375,36 @@ export default function App() {
       case 'professors':
         return <ProfessorManagement />;
       case 'courses':
-      case 'tuts':
         return <CourseCoursework />;
+      // ===== TutsModule (دوره‌های آموزشی) — from database menu URLs =====
+      case 'tuts':
+      case 'tuts-list':
+      case 'tuts-reports':
+      case 'tuts-receipts':
+      case 'tuts-stats':
+      case 'tuts-surveys':
+      case 'tuts-surveys-stats':
+      case 'tuts-vouchers':
+      // Map actual DB menu URLs to TutsModule sub-views
+      case 'tuts/reports':
+      case 'tuts/bank-receipts':
+      case 'tuts/statistics':
+      case 'course-surveys':
+      case 'course-surveys/statistics':
+        return user ? (
+          <TutsModule
+            user={user}
+            activeTabId={activeTabId}
+            moduleId={moduleType === 'tuts' || moduleType === 'tuts-list' ? 'tuts-list'
+              : moduleType === 'tuts/reports' ? 'tuts-reports'
+              : moduleType === 'tuts/bank-receipts' ? 'tuts-receipts'
+              : moduleType === 'tuts/statistics' ? 'tuts-stats'
+              : moduleType === 'course-surveys' ? 'tuts-surveys'
+              : moduleType === 'course-surveys/statistics' ? 'tuts-surveys-stats'
+              : moduleType}
+            onOpenTab={handleOpenTab}
+          />
+        ) : null;
       case 'finance':
         return <FinancialManagement />;
       case 'theses':

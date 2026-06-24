@@ -186,3 +186,69 @@ export interface CourseStats {
   pending_receipts: number;
   top_courses: { id: number; title: string; count: number }[];
 }
+
+// ============================================================
+// Course Survey (نظرسنجی دوره‌های آموزشی)
+// ============================================================
+
+export interface CourseSurvey {
+  id: number;
+  course_id: number;
+  course_title?: string;
+  first_name: string;
+  last_name: string;
+  full_name?: string;
+  phone_number: string;
+  rating: number;
+  suggestions: string | null;
+  comment: string | null;
+  ip_address: string | null;
+  browser_fingerprint: string | null;
+  created_at: string;
+}
+
+export interface CourseSurveyStats {
+  total_surveys: number;
+  average_rating: number;
+  surveys_by_course: { course_id: number; course_title: string; count: number; avg_rating: number }[];
+  ratings_breakdown: { rating: number; count: number }[];
+  recent_surveys: CourseSurvey[];
+}
+
+// ============================================================
+// Course Coupon / Voucher (بن تخفیف و کوپن)
+// ============================================================
+
+export interface CourseCoupon {
+  id: number;
+  title: string;
+  code: string;
+  type: 'discount' | 'installment';
+  type_discount: 'percent' | 'money';
+  value: number;
+  value_formatted?: string;
+  course_id: number | null;
+  course_title?: string;
+  capacity: number;
+  used_count: number;
+  remaining: number;
+  start_date: string;
+  finish_date: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// ============================================================
+// Bank receipt verification types
+// ============================================================
+
+export interface ReceiptReview {
+  registration_id: number;
+  registrant_name: string;
+  course_title: string;
+  amount: number;
+  bank_receipt: string | null;
+  status: string;
+  rejection_reason?: string;
+}

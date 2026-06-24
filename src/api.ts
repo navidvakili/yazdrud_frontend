@@ -4,7 +4,7 @@
 
 import { API } from '@/src/lib/functions';
 import { TOKEN_STRING, USER_STRING } from '@/src/lib/constants';
-import type { AuthResponse, LoginCredentials, User, UserRole, NavItem, NavResponse, UserRolesResponse, PermissionsResponse, RoleInfo, PermissionItem, Course, CourseRegistration, CourseStats } from '@/src/types';
+import type { AuthResponse, LoginCredentials, User, UserRole, NavItem, NavResponse, UserRolesResponse, PermissionsResponse, RoleInfo, PermissionItem, Course, CourseRegistration, CourseStats, CourseSurvey, CourseSurveyStats, CourseCoupon } from '@/src/types';
 import { getAvatarUrl } from '@/src/lib/functions';
 
 class ApiService {
@@ -236,6 +236,91 @@ class ApiService {
    */
   async getCourseStatistics(): Promise<CourseStats> {
     const data = await API<any>('courses/statistics');
+    return data.data;
+  }
+
+  // ========== Surveys (نظرسنجی دوره‌ها) ==========
+
+  /**
+   * Get paginated list of course surveys.
+   */
+  async getSurveys(params?: { course_id?: number; search?: string; page?: number; per_page?: number }): Promise<{ data: CourseSurvey[]; meta: any }> {
+    const query = new URLSearchParams();
+    if (params?.course_id) query.set('course_id', String(params.course_id));
+    if (params?.search) query.set('search', params.search);
+    if (params?.page) query.set('page', String(params.page));
+    if (params?.per_page) query.set('per_page', String(params.per_page));
+    const qs = query.toString();
+    const url = qs ? `courses/surveys?${qs}` : 'courses/surveys';
+    return API<any>(url);
+  }
+
+  /**
+   * Get survey statistics.
+   */
+  async getSurveyStatistics(): Promise<CourseSurveyStats> {
+    const data = await API<any>('courses/surveys/statistics');
+    return data.data;
+  }
+
+  /**
+   * Delete a survey.
+   */
+  async deleteSurvey(id: number): Promise<void> {
+    await API(`courses/surveys/${id}`, {}, 'DELETE');
+  }
+
+  // ========== Coupons / Vouchers (بن‌های تخفیف) ==========
+
+  /**
+   * Get paginated list of coupons.
+   */
+  async getCoupons(params?: { page?: number; per_page?: number; is_active?: boolean }): Promise<{ data: CourseCoupon[]; meta: any }> {
+    const query = new URLSearchParams();
+    if (params?.page) query.set('page', String(params.page));
+    if (params?.per_page) query.set('per_page', String(params.per_page));
+    if (params?.is_active !== undefined) query.set('is_active', String(params.is_active));
+    const qs = query.toString();
+    const url = qs ? `courses/coupons?${qs}` : 'courses/coupons';
+    return API<any>(url);
+  }
+
+  /**
+   * Get a single coupon by ID.
+   */
+  async getCoupon(id: number): Promise<CourseCoupon> {
+    const data = await API<any>(`courses/coupons/${id}`);
+    return data.data;
+  }
+
+  /**
+   * Create a new coupon.
+   */
+  async createCoupon(couponData: any): Promise<CourseCoupon> {
+    const data = await API<any>('courses/coupons', couponData, 'POST');
+    return data.data;
+  }
+
+  /**
+   * Update an existing coupon.
+   */
+  async updateCoupon(id: number, couponData: any): Promise<CourseCoupon> {
+    const data = await API<any>(`courses/coupons/${id}`, couponData, 'PUT');
+    return data.data;
+  }
+
+  /**
+   * Delete a coupon.
+   */
+  async deleteCoupon(id: number): Promise<void> {
+    await API(`courses/coupons/${id}`, {}, 'DELETE');
+  }
+
+  /**
+   * Validate a coupon code for a given course.
+   */
+  async validateCoupon(code: string, courseId: number): Promise<{ valid: boolean; discount?: number; message?: string }> {
+    const data = await API<any>('courses/coupons/validate', { code, course_id: courseId }, 'POST');
     return data.data;
   }
 }
