@@ -40,7 +40,8 @@ import {
   MapPin,
   UserPlus,
   Phone,
-  Eye
+  Eye,
+  Copy
 } from 'lucide-react';
 import { User as UserType } from '@/src/types';
 import api from '@/src/api';
@@ -886,6 +887,15 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedCourseForDetail, setSelectedCourseForDetail] = useState<TutCourse | null>(null);
+
+  const handleCopyCourseUrl = (course: TutCourse) => {
+    const url = `https://terms.sau.ac.ir/course/${course.id}`;
+    navigator.clipboard.writeText(url).then(() => {
+      showToast('آدرس دوره کپی شد.', 'success');
+    }).catch(() => {
+      showToast('خطا در کپی آدرس.', 'error');
+    });
+  };
   const [registeringCourse, setRegisteringCourse] = useState<TutCourse | null>(null);
   const [isNewCourseModalOpen, setIsNewCourseModalOpen] = useState(false);
 
@@ -1681,6 +1691,13 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                                   >
                                     جزئیات سرفصل
                                   </button>
+                                  <button
+                                    onClick={() => handleCopyCourseUrl(course)}
+                                    className="p-2 border border-gray-150 dark:border-gray-800 bg-white dark:bg-gray-900 rounded-xl text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950 transition-all cursor-pointer"
+                                    title="کپی آدرس دوره"
+                                  >
+                                    <Copy className="w-3.5 h-3.5" />
+                                  </button>
                                 </div>
                               </div>
                             </div>
@@ -1730,6 +1747,13 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                                     title="خروجی اکسل (CSV)"
                                   >
                                     <Download className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleCopyCourseUrl(course)}
+                                    className="p-1.5 bg-white dark:bg-gray-900 border border-gray-150 dark:border-gray-800 rounded-lg text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-950 transition-all cursor-pointer"
+                                    title="کپی آدرس دوره"
+                                  >
+                                    <Copy className="w-3.5 h-3.5" />
                                   </button>
                                   <button
                                     onClick={() => handleDeleteCourse(course.id)}
