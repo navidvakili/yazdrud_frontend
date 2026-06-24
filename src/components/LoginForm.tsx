@@ -51,8 +51,8 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
     } catch (err: any) {
       if (err.status === 422 && err.errors) {
         // Validation errors
-        const firstError = Object.values(err.errors).flat()[0];
-        setError(firstError || 'اطلاعات وارد شده معتبر نیست.');
+        const firstError = (Object.values(err.errors).flat()[0] as string) || 'اطلاعات وارد شده معتبر نیست.';
+        setError(firstError);
       } else if (err.status === 401) {
         setError('نام کاربری یا گذرواژه اشتباه است.');
       } else {
