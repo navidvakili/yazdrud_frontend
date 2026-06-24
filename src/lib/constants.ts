@@ -18,7 +18,7 @@ export const USER_STRING = 'portal_user';
 export const THEME_STRING = 'portal_theme';
 
 /** نام شرکت / دانشگاه */
-export const COMPANY_NAME = 'پرتال جامع دانشگاهی کارانت';
+export const COMPANY_NAME = 'نرم‌افزار یکپارچهٔ آموزشی نیکا';
 
 /** مسیر ذخیره‌سازی امضاها (برای آواتار) */
 export const SIGNS_STORAGE_PATH = `${BACKEND_API_URL}/storage/signs`;

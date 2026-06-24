@@ -78,7 +78,7 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
       >
         {/* Card */}
         <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-xl shadow-teal-500/5 dark:shadow-black/20 border border-gray-100 dark:border-gray-800 p-8 sm:p-10 transition-all">
-          
+
           {/* Logo & Header */}
           <div className="text-center mb-8">
             <div className="flex justify-center mb-5">
@@ -88,7 +88,7 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
               ورود به پنل کاربری
             </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-              پرتال جامع دانشگاهی کارانت | دانشگاه علم و هنر
+              نرم‌افزار یکپارچهٔ آموزشی <span className="text-teal-600 dark:text-teal-400 font-bold">نیکا</span> | دانشگاه علم و هنر
             </p>
           </div>
 
@@ -114,7 +114,7 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
             {/* Username Field */}
             <div>
               <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 pr-1">
-                نام کاربری 
+                نام کاربری
               </label>
               <div className="relative">
                 <User className="w-4.5 h-4.5 text-gray-400 absolute right-3.5 top-1/2 -translate-y-1/2" />

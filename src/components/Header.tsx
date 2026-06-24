@@ -38,7 +38,9 @@ export default function Header({
       <div className="flex items-center gap-3">
         <img src="/logo_nika.png" alt="نیکا" className="h-9 w-auto" />
         <div>
-          <h1 className="font-black text-sm text-gray-900 dark:text-white">پرتال جامع دانشگاهی کارانت</h1>
+          <h1 className="font-black text-sm text-gray-900 dark:text-white">
+            نرم‌افزار یکپارچهٔ آموزشی <span className="text-teal-600 dark:text-teal-400">نیکا</span>
+          </h1>
           <p className="text-[10px] text-gray-400 animate-pulse">پنل یکپارچه مدیریت امور آموزش عالی</p>
         </div>
       </div>
@@ -185,9 +187,8 @@ export default function Header({
                             <button
                               key={r.id}
                               onClick={() => { handleChangeRole(r.role); setShowUserDropdown(false); }}
-                              className={`px-2 py-1 text-[10px] rounded-lg flex items-center justify-between w-full text-right transition-colors cursor-pointer ${
-                                isActive ? 'bg-teal-500/10 text-teal-600 dark:text-teal-400 font-extrabold' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5'
-                              }`}
+                              className={`px-2 py-1 text-[10px] rounded-lg flex items-center justify-between w-full text-right transition-colors cursor-pointer ${isActive ? 'bg-teal-500/10 text-teal-600 dark:text-teal-400 font-extrabold' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5'
+                                }`}
                             >
                               <span>{r.label}</span>
                               {isActive && <Check className="w-3.5 h-3.5" />}
