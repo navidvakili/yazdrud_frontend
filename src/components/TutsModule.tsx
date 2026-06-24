@@ -887,6 +887,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedCourseForDetail, setSelectedCourseForDetail] = useState<TutCourse | null>(null);
+  const [courseToDelete, setCourseToDelete] = useState<TutCourse | null>(null);
 
   const handleCopyCourseUrl = (course: TutCourse) => {
     const url = `https://terms.sau.ac.ir/course/${course.id}`;
@@ -1053,11 +1054,16 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
   const handleDeleteCourse = (id: string) => {
     const course = courses.find(c => c.id === id);
     if (!course) return;
-    if (confirm(`آیا از حذف کامل دوره آموزشی "${course.title}" اطمینان دارید؟ تمام داده‌های مرتبط حذف خواهند شد.`)) {
-      setCourses(prev => prev.filter(c => c.id !== id));
-      setRegistrants(prev => prev.filter(r => r.courseId !== id));
-      showToast(`دوره آموزشی "${course.title}" با موفقیت حذف گردید.`, 'info');
-    }
+    setCourseToDelete(course);
+  };
+
+  const confirmDeleteCourse = () => {
+    if (!courseToDelete) return;
+    const id = courseToDelete.id;
+    setCourses(prev => prev.filter(c => c.id !== id));
+    setRegistrants(prev => prev.filter(r => r.courseId !== id));
+    showToast(`دوره آموزشی "${courseToDelete.title}" با موفقیت حذف گردید.`, 'info');
+    setCourseToDelete(null);
   };
 
   const handleExportSingleCourseExcel = (course: TutCourse) => {
@@ -5044,6 +5050,50 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                   بستن پنجره
                 </button>
               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete Course Confirmation Modal */}
+      <AnimatePresence>
+        {courseToDelete && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="p-6 max-w-sm w-full bg-white dark:bg-gray-900 border border-red-500/15 rounded-3xl text-center space-y-4"
+            >
+              <div className="inline-flex p-3 rounded-full bg-red-100 text-rose-600 dark:bg-rose-950/20">
+                <Trash2 className="w-10 h-10" />
+              </div>
+              <h4 className="text-sm font-black text-gray-900 dark:text-white">
+                حذف دوره آموزشی
+              </h4>
+              <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed font-sans font-medium">
+                آیا از حذف کامل دوره آموزشی <span className="text-rose-600 dark:text-rose-400 font-bold">{courseToDelete.title}</span> اطمینان دارید؟
+              </p>
+              <p className="text-[10px] text-gray-400 dark:text-gray-500 leading-relaxed">
+                تمام داده‌های مرتبط با این دوره حذف خواهند شد و این عملیات قابل بازگشت نیست.
+              </p>
+
+              <div className="pt-3 border-t border-red-500/10 dark:border-red-500/5 space-y-2">
+                <button
+                  onClick={confirmDeleteCourse}
+                  className="w-full py-2.5 px-3 rounded-xl bg-red-600 hover:bg-red-700 text-white text-[11px] font-black transition-all cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5 inline-block ml-1 -mt-0.5" />
+                  بله، حذف شود
+                </button>
+              </div>
+
+              <button
+                onClick={() => setCourseToDelete(null)}
+                className="w-full py-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold text-xs cursor-pointer"
+              >
+                انصراف (بازگشت)
+              </button>
             </motion.div>
           </div>
         )}
