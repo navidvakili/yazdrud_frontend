@@ -76,6 +76,19 @@ class ApiService {
     return data;
   }
 
+  /**
+   * Verify user's current password (for standby unlock).
+   * Returns true if password is correct, false otherwise.
+   */
+  async verifyPassword(password: string): Promise<boolean> {
+    try {
+      await API<any>('user/verify-password', { password }, 'POST');
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   // ========== Restore session from localStorage ==========
 
   getStoredUser(): User | null {

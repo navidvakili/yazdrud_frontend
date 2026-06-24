@@ -2,14 +2,14 @@
 // App — کامپوننت اصلی برنامه
 // ============================================================
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { AnimatePresence } from 'motion/react';
 import {
   Bell, HelpCircle, MessageSquare, LogOut,
 } from 'lucide-react';
 import type { User as UserType, Tab, PortalNotification, NavItem, RoleInfo } from '@/src/types';
 import api from '@/src/api';
-import { THEME_STRING, USER_STRING, MAX_TABS } from '@/src/lib/constants';
+import { THEME_STRING, USER_STRING, MAX_TABS, STANDBY_TIMEOUT } from '@/src/lib/constants';
 import { defaultNotifications, urlToTargetId, resolveIcon, faToLucideName } from '@/src/lib/menuConfig';
 import type { MenuCategory } from '@/src/lib/menuConfig';
 import LoginForm from '@/src/components/LoginForm';
@@ -28,6 +28,7 @@ import Sidebar from '@/src/components/Sidebar';
 import TabsBar from '@/src/components/TabsBar';
 import Footer from '@/src/components/Footer';
 import LogoutModal from '@/src/components/LogoutModal';
+import StandbyModal from '@/src/components/StandbyModal';
 import TabLimitAlert from '@/src/components/TabLimitAlert';
 
 export default function App() {
@@ -48,6 +49,11 @@ export default function App() {
   const [confirmClearActive, setConfirmClearActive] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+
+  // Standby (auto-lock) state
+  const [isStandby, setIsStandby] = useState(false);
+  const lastActivityRef = useRef<number>(Date.now());
+  const standbyCheckIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Navigation state — fetched dynamically from API
   const [navItems, setNavItems] = useState<NavItem[]>([]);
@@ -91,6 +97,45 @@ export default function App() {
       fetchPinnedMenus();
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ========== Standby (Auto-Lock) — track activity, lock after timeout ==========
+  useEffect(() => {
+    if (viewState !== 'authenticated') {
+      // Not logged in — no standby tracking
+      setIsStandby(false);
+      return;
+    }
+
+    // Reset activity timestamp on any user interaction
+    const updateActivity = () => {
+      lastActivityRef.current = Date.now();
+      // If was in standby, do NOT auto-exit — must use password
+    };
+
+    // Also reset activity when we start tracking (fresh login)
+    lastActivityRef.current = Date.now();
+    setIsStandby(false);
+
+    // Periodic check: if inactive beyond timeout → enter standby
+    standbyCheckIntervalRef.current = setInterval(() => {
+      const elapsed = Date.now() - lastActivityRef.current;
+      if (elapsed >= STANDBY_TIMEOUT && !isStandby) {
+        setIsStandby(true);
+      }
+    }, 5000); // Check every 5 seconds
+
+    // Bind activity events
+    const events = ['mousedown', 'mousemove', 'keydown', 'click', 'touchstart', 'scroll', 'wheel'];
+    events.forEach(ev => window.addEventListener(ev, updateActivity, { passive: true }));
+
+    return () => {
+      if (standbyCheckIntervalRef.current) {
+        clearInterval(standbyCheckIntervalRef.current);
+        standbyCheckIntervalRef.current = null;
+      }
+      events.forEach(ev => window.removeEventListener(ev, updateActivity));
+    };
+  }, [viewState]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fetch navigation and roles when user is authenticated
   const fetchNavigation = useCallback(async () => {
@@ -207,6 +252,16 @@ export default function App() {
     setSelectedMainCat(null);
     setShowLogoutModal(false);
     setPinnedMenus([]);
+  };
+
+  /** Verify password and exit standby mode */
+  const handleUnlock = async (password: string): Promise<boolean> => {
+    const ok = await api.verifyPassword(password);
+    if (ok) {
+      setIsStandby(false);
+      lastActivityRef.current = Date.now();
+    }
+    return ok;
   };
 
   const handleToggleTheme = () => {
@@ -517,6 +572,13 @@ export default function App() {
         handleClearAllTabs={handleClearAllTabs}
         confirmClearActive={confirmClearActive}
         setConfirmClearActive={setConfirmClearActive}
+      />
+
+      {/* Standby (auto-lock) overlay */}
+      <StandbyModal
+        isStandby={isStandby}
+        user={user}
+        onUnlock={handleUnlock}
       />
     </div>
   );

@@ -25,3 +25,6 @@ export const SIGNS_STORAGE_PATH = `${BACKEND_API_URL}/storage/signs`;
 
 /** حداکثر تعداد تب‌های همزمان مجاز */
 export const MAX_TABS = 6;
+
+/** مدت زمان غیرفعال بودن کاربر (بر حسب میلی‌ثانیه) قبل از فعال شدن حالت standby */
+export const STANDBY_TIMEOUT = 1 * 60 * 1000; // 15 دقیقه
