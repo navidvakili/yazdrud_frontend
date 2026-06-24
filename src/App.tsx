@@ -374,6 +374,7 @@ export default function App() {
       case 'professors':
         return <ProfessorManagement />;
       case 'courses':
+      case 'tuts':
         return <CourseCoursework />;
       case 'finance':
         return <FinancialManagement />;

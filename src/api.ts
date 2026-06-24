@@ -4,7 +4,7 @@
 
 import { API } from '@/src/lib/functions';
 import { TOKEN_STRING, USER_STRING } from '@/src/lib/constants';
-import type { AuthResponse, LoginCredentials, User, UserRole, NavResponse, UserRolesResponse, PermissionsResponse, RoleInfo } from '@/src/types';
+import type { AuthResponse, LoginCredentials, User, UserRole, NavItem, NavResponse, UserRolesResponse, PermissionsResponse, RoleInfo, PermissionItem, Course, CourseRegistration, CourseStats } from '@/src/types';
 import { getAvatarUrl } from '@/src/lib/functions';
 
 class ApiService {
@@ -136,6 +136,107 @@ class ApiService {
     // Update localStorage with new user info
     localStorage.setItem(USER_STRING, JSON.stringify(updatedUser));
     return updatedUser;
+  }
+
+  // ========== Courses (دوره‌های آموزشی) ==========
+
+  /**
+   * Get paginated list of courses.
+   */
+  async getCourses(params?: { active?: boolean; search?: string; page?: number; per_page?: number }): Promise<{ data: Course[]; meta: any }> {
+    const query = new URLSearchParams();
+    if (params?.active !== undefined) query.set('active', String(params.active));
+    if (params?.search) query.set('search', params.search);
+    if (params?.page) query.set('page', String(params.page));
+    if (params?.per_page) query.set('per_page', String(params.per_page));
+    const qs = query.toString();
+    const url = qs ? `courses?${qs}` : 'courses';
+    return API<any>(url);
+  }
+
+  /**
+   * Get a single course by ID.
+   */
+  async getCourse(id: number): Promise<Course> {
+    const data = await API<any>(`courses/${id}`);
+    return data.data;
+  }
+
+  /**
+   * Create a new course.
+   */
+  async createCourse(courseData: any): Promise<Course> {
+    const data = await API<any>('courses', courseData, 'POST');
+    return data.data;
+  }
+
+  /**
+   * Update an existing course.
+   */
+  async updateCourse(id: number, courseData: any): Promise<Course> {
+    const data = await API<any>(`courses/${id}`, courseData, 'PUT');
+    return data.data;
+  }
+
+  /**
+   * Delete a course.
+   */
+  async deleteCourse(id: number): Promise<void> {
+    await API(`courses/${id}`, {}, 'DELETE');
+  }
+
+  /**
+   * Toggle course active status.
+   */
+  async toggleCourseActive(id: number): Promise<Course> {
+    const data = await API<any>(`courses/${id}/toggle-active`, {}, 'PUT');
+    return data.data;
+  }
+
+  /**
+   * Get registrations for a specific course.
+   */
+  async getCourseRegistrations(courseId: number): Promise<CourseRegistration[]> {
+    const data = await API<any>(`courses/${courseId}/registrations`);
+    return data.data;
+  }
+
+  /**
+   * Get all registrations (with optional filters).
+   */
+  async getAllRegistrations(params?: { course_id?: number; status?: string; page?: number; per_page?: number }): Promise<{ data: CourseRegistration[]; meta: any }> {
+    const query = new URLSearchParams();
+    if (params?.course_id) query.set('course_id', String(params.course_id));
+    if (params?.status) query.set('status', params.status);
+    if (params?.page) query.set('page', String(params.page));
+    if (params?.per_page) query.set('per_page', String(params.per_page));
+    const qs = query.toString();
+    const url = qs ? `courses/registrations?${qs}` : 'courses/registrations';
+    return API<any>(url);
+  }
+
+  /**
+   * Approve a bank receipt for a registration.
+   */
+  async approveReceipt(registrationId: number): Promise<CourseRegistration> {
+    const data = await API<any>(`courses/registrations/${registrationId}/approve-receipt`, {}, 'POST');
+    return data.data;
+  }
+
+  /**
+   * Reject a bank receipt for a registration.
+   */
+  async rejectReceipt(registrationId: number, rejectionReason?: string): Promise<CourseRegistration> {
+    const data = await API<any>(`courses/registrations/${registrationId}/reject-receipt`, { rejection_reason: rejectionReason }, 'POST');
+    return data.data;
+  }
+
+  /**
+   * Get course statistics.
+   */
+  async getCourseStatistics(): Promise<CourseStats> {
+    const data = await API<any>('courses/statistics');
+    return data.data;
   }
 }
 
