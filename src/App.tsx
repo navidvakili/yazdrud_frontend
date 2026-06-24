@@ -54,7 +54,6 @@ import ProfileModule from '@/src/components/ProfileModule';
 import ChangePasswordModule from '@/src/components/ChangePasswordModule';
 import StudentManagement from '@/src/components/StudentManagement';
 import ProfessorManagement from '@/src/components/ProfessorManagement';
-import CourseCoursework from '@/src/components/CourseCoursework';
 import FinancialManagement from '@/src/components/FinancialManagement';
 import ThesisManagement from '@/src/components/ThesisManagement';
 import LegacyModules from '@/src/components/LegacyModules';
@@ -374,8 +373,6 @@ export default function App() {
         return <StudentManagement />;
       case 'professors':
         return <ProfessorManagement />;
-      case 'courses':
-        return <CourseCoursework />;
       // ===== TutsModule (دوره‌های آموزشی) — from database menu URLs =====
       case 'tuts':
       case 'tuts-list':
