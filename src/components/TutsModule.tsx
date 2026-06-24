@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Calendar, 
@@ -220,96 +220,108 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
   const [registrants, setRegistrants] = useState<TutRegistrant[]>([]);
   const [surveys, setSurveys] = useState<TutSurvey[]>([]);
 
-  // ===== Data Fetching Effects =====
-  useEffect(() => {
-    setLoadingCourses(true);
-    api.getCourses()
-      .then(res => {
-        const mapped = (res.data || []).map(mapCourse);
-        setCourses(mapped);
-      })
-      .catch(err => console.error('Error fetching courses:', err))
-      .finally(() => setLoadingCourses(false));
-  }, []);
+  // ===== Lazy Data Fetching: each section fetches only its own data when activated =====
+  const fetchedRef = useRef({ courses: false, registrants: false, surveys: false, vouchers: false });
 
   useEffect(() => {
-    setLoadingRegistrants(true);
-    api.getAllRegistrations()
-      .then(res => {
-        const mapped = (res.data || []).map(mapRegistrant);
-        setRegistrants(mapped);
-      })
-      .catch(err => console.error('Error fetching registrations:', err))
-      .finally(() => setLoadingRegistrants(false));
-  }, []);
+    // Determine which data types are needed based on the active moduleId
+    const needsCourses = moduleId === 'tuts-list' || moduleId === 'tuts-stats' || moduleId === 'tuts-surveys';
+    const needsRegistrants = moduleId === 'tuts-reports' || moduleId === 'tuts-receipts' || moduleId === 'tuts-stats';
+    const needsSurveys = moduleId === 'tuts-surveys' || moduleId === 'tuts-surveys-stats';
+    const needsVouchers = moduleId === 'tuts-vouchers';
 
-  useEffect(() => {
-    setLoadingSurveys(true);
-    api.getSurveys()
-      .then(res => {
-        const rows: any[] = res.data || [];
-        // Store individual surveys for the detailed list view
-        setIndividualSurveys(rows.map((s: any) => ({
-          id: s.id,
-          name: s.full_name || `${s.first_name || ''} ${s.last_name || ''}`.trim(),
-          phone: s.phone_number || '',
-          date: s.created_at ? s.created_at.split(' ')[0].replace(/-/g, '/') : '',
-          courseTitle: s.course_title || '',
-          rating: s.rating || 0,
-          comment: s.comment || s.suggestions || ''
-        })));
-        // Aggregate surveys by course for the stats view
-        const grouped: Record<string, any> = {};
-        rows.forEach((s: any) => {
-          const key = String(s.course_id);
-          if (!grouped[key]) {
-            grouped[key] = {
-              courseId: key,
-              courseTitle: s.course_title || '',
-              rating: 0,
-              totalResponses: 0,
-              breakdown: { content: 0, lecturer: 0, organization: 0, facilities: 0 },
-              comments: []
-            };
-          }
-          const g = grouped[key];
-          g.totalResponses++;
-          g.rating += s.rating || 0;
-          if (s.comment || s.suggestions) {
-            g.comments.push({
-              user: s.full_name || `${s.first_name || ''} ${s.last_name || ''}`.trim() || 'کاربر',
-              rating: s.rating || 0,
-              comment: s.comment || s.suggestions || '',
-              date: s.created_at ? s.created_at.split(' ')[0].replace(/-/g, '/') : ''
-            });
-          }
-        });
-        const aggregated = Object.values(grouped).map((g: any) => ({
-          ...g,
-          rating: g.totalResponses > 0 ? Math.round(g.rating / g.totalResponses) : 0,
-          breakdown: {
-            content: Math.round((g.rating / g.totalResponses) * 20),
-            lecturer: Math.round((g.rating / g.totalResponses) * 20),
-            organization: Math.round((g.rating / g.totalResponses) * 18),
-            facilities: Math.round((g.rating / g.totalResponses) * 17)
-          }
-        }));
-        setSurveys(aggregated);
-      })
-      .catch(err => console.error('Error fetching surveys:', err))
-      .finally(() => setLoadingSurveys(false));
-  }, []);
+    if (needsCourses && !fetchedRef.current.courses) {
+      setLoadingCourses(true);
+      fetchedRef.current.courses = true;
+      api.getCourses()
+        .then(res => {
+          const mapped = (res.data || []).map(mapCourse);
+          setCourses(mapped);
+        })
+        .catch(err => { console.error('Error fetching courses:', err); fetchedRef.current.courses = false; })
+        .finally(() => setLoadingCourses(false));
+    }
 
-  useEffect(() => {
-    setLoadingVouchers(true);
-    api.getCoupons()
-      .then(res => {
-        const mapped = (res.data || []).map(mapVoucher);
-        setVouchers(mapped);
-      })
-      .catch(err => console.error('Error fetching coupons:', err))
-      .finally(() => setLoadingVouchers(false));
-  }, []);
+    if (needsRegistrants && !fetchedRef.current.registrants) {
+      setLoadingRegistrants(true);
+      fetchedRef.current.registrants = true;
+      api.getAllRegistrations()
+        .then(res => {
+          const mapped = (res.data || []).map(mapRegistrant);
+          setRegistrants(mapped);
+        })
+        .catch(err => { console.error('Error fetching registrations:', err); fetchedRef.current.registrants = false; })
+        .finally(() => setLoadingRegistrants(false));
+    }
+
+    if (needsSurveys && !fetchedRef.current.surveys) {
+      setLoadingSurveys(true);
+      fetchedRef.current.surveys = true;
+      api.getSurveys()
+        .then(res => {
+          const rows: any[] = res.data || [];
+          setIndividualSurveys(rows.map((s: any) => ({
+            id: s.id,
+            name: s.full_name || `${s.first_name || ''} ${s.last_name || ''}`.trim(),
+            phone: s.phone_number || '',
+            date: s.created_at ? s.created_at.split(' ')[0].replace(/-/g, '/') : '',
+            courseTitle: s.course_title || '',
+            rating: s.rating || 0,
+            comment: s.comment || s.suggestions || ''
+          })));
+          const grouped: Record<string, any> = {};
+          rows.forEach((s: any) => {
+            const key = String(s.course_id);
+            if (!grouped[key]) {
+              grouped[key] = {
+                courseId: key,
+                courseTitle: s.course_title || '',
+                rating: 0,
+                totalResponses: 0,
+                breakdown: { content: 0, lecturer: 0, organization: 0, facilities: 0 },
+                comments: []
+              };
+            }
+            const g = grouped[key];
+            g.totalResponses++;
+            g.rating += s.rating || 0;
+            if (s.comment || s.suggestions) {
+              g.comments.push({
+                user: s.full_name || `${s.first_name || ''} ${s.last_name || ''}`.trim() || 'کاربر',
+                rating: s.rating || 0,
+                comment: s.comment || s.suggestions || '',
+                date: s.created_at ? s.created_at.split(' ')[0].replace(/-/g, '/') : ''
+              });
+            }
+          });
+          const aggregated = Object.values(grouped).map((g: any) => ({
+            ...g,
+            rating: g.totalResponses > 0 ? Math.round(g.rating / g.totalResponses) : 0,
+            breakdown: {
+              content: Math.round((g.rating / g.totalResponses) * 20),
+              lecturer: Math.round((g.rating / g.totalResponses) * 20),
+              organization: Math.round((g.rating / g.totalResponses) * 18),
+              facilities: Math.round((g.rating / g.totalResponses) * 17)
+            }
+          }));
+          setSurveys(aggregated);
+        })
+        .catch(err => { console.error('Error fetching surveys:', err); fetchedRef.current.surveys = false; })
+        .finally(() => setLoadingSurveys(false));
+    }
+
+    if (needsVouchers && !fetchedRef.current.vouchers) {
+      setLoadingVouchers(true);
+      fetchedRef.current.vouchers = true;
+      api.getCoupons()
+        .then(res => {
+          const mapped = (res.data || []).map(mapVoucher);
+          setVouchers(mapped);
+        })
+        .catch(err => { console.error('Error fetching coupons:', err); fetchedRef.current.vouchers = false; })
+        .finally(() => setLoadingVouchers(false));
+    }
+  }, [moduleId]);
 
   // Dedicated role for education expert (کارشناس آموزش)
   const currentUserRole = user?.role || 'admin';
