@@ -17,7 +17,14 @@ export default function Footer({ user }: FooterProps) {
           <span className="h-1.5 w-1.5 bg-green-500 rounded-full animate-pulse"></span>
           وضعیت شبکه: فعال و بهینه (Online)
         </span>
-        <span className="text-[9px] text-gray-300 dark:text-slate-600 ">Karant Portal v2.0</span>
+        <a
+          href="https://karanet.info"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[9px] text-gray-300 dark:text-slate-600 hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
+        >
+          برنامه نویس و توسعه دهنده توسط شرکت فناوری اطلاعات
+        </a>
       </div>
       <div className="flex items-center gap-3">
         <span className="text-[9px] text-gray-300 dark:text-slate-600 ">API: Connected</span>
