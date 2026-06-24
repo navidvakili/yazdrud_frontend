@@ -18,7 +18,6 @@ import {
   TrendingUp,
   BookMarked,
   Pin,
-  PinOff,
   type LucideIcon,
 } from 'lucide-react';
 import type { User as UserType } from '@/src/types';
@@ -38,8 +37,6 @@ interface DashboardModuleProps {
   openTabsCount: number;
   pinnedMenus?: string[];
   allMenuItems?: MenuAction[];
-  onPinMenu?: (menuId: string) => void;
-  onUnpinMenu?: (menuId: string) => void;
 }
 
 export default function DashboardModule({
@@ -48,8 +45,6 @@ export default function DashboardModule({
   openTabsCount,
   pinnedMenus = [],
   allMenuItems,
-  onPinMenu,
-  onUnpinMenu,
 }: DashboardModuleProps) {
   if (!user) return null;
 
@@ -177,71 +172,11 @@ export default function DashboardModule({
                     <span className="text-sm font-bold text-gray-900 dark:text-white block truncate">{action.title}</span>
                     <span className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5 block line-clamp-1">{action.desc}</span>
                   </div>
-                  {onUnpinMenu && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); onUnpinMenu(action.id); }}
-                      className="absolute top-1.5 left-1.5 p-1 rounded-md text-gray-300 hover:text-rose-500 hover:bg-rose-500/10 opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
-                      title="حذف از میانبرها"
-                    >
-                      <PinOff className="w-3.5 h-3.5" />
-                    </button>
-                  )}
                 </motion.button>
               ))}
           </div>
         </div>
       )}
-
-      {/* All Quick Actions */}
-      <div>
-        <h3 className="text-base font-black text-gray-900 dark:text-white mb-4">
-          دسترسی‌های سریع
-        </h3>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {filteredActions.map((action, idx) => {
-            const isPinned = pinnedMenus.includes(action.id);
-            return (
-              <motion.button
-                key={action.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: idx * 0.05 }}
-                onClick={() => onNavigate(action.id, action.title, action.icon.name)}
-                className="flex items-start gap-3 p-4 bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 hover:shadow-md hover:border-teal-500/30 dark:hover:border-teal-500/20 transition-all text-right cursor-pointer group"
-              >
-                <div className="p-2.5 rounded-xl bg-teal-50 dark:bg-teal-950/40 text-teal-600 dark:text-teal-400 group-hover:bg-teal-600 group-hover:text-white transition-all">
-                  <action.icon className="w-5 h-5" />
-                </div>
-                <div className="flex-1 text-right">
-                  <span className="text-sm font-bold text-gray-900 dark:text-white block">{action.title}</span>
-                  <span className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5 block">{action.desc}</span>
-                </div>
-                {/* Pin toggle */}
-                {onPinMenu && onUnpinMenu && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (isPinned) {
-                        onUnpinMenu(action.id);
-                      } else {
-                        onPinMenu(action.id);
-                      }
-                    }}
-                    className={`p-1.5 rounded-lg transition-all cursor-pointer shrink-0 ${
-                      isPinned
-                        ? 'text-teal-600 bg-teal-50 dark:bg-teal-950/40 dark:text-teal-400'
-                        : 'text-gray-300 hover:text-teal-500 hover:bg-teal-50 dark:hover:bg-teal-950/30 opacity-0 group-hover:opacity-100'
-                    }`}
-                    title={isPinned ? 'حذف از میانبرها' : 'افزودن به میانبرها'}
-                  >
-                    <Pin className={`w-4 h-4 ${isPinned ? 'fill-teal-500' : ''}`} />
-                  </button>
-                )}
-              </motion.button>
-            );
-          })}
-        </div>
-      </div>
 
       {/* Role-specific info */}
       <motion.div

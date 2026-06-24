@@ -90,7 +90,7 @@ export default function Pagination({ currentPage, totalItems, perPage, onPageCha
       <button
         disabled={safePage <= 1}
         onClick={() => onPageChange(safePage - 1)}
-        className="h-8 px-3 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-500 hover:text-gray-800 dark:hover:text-white disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center transition-colors font-mono text-xs"
+        className="h-8 px-3 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-500 hover:text-gray-800 dark:hover:text-white disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center transition-colors text-xs"
         title="صفحه قبل"
       >
         &gt;
@@ -109,7 +109,7 @@ export default function Pagination({ currentPage, totalItems, perPage, onPageCha
           <button
             key={page}
             onClick={() => onPageChange(page)}
-            className={`h-8 w-8 rounded-lg border font-bold transition-all cursor-pointer flex items-center justify-center text-xs font-mono ${
+            className={`h-8 w-8 rounded-lg border font-bold transition-all cursor-pointer flex items-center justify-center text-xs ${
               page === safePage
                 ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
                 : 'border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300 hover:bg-gray-55'
@@ -124,7 +124,7 @@ export default function Pagination({ currentPage, totalItems, perPage, onPageCha
       <button
         disabled={safePage >= totalPages}
         onClick={() => onPageChange(safePage + 1)}
-        className="h-8 px-3 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-500 hover:text-gray-800 dark:hover:text-white disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center transition-colors font-mono text-xs"
+        className="h-8 px-3 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-500 hover:text-gray-800 dark:hover:text-white disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center transition-colors text-xs"
         title="صفحه بعد"
       >
         &lt;
@@ -138,7 +138,7 @@ export default function Pagination({ currentPage, totalItems, perPage, onPageCha
           value={jumpInput}
           onChange={(e) => setJumpInput(e.target.value)}
           placeholder="صفحه"
-          className="w-14 h-8 text-center text-xs rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500/30 font-mono"
+          className="w-14 h-8 text-center text-xs rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500/30"
           inputMode="numeric"
         />
         <button
