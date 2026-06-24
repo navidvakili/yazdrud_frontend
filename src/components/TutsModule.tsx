@@ -1,20 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  Calendar, 
-  User, 
-  DollarSign, 
-  Users, 
-  Upload, 
-  CheckCircle, 
-  AlertTriangle, 
-  FileText, 
-  Sparkles, 
-  Search, 
-  Filter, 
-  Plus, 
-  X, 
-  Info, 
+import {
+  Calendar,
+  User,
+  DollarSign,
+  Users,
+  Upload,
+  CheckCircle,
+  AlertTriangle,
+  FileText,
+  Sparkles,
+  Search,
+  Filter,
+  Plus,
+  X,
+  Info,
   ArrowLeft,
   ChevronDown,
   Award,
@@ -182,7 +182,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     capacity: c.capacity || 30,
     startDate: c.start_date ? (c.start_date.includes('/') ? c.start_date : c.start_date.replace(/-/g, '/')) : '۱۴۰۵/۰۱/۰۱',
     status: c.active ? 'active' : 'ended',
-    category: c.category || 'عمومی',
+    category: c.group_title || c.category || 'عمومی',
     description: c.description || 'توضیحات دوره به زودی منتشر خواهد شد.'
   });
 
@@ -327,23 +327,27 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
   // Dedicated role for education expert (کارشناس آموزش)
   const currentUserRole = user?.role || 'admin';
 
-  // Dynamic Categories (Groups) management
-  const [categories, setCategories] = useState<string[]>(() => {
-    const saved = localStorage.getItem('tuts_categories');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        // ignore
-      }
-    }
-    return [
-      'علوم تربیتی و روانشناسی',
-      'فناوری و مهندسی',
-      'هنر و رسانه دیجیتال',
-      'مدیریت و تجارت'
-    ];
-  });
+  // Dynamic Categories (Groups) management — synced with backend API
+  const [courseGroups, setCourseGroups] = useState<{ id: number; title: string }[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+
+  // Fetch course groups from backend API
+  useEffect(() => {
+    api.getCourseGroups()
+      .then(groups => {
+        setCourseGroups(groups);
+        setCategories(groups.map((g: any) => g.title));
+      })
+      .catch(() => {
+        // Fallback to localStorage if API fails
+        const saved = localStorage.getItem('tuts_categories');
+        if (saved) {
+          try { setCategories(JSON.parse(saved)); } catch { /* ignore */ }
+        }
+      })
+      .finally(() => setCategoriesLoading(false));
+  }, []);
 
   const [vouchers, setVouchers] = useState<TutVoucher[]>([]);
 
@@ -442,7 +446,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
   const [statAppliedYear, setStatAppliedYear] = useState('۱۴۰۵');
   const [statAppliedCourse, setStatAppliedCourse] = useState('all');
 
-  const handleAddCategory = (e: React.FormEvent) => {
+  const handleAddCategory = async (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = newCategoryName.trim();
     if (!trimmed) {
@@ -453,9 +457,15 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
       showToast('این گروه آموزشی از قبل تعریف شده است.', 'error');
       return;
     }
-    setCategories(prev => [...prev, trimmed]);
-    setNewCategoryName('');
-    showToast(`گروه آموزشی "${trimmed}" با موفقیت تعریف شد.`);
+    try {
+      const created = await api.createCourseGroup(trimmed);
+      setCourseGroups(prev => [...prev, created]);
+      setCategories(prev => [...prev, created.title]);
+      setNewCategoryName('');
+      showToast(`گروه آموزشی "${trimmed}" با موفقیت تعریف شد.`);
+    } catch {
+      showToast('خطا در تعریف گروه آموزشی.', 'error');
+    }
   };
 
   const handleCreateVoucher = (e: React.FormEvent) => {
@@ -502,7 +512,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
 
     setVouchers([created, ...vouchers]);
     showToast(`بن خرید جدید "${title}" با کد "${code}" با موفقیت ایجاد گردید.`);
-    
+
     // reset form fields
     setNewVoucherCode('');
     setNewVoucherTitle('');
@@ -571,7 +581,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
       const totalCur = currentHour * 60 + currentMinute;
       const totalStart = sh * 60 + sm;
       const totalEnd = eh * 60 + em;
-      
+
       if (totalCur < totalStart || totalCur > totalEnd) {
         hoursPassed = false;
         isValid = false;
@@ -707,8 +717,8 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     let firstPassed = true;
     let firstDesc = 'برای همه ثبت‌نام کنندگان مجاز است.';
     if (vouch.firstPurchaseOnly) {
-      const hasPurchased = registrants.some(r => 
-        r.status === 'verified' && 
+      const hasPurchased = registrants.some(r =>
+        r.status === 'verified' &&
         (r.studentCode === sandboxPhone || r.studentCode === sandboxEmail)
       );
       if (hasPurchased) {
@@ -832,10 +842,18 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     setSurveyFormComment('');
   };
 
-  const handleDeleteCategory = (catToDelete: string) => {
-    if (confirm(`آیا از حذف گروه "${catToDelete}" اطمینان دارید؟`)) {
+  const handleDeleteCategory = async (catToDelete: string) => {
+    const group = courseGroups.find(g => g.title === catToDelete);
+    if (!confirm(`آیا از حذف گروه "${catToDelete}" اطمینان دارید؟`)) return;
+    try {
+      if (group) {
+        await api.deleteCourseGroup(group.id);
+      }
+      setCourseGroups(prev => prev.filter(g => g.title !== catToDelete));
       setCategories(prev => prev.filter(c => c !== catToDelete));
       showToast(`گروه آموزشی "${catToDelete}" حذف گردید.`, 'info');
+    } catch {
+      showToast(`خطا در حذف گروه "${catToDelete}".`, 'error');
     }
   };
 
@@ -970,8 +988,8 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
       if (c.id === id) {
         const nextStatus = c.status === 'ended' ? 'active' : 'ended';
         showToast(
-          nextStatus === 'active' 
-            ? `دوره "${c.title}" مجدداً فعال گردید.` 
+          nextStatus === 'active'
+            ? `دوره "${c.title}" مجدداً فعال گردید.`
             : `دوره "${c.title}" غیرفعال (پایان‌یافته) گردید.`,
           'info'
         );
@@ -1001,7 +1019,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     // Generate CSV content with UTF-8 BOM for proper Excel display of Persian text
     let csvContent = '\uFEFF';
     csvContent += 'شناسه ثبت‌نام,نام دانشجو,کد ملی/دانشجویی,کد پیگیری شتابی,بانک مبدأ,تاریخ ثبت,مبلغ پرداختی (ریال),وضعیت\n';
-    
+
     courseRegs.forEach(r => {
       const statusText = r.status === 'verified' ? 'تایید شده' : r.status === 'rejected' ? 'رد شده' : 'در انتظار تایید';
       csvContent += `"${r.id}","${r.name}","${r.studentCode}","${r.referenceCode}","${r.bank}","${r.date}",${r.amount},"${statusText}"\n`;
@@ -1087,7 +1105,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
       const totalCur = currentHour * 60 + currentMinute;
       const totalStart = sh * 60 + sm;
       const totalEnd = eh * 60 + em;
-      
+
       if (totalCur < totalStart || totalCur > totalEnd) {
         setVoucherError(`این بن تخفیف فقط در ساعات خاصی از شبانه‌روز (${toPersianDigits(foundVoucher.allowedHours)}) قابل استفاده است. ساعت فعلی سیستم: ${toPersianDigits('۱۰:۰۵')}`);
         setAppliedVoucher(null);
@@ -1163,8 +1181,8 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
 
     // 5. Simple Identity / First Purchase Check
     if (foundVoucher.firstPurchaseOnly) {
-      const hasPurchased = registrants.some(r => 
-        r.status === 'verified' && 
+      const hasPurchased = registrants.some(r =>
+        r.status === 'verified' &&
         (r.name.trim() === studentName.trim() || r.studentCode === studentIdNum)
       );
       if (hasPurchased) {
@@ -1239,7 +1257,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     setRegistrants([newReg, ...registrants]);
     setRegisteringCourse(null);
     showToast('پیش‌ثبت‌نام شما با موفقیت ثبت شد و فیش پیوستی در صف تایید مدیریت آموزش قرار گرفت.');
-    
+
     // Clear registration fields
     setRefCodeInput('');
     setUploadFileName('');
@@ -1261,9 +1279,9 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
   const [reportStatusFilter, setReportStatusFilter] = useState('');
 
   const filteredRegistrants = registrants.filter(reg => {
-    const matchText = reg.name.toLowerCase().includes(reportSearch.toLowerCase()) || 
-                      reg.studentCode.includes(reportSearch) ||
-                      reg.referenceCode.includes(reportSearch);
+    const matchText = reg.name.toLowerCase().includes(reportSearch.toLowerCase()) ||
+      reg.studentCode.includes(reportSearch) ||
+      reg.referenceCode.includes(reportSearch);
     const matchCourse = reportCourseFilter === '' || reg.courseId === reportCourseFilter;
     const matchStatus = reportStatusFilter === '' || reg.status === reportStatusFilter;
     return matchText && matchCourse && matchStatus;
@@ -1358,8 +1376,8 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
   };
 
   const filteredCoursesForListing = courses.filter(c => {
-    const matchSearch = c.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                        c.lecturer.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchSearch = c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.lecturer.toLowerCase().includes(searchQuery.toLowerCase());
     const matchCategory = selectedCategory === '' || c.category === selectedCategory;
     return matchSearch && matchCategory;
   });
@@ -1373,11 +1391,10 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
             initial={{ opacity: 0, y: -20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -20, scale: 0.95 }}
-            className={`fixed top-4 left-4 right-4 sm:left-auto sm:right-4 z-50 p-4 rounded-2xl shadow-2xl border flex items-center gap-3 max-w-md ${
-              toastMsg.type === 'success' ? 'bg-emerald-50 dark:bg-emerald-950/90 border-emerald-500/20 text-emerald-800 dark:text-emerald-300' :
+            className={`fixed top-4 left-4 right-4 sm:left-auto sm:right-4 z-50 p-4 rounded-2xl shadow-2xl border flex items-center gap-3 max-w-md ${toastMsg.type === 'success' ? 'bg-emerald-50 dark:bg-emerald-950/90 border-emerald-500/20 text-emerald-800 dark:text-emerald-300' :
               toastMsg.type === 'error' ? 'bg-rose-50 dark:bg-rose-950/90 border-rose-500/20 text-rose-800 dark:text-rose-300' :
-              'bg-blue-50 dark:bg-blue-950/90 border-blue-500/20 text-blue-800 dark:text-blue-300'
-            }`}
+                'bg-blue-50 dark:bg-blue-950/90 border-blue-500/20 text-blue-800 dark:text-blue-300'
+              }`}
           >
             {toastMsg.type === 'success' && <CheckCircle className="w-5 h-5 text-emerald-500 shrink-0" />}
             {toastMsg.type === 'error' && <AlertTriangle className="w-5 h-5 text-rose-500 shrink-0" />}
@@ -1548,13 +1565,12 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                                 <span className="text-[10px] font-black px-2.5 py-1 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
                                   {course.category}
                                 </span>
-                                <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-md ${
-                                  course.status === 'active' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' :
+                                <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-md ${course.status === 'active' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' :
                                   course.status === 'completed' ? 'bg-amber-500/10 text-amber-600' :
-                                  'bg-gray-100 dark:bg-gray-800 text-gray-500'
-                                }`}>
+                                    'bg-gray-100 dark:bg-gray-800 text-gray-500'
+                                  }`}>
                                   {course.status === 'active' ? 'ثبت‌نام فعال' :
-                                   course.status === 'completed' ? 'تکمیل ظرفیت' : 'برگزار شده'}
+                                    course.status === 'completed' ? 'تکمیل ظرفیت' : 'برگزار شده'}
                                 </span>
                               </div>
 
@@ -1595,9 +1611,8 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                               </div>
                               <div className="w-full h-1.5 rounded-full bg-gray-50 dark:bg-gray-800 overflow-hidden mb-4 relative">
                                 <div
-                                  className={`absolute h-full rounded-full transition-all duration-500 ${
-                                    isFull ? 'bg-amber-500' : 'bg-gradient-to-r from-teal-500 to-indigo-500'
-                                  }`}
+                                  className={`absolute h-full rounded-full transition-all duration-500 ${isFull ? 'bg-amber-500' : 'bg-gradient-to-r from-teal-500 to-indigo-500'
+                                    }`}
                                   style={{ width: `${Math.min(100, regPercent)}%` }}
                                 ></div>
                               </div>
@@ -1652,11 +1667,10 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                                   </button>
                                   <button
                                     onClick={() => handleToggleCourseStatus(course.id)}
-                                    className={`p-1.5 bg-white dark:bg-gray-900 border border-gray-150 dark:border-gray-800 rounded-lg transition-all cursor-pointer ${
-                                      course.status === 'ended' 
-                                        ? 'text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950' 
-                                        : 'text-emerald-600 hover:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-950'
-                                    }`}
+                                    className={`p-1.5 bg-white dark:bg-gray-900 border border-gray-150 dark:border-gray-800 rounded-lg transition-all cursor-pointer ${course.status === 'ended'
+                                      ? 'text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950'
+                                      : 'text-emerald-600 hover:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-950'
+                                      }`}
                                     title={course.status === 'ended' ? 'فعال کردن دوره' : 'غیرفعال (پایان دوره)'}
                                   >
                                     <Power className="w-3.5 h-3.5" />
@@ -2400,11 +2414,10 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                               <td className="p-3.5 font-sans">{reg.bank}</td>
                               <td className="p-3.5 font-bold text-gray-700 dark:text-gray-300">{formatCurrency(reg.amount)}</td>
                               <td className="p-3.5">
-                                <span className={`px-2 py-0.5 rounded-md text-[10px] font-sans font-black ${
-                                  reg.status === 'verified' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' :
+                                <span className={`px-2 py-0.5 rounded-md text-[10px] font-sans font-black ${reg.status === 'verified' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' :
                                   reg.status === 'rejected' ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400' :
-                                  'bg-amber-500/10 text-amber-600 dark:text-amber-400'
-                                }`}>
+                                    'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                                  }`}>
                                   {reg.status === 'verified' ? 'تایید نهایی' : reg.status === 'rejected' ? 'مردود' : 'در انتظار بررسی'}
                                 </span>
                               </td>
@@ -2563,13 +2576,12 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                                   {toPersianDigits(reg.date)}
                                 </td>
                                 <td className="p-4 text-center">
-                                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold inline-block ${
-                                    reg.status === 'verified' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' :
+                                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold inline-block ${reg.status === 'verified' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' :
                                     reg.status === 'rejected' ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400' :
-                                    'bg-amber-500/10 text-amber-600'
-                                  }`}>
+                                      'bg-amber-500/10 text-amber-600'
+                                    }`}>
                                     {reg.status === 'verified' ? 'تایید نهایی شده' :
-                                     reg.status === 'rejected' ? 'فیش رد شده' : 'در انتظار بررسی'}
+                                      reg.status === 'rejected' ? 'فیش رد شده' : 'در انتظار بررسی'}
                                   </span>
                                   {reg.status === 'rejected' && reg.rejectionReason && (
                                     <div className="text-[9px] text-rose-500 mt-1 max-w-[150px] mx-auto truncate" title={reg.rejectionReason}>
@@ -2650,7 +2662,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                   <Filter className="w-4 h-4 text-teal-600" />
                   <span>جستجو و فیلترینگ پیشرفته کارتابل فیش‌ها</span>
                 </div>
-                
+
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-right">
                   {/* Status Filter */}
                   <div>
@@ -2701,7 +2713,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                   const filtered = registrants.filter(r => {
                     const matchesStatus = receiptWorkspaceStatusFilter === 'all' || r.status === receiptWorkspaceStatusFilter;
                     const matchesCourse = receiptWorkspaceCourseFilter === 'all' || r.courseId === receiptWorkspaceCourseFilter;
-                    const matchesCode = !receiptWorkspaceSearchCode.trim() || 
+                    const matchesCode = !receiptWorkspaceSearchCode.trim() ||
                       r.studentCode.toString().includes(receiptWorkspaceSearchCode.trim()) ||
                       r.name.includes(receiptWorkspaceSearchCode.trim());
                     return matchesStatus && matchesCourse && matchesCode;
@@ -2726,24 +2738,22 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                           setShowRejectBox(false);
                           setRejectionInput('');
                         }}
-                        className={`p-4 bg-white dark:bg-gray-900 border rounded-2xl shadow-2xs hover:shadow-md cursor-pointer transition-all text-right ${
-                          isSelected 
-                            ? 'border-teal-500 dark:border-teal-500/60 ring-1 ring-teal-500/10' 
-                            : 'border-gray-100 dark:border-gray-800/80 hover:border-gray-200'
-                        }`}
+                        className={`p-4 bg-white dark:bg-gray-900 border rounded-2xl shadow-2xs hover:shadow-md cursor-pointer transition-all text-right ${isSelected
+                          ? 'border-teal-500 dark:border-teal-500/60 ring-1 ring-teal-500/10'
+                          : 'border-gray-100 dark:border-gray-800/80 hover:border-gray-200'
+                          }`}
                       >
                         <div className="flex justify-between items-start mb-2">
                           <div>
                             <span className="font-extrabold text-xs text-gray-900 dark:text-white block">{reg.name}</span>
                             <span className="text-[10px] text-gray-400 block mt-0.5 font-mono">کد ملی / دانشجویی: {toPersianDigits(reg.studentCode)}</span>
                           </div>
-                          <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold ${
-                            reg.status === 'verified' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' :
+                          <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold ${reg.status === 'verified' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' :
                             reg.status === 'rejected' ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400' :
-                            'bg-amber-500/10 text-amber-600'
-                          }`}>
+                              'bg-amber-500/10 text-amber-600'
+                            }`}>
                             {reg.status === 'verified' ? 'تایید شده' :
-                             reg.status === 'rejected' ? 'رد شده' : 'در انتظار بررسی'}
+                              reg.status === 'rejected' ? 'رد شده' : 'در انتظار بررسی'}
                           </span>
                         </div>
 
@@ -2784,7 +2794,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                     <div className="absolute top-12 left-1/2 -translate-x-1/2 text-center text-gray-200/25 dark:text-gray-800/15 text-5xl font-black rotate-12 uppercase">
                       karante university
                     </div>
-                    
+
                     <div className="flex justify-between items-center border-b border-gray-200/40 pb-3 mb-4">
                       <span className="text-[10px] font-bold text-indigo-700 dark:text-indigo-400 uppercase">فیش دیجیتال شتاب</span>
                       <span className="text-xs font-black text-gray-800 dark:text-gray-200">{selectedReceiptForReview.bank}</span>
@@ -2807,11 +2817,11 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                         <span className="text-gray-400 font-sans">کد رهگیری تراکنش (Ref):</span>
                         <span className="text-gray-900 dark:text-white font-black text-indigo-600 dark:text-indigo-400">{toPersianDigits(selectedReceiptForReview.referenceCode)}</span>
                       </div>
-                       <div className="flex justify-between">
+                      <div className="flex justify-between">
                         <span className="text-gray-400 font-sans">تاریخ و زمان تراکنش:</span>
                         <span className="text-gray-900 dark:text-white font-bold">{toPersianDigits(selectedReceiptForReview.date)}</span>
                       </div>
-                      
+
                       {/* VOUCHER & DISCOUNT INFO IN SLIP */}
                       {(selectedReceiptForReview as any).appliedVoucherCode && (
                         <div className="bg-indigo-500/5 p-2 rounded-xl border border-indigo-500/10 space-y-1 mt-2 text-[11px]">
@@ -2953,7 +2963,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
               peekMonth: 'اردیبهشت با ۴۲۷ نفر'
             };
           }
-          
+
           const course = courses.find(c => c.id === statAppliedCourse);
           if (!course) {
             return {
@@ -2962,7 +2972,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
               onlinePayment: 0,
               bankSlips: 0,
               months: [],
-              seasons: { spring: { count:0, amount:0 }, summer: { count:0, amount:0 }, autumn: { count:0, amount:0 }, winter: { count:0, amount:0 } },
+              seasons: { spring: { count: 0, amount: 0 }, summer: { count: 0, amount: 0 }, autumn: { count: 0, amount: 0 }, winter: { count: 0, amount: 0 } },
               avgMonthly: 0,
               peekMonth: 'ندارد'
             };
@@ -3148,35 +3158,35 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                   >
                     <defs>
                       <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4}/>
-                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4} />
+                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" className="stroke-gray-100 dark:stroke-gray-800" />
-                    <XAxis 
-                      dataKey="month" 
-                      className="fill-gray-400 dark:fill-gray-500" 
-                      tickLine={false} 
+                    <XAxis
+                      dataKey="month"
+                      className="fill-gray-400 dark:fill-gray-500"
+                      tickLine={false}
                       axisLine={false}
                     />
-                    <YAxis 
-                      className="fill-gray-400 dark:fill-gray-500" 
-                      tickLine={false} 
+                    <YAxis
+                      className="fill-gray-400 dark:fill-gray-500"
+                      tickLine={false}
                       axisLine={false}
                       tickFormatter={(v) => toPersianDigits(v)}
                     />
-                    <Tooltip 
+                    <Tooltip
                       formatter={(value: any) => [toPersianDigits(value) + ' نفر', 'تعداد ثبت‌نام']}
                       labelFormatter={(label) => `ماه: ${label}`}
                       contentStyle={{ background: '#1e293b', border: 'none', borderRadius: '12px', color: '#fff', textAlign: 'right' }}
                     />
-                    <Area 
-                      type="monotone" 
-                      dataKey="count" 
-                      stroke="#3b82f6" 
+                    <Area
+                      type="monotone"
+                      dataKey="count"
+                      stroke="#3b82f6"
                       strokeWidth={3}
-                      fillOpacity={1} 
-                      fill="url(#colorCount)" 
+                      fillOpacity={1}
+                      fill="url(#colorCount)"
                     />
                   </AreaChart>
                 </ResponsiveContainer>
@@ -3302,7 +3312,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
               <h4 className="text-sm font-black text-gray-950 dark:text-white mb-1">گزارش کلی و عملکرد مالی دوره‌های آموزشی</h4>
               <p className="text-xs text-gray-400">تحلیل آماری ثبت‌نام، ظرفیت کلاس‌ها و سود خالص ناخالص کارگاه‌های مهارتی</p>
             </div>
-            
+
             <button
               onClick={() => {
                 showToast('در حال آماده‌سازی گزارش تجمیعی PDF دوره‌ها...', 'info');
@@ -3365,11 +3375,10 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                           initial={{ width: 0 }}
                           animate={{ width: `${Math.min(100, percent)}%` }}
                           transition={{ duration: 1, ease: 'easeOut' }}
-                          className={`absolute h-full rounded-full ${
-                            percent >= 100 ? 'bg-gradient-to-r from-emerald-500 to-teal-500' :
+                          className={`absolute h-full rounded-full ${percent >= 100 ? 'bg-gradient-to-r from-emerald-500 to-teal-500' :
                             percent >= 75 ? 'bg-gradient-to-r from-teal-500 to-indigo-500' :
-                            'bg-gradient-to-r from-indigo-500 to-purple-500'
-                          }`}
+                              'bg-gradient-to-r from-indigo-500 to-purple-500'
+                            }`}
                         ></motion.div>
                       </div>
                     </div>
@@ -3454,13 +3463,12 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                           {toPersianDigits((rev / 10).toLocaleString('fa-IR'))} <span className="text-[10px] font-sans font-normal text-gray-400">تومان</span>
                         </td>
                         <td className="p-3 text-center">
-                          <span className={`px-2 py-1 rounded-full text-[9px] font-extrabold ${
-                            c.status === 'active' ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-500/10' :
+                          <span className={`px-2 py-1 rounded-full text-[9px] font-extrabold ${c.status === 'active' ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-500/10' :
                             c.status === 'completed' ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-400 border border-indigo-500/10' :
-                            'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
-                          }`}>
+                              'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+                            }`}>
                             {c.status === 'active' ? 'در حال ثبت‌نام' :
-                             c.status === 'completed' ? 'پایان کلاس مهارتی' : 'پایان یافته و بسته شده'}
+                              c.status === 'completed' ? 'پایان کلاس مهارتی' : 'پایان یافته و بسته شده'}
                           </span>
                         </td>
                       </tr>
@@ -3483,33 +3491,33 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
           if (query) {
             const queryEng = toEnglishDigits(query);
             const queryPer = toPersianDigits(query);
-            
+
             const matchesName = survey.name.toLowerCase().includes(query) || survey.name.toLowerCase().includes(queryEng) || survey.name.toLowerCase().includes(queryPer);
             const matchesPhone = survey.phone.includes(query) || survey.phone.includes(queryEng) || survey.phone.includes(queryPer);
             const matchesCourse = survey.courseTitle.toLowerCase().includes(query) || survey.courseTitle.toLowerCase().includes(queryEng) || survey.courseTitle.toLowerCase().includes(queryPer);
-            
+
             if (!matchesName && !matchesPhone && !matchesCourse) return false;
           }
-          
+
           if (surveyFromDate.trim()) {
             const sDate = toEnglishDigits(survey.date.split(' ')[0]);
             const fromDate = toEnglishDigits(surveyFromDate.trim());
             if (sDate < fromDate) return false;
           }
-          
+
           if (surveyToDate.trim()) {
             const sDate = toEnglishDigits(survey.date.split(' ')[0]);
             const toDate = toEnglishDigits(surveyToDate.trim());
             if (sDate > toDate) return false;
           }
-          
+
           return true;
         });
 
         const surveysPerPage = 20;
         const totalSurveysCount = filteredSurveys.length;
         const totalPagesCount = Math.max(1, Math.ceil(totalSurveysCount / surveysPerPage));
-        
+
         // Ensure page is safe
         const safeCurrentPage = Math.min(surveyPage, totalPagesCount);
         const paginatedSurveys = filteredSurveys.slice(
@@ -3548,10 +3556,10 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
             s.rating,
             s.comment
           ]);
-          
-          const csvContent = "data:text/csv;charset=utf-8,\uFEFF" 
+
+          const csvContent = "data:text/csv;charset=utf-8,\uFEFF"
             + [headers.join(','), ...rows.map(e => e.map(val => `"${String(val).replace(/"/g, '""')}"`).join(','))].join('\n');
-          
+
           const encodedUri = encodeURI(csvContent);
           const link = document.createElement("a");
           link.setAttribute("href", encodedUri);
@@ -3706,89 +3714,89 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                   <table className="w-full text-right text-xs">
                     <thead>
                       <tr className="border-b border-gray-100 dark:border-gray-850 text-gray-400 dark:text-gray-500 font-extrabold">
-                      <th className="p-3 text-center w-16 font-extrabold">شناسه</th>
-                      <th className="p-3 font-extrabold">نام و نام خانوادگی</th>
-                      <th className="p-3 text-center font-extrabold">شماره همراه</th>
-                      <th className="p-3 text-center font-extrabold">تاریخ ثبت</th>
-                      <th className="p-3 text-center w-36 font-extrabold">عملیات</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100 dark:divide-gray-850">
-                    {paginatedSurveys.length === 0 ? (
-                      <tr>
-                        <td colSpan={5} className="p-8 text-center text-gray-400 font-bold">
-                          هیچ موردی منطبق بر فیلترهای جستجوی شما یافت نشد.
-                        </td>
+                        <th className="p-3 text-center w-16 font-extrabold">شناسه</th>
+                        <th className="p-3 font-extrabold">نام و نام خانوادگی</th>
+                        <th className="p-3 text-center font-extrabold">شماره همراه</th>
+                        <th className="p-3 text-center font-extrabold">تاریخ ثبت</th>
+                        <th className="p-3 text-center w-36 font-extrabold">عملیات</th>
                       </tr>
-                    ) : (
-                      paginatedSurveys.map((survey, index) => (
-                        <tr key={survey.id} className="hover:bg-gray-55/30 dark:hover:bg-gray-950/20 transition-colors">
-                          {/* ID Badge */}
-                          <td className="p-3 text-center">
-                            <div className="h-7 w-7 bg-blue-600 dark:bg-blue-500 text-white font-mono font-bold text-xs rounded-lg flex items-center justify-center mx-auto shadow-xs">
-                              {survey.id}
-                            </div>
-                          </td>
-
-                          {/* Full Name */}
-                          <td className="p-3 font-black text-gray-900 dark:text-white">
-                            {survey.name}
-                          </td>
-
-                          {/* Mobile Phone */}
-                          <td className="p-3 text-center">
-                            <span className="text-blue-600 dark:text-blue-400 font-mono font-bold text-xs flex items-center justify-center gap-1">
-                              {survey.phone}
-                              <Phone className="w-3 h-3 text-blue-500" />
-                            </span>
-                          </td>
-
-                          {/* Date of registration */}
-                          <td className="p-3 text-center text-gray-550 dark:text-gray-400 font-mono">
-                            <span className="flex items-center justify-center gap-1.5">
-                              {toPersianDigits(survey.date)}
-                              <Clock className="w-3.5 h-3.5 text-gray-400" />
-                            </span>
-                          </td>
-
-                          {/* Action Buttons */}
-                          <td className="p-3 text-center">
-                            <div className="flex justify-center gap-1.5">
-                              {/* Delete Button */}
-                              <button
-                                onClick={() => handleDeleteSurvey(survey.id)}
-                                className="px-2.5 py-1.5 bg-rose-500 hover:bg-rose-600 text-white font-bold text-[10px] rounded-lg cursor-pointer transition-all flex items-center gap-1 shadow-2xs"
-                              >
-                                <Trash2 className="w-3 h-3" />
-                                حذف
-                              </button>
-                              {/* View/Show Button */}
-                              <button
-                                onClick={() => setSelectedSurveyDetails(survey)}
-                                className="px-2.5 py-1.5 bg-teal-600 hover:bg-teal-700 text-white font-bold text-[10px] rounded-lg cursor-pointer transition-all flex items-center gap-1 shadow-2xs"
-                              >
-                                <Eye className="w-3 h-3" />
-                                نمایش
-                              </button>
-                            </div>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 dark:divide-gray-850">
+                      {paginatedSurveys.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="p-8 text-center text-gray-400 font-bold">
+                            هیچ موردی منطبق بر فیلترهای جستجوی شما یافت نشد.
                           </td>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                      ) : (
+                        paginatedSurveys.map((survey, index) => (
+                          <tr key={survey.id} className="hover:bg-gray-55/30 dark:hover:bg-gray-950/20 transition-colors">
+                            {/* ID Badge */}
+                            <td className="p-3 text-center">
+                              <div className="h-7 w-7 bg-blue-600 dark:bg-blue-500 text-white font-mono font-bold text-xs rounded-lg flex items-center justify-center mx-auto shadow-xs">
+                                {survey.id}
+                              </div>
+                            </td>
 
-              {/* Pagination Controls for Surveys */}
-              {totalSurveysCount > surveysPerPage && (
-                <Pagination
-                  currentPage={surveyPage}
-                  totalItems={totalSurveysCount}
-                  perPage={surveysPerPage}
-                  onPageChange={setSurveyPage}
-                />
-              )}
-            </div>
+                            {/* Full Name */}
+                            <td className="p-3 font-black text-gray-900 dark:text-white">
+                              {survey.name}
+                            </td>
+
+                            {/* Mobile Phone */}
+                            <td className="p-3 text-center">
+                              <span className="text-blue-600 dark:text-blue-400 font-mono font-bold text-xs flex items-center justify-center gap-1">
+                                {survey.phone}
+                                <Phone className="w-3 h-3 text-blue-500" />
+                              </span>
+                            </td>
+
+                            {/* Date of registration */}
+                            <td className="p-3 text-center text-gray-550 dark:text-gray-400 font-mono">
+                              <span className="flex items-center justify-center gap-1.5">
+                                {toPersianDigits(survey.date)}
+                                <Clock className="w-3.5 h-3.5 text-gray-400" />
+                              </span>
+                            </td>
+
+                            {/* Action Buttons */}
+                            <td className="p-3 text-center">
+                              <div className="flex justify-center gap-1.5">
+                                {/* Delete Button */}
+                                <button
+                                  onClick={() => handleDeleteSurvey(survey.id)}
+                                  className="px-2.5 py-1.5 bg-rose-500 hover:bg-rose-600 text-white font-bold text-[10px] rounded-lg cursor-pointer transition-all flex items-center gap-1 shadow-2xs"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                  حذف
+                                </button>
+                                {/* View/Show Button */}
+                                <button
+                                  onClick={() => setSelectedSurveyDetails(survey)}
+                                  className="px-2.5 py-1.5 bg-teal-600 hover:bg-teal-700 text-white font-bold text-[10px] rounded-lg cursor-pointer transition-all flex items-center gap-1 shadow-2xs"
+                                >
+                                  <Eye className="w-3 h-3" />
+                                  نمایش
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Pagination Controls for Surveys */}
+                {totalSurveysCount > surveysPerPage && (
+                  <Pagination
+                    currentPage={surveyPage}
+                    totalItems={totalSurveysCount}
+                    perPage={surveysPerPage}
+                    onPageChange={setSurveyPage}
+                  />
+                )}
+              </div>
             )}
 
             {/* Interactive Survey Detail Modal dialog */}
@@ -3849,9 +3857,8 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                           {[1, 2, 3, 4, 5].map((star) => (
                             <span
                               key={star}
-                              className={`text-xl ${
-                                star <= selectedSurveyDetails.rating ? 'text-amber-500' : 'text-gray-250 dark:text-gray-800'
-                              }`}
+                              className={`text-xl ${star <= selectedSurveyDetails.rating ? 'text-amber-500' : 'text-gray-250 dark:text-gray-800'
+                                }`}
                             >
                               ★
                             </span>
@@ -3896,7 +3903,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
               <h4 className="text-sm font-black text-gray-950 dark:text-white mb-1">آمار، نمودارها و ارزیابی کیفی دوره‌ها</h4>
               <p className="text-xs text-gray-400">شاخص‌های رضایت‌مندی دانشجویان، ارزیابی کیفیت اساتید و پلتفرم برگزاری کلاس‌ها</p>
             </div>
-            
+
             <div className="relative min-w-[240px] w-full sm:w-auto">
               <select
                 value={selectedStatCourse}
@@ -3954,7 +3961,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
               {/* Question breakdowns bar chart */}
               <div className="space-y-4">
                 <h6 className="text-xs font-black text-gray-900 dark:text-white">ارزیابی تفکیکی ابعاد کیفی دوره‌ها</h6>
-                
+
                 {selectedStatCourse === 'all' ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {[
@@ -4054,7 +4061,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                 {/* Range parameters */}
                 <div className="space-y-3 p-3 bg-gray-55/60 dark:bg-gray-950/40 rounded-xl border border-gray-100/50 dark:border-gray-850">
                   <span className="text-[10px] font-bold text-gray-400 block">ارزیابی پارامترهای جزئی (درصد رضایت)</span>
-                  
+
                   <div className="space-y-1">
                     <div className="flex justify-between text-[9px] text-gray-450">
                       <span>محتوای علمی</span>
@@ -4189,25 +4196,23 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
               <h4 className="text-sm font-black text-gray-950 dark:text-white mb-1">مدیریت بن‌های خرید، کدهای تخفیف و جشنواره‌ها</h4>
               <p className="text-xs text-gray-400">تنظیمات کمپین‌های تخفیف مهارتی، شرایط چندگانه زمانی، مکانی، فنی و پرداخت اقساطی</p>
             </div>
-            
+
             <div className="flex gap-2">
               <button
                 onClick={() => setVoucherActiveTab('list')}
-                className={`px-4 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
-                  voucherActiveTab === 'list'
-                    ? 'bg-teal-600 text-white shadow-sm'
-                    : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200'
-                }`}
+                className={`px-4 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${voucherActiveTab === 'list'
+                  ? 'bg-teal-600 text-white shadow-sm'
+                  : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200'
+                  }`}
               >
                 لیست بن‌های فعال
               </button>
               <button
                 onClick={() => setVoucherActiveTab('create')}
-                className={`px-4 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
-                  voucherActiveTab === 'create'
-                    ? 'bg-teal-600 text-white shadow-sm'
-                    : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200'
-                }`}
+                className={`px-4 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${voucherActiveTab === 'create'
+                  ? 'bg-teal-600 text-white shadow-sm'
+                  : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200'
+                  }`}
               >
                 + تعریف بن خرید جدید
               </button>
@@ -4379,7 +4384,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
               ) : (
                 <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800/85 p-6 rounded-3xl">
                   <h5 className="text-xs font-black text-gray-900 dark:text-white mb-4">تعریف بن خرید و سناریو تخفیف جدید</h5>
-                  
+
                   <form onSubmit={handleCreateVoucher} className="space-y-4">
                     {/* SECTION 1 */}
                     <div className="bg-gray-50/50 dark:bg-gray-950 p-4 rounded-2xl border border-gray-100 dark:border-gray-850 space-y-3">
@@ -4774,11 +4779,10 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                   <div className="p-4 rounded-2xl bg-white dark:bg-gray-950 border border-indigo-500/10 space-y-4 text-right">
                     <div className="flex justify-between items-center pb-2 border-b border-gray-100 dark:border-gray-850">
                       <span className="text-[10.5px] font-black text-gray-900 dark:text-white">نتیجه بررسی شبیه‌ساز:</span>
-                      <span className={`text-[9.5px] px-2.5 py-1 rounded-full font-black ${
-                        sandboxResult.isValid
-                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                          : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
-                      }`}>
+                      <span className={`text-[9.5px] px-2.5 py-1 rounded-full font-black ${sandboxResult.isValid
+                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                        : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
+                        }`}>
                         {sandboxResult.isValid ? '✓ بن معتبر است' : '⚠ بن نامعتبر است'}
                       </span>
                     </div>
@@ -4797,7 +4801,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                         <span className="font-sans">مبلغ پرداختی نهایی:</span>
                         <span className="text-emerald-600 dark:text-emerald-400">{formatCurrency(sandboxResult.finalPrice)}</span>
                       </div>
-                      
+
                       {sandboxResult.allowInstallments && sandboxResult.installmentCount && (
                         <div className="pt-2 mt-2 border-t border-indigo-500/10 space-y-0.5 text-[10px] text-indigo-600 dark:text-indigo-400 font-sans">
                           <div>✓ قابلیت ثبت‌نام اقساطی فعال شد.</div>
@@ -4814,9 +4818,8 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                           <div key={idx} className="flex gap-2 items-start justify-between">
                             <span className="text-gray-600 dark:text-gray-400 font-bold">{idx + 1}. {check.title}:</span>
                             <div className="text-left shrink-0">
-                              <span className={`inline-block text-[9.5px] font-bold ml-1.5 ${
-                                check.passed ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400 font-black'
-                              }`}>
+                              <span className={`inline-block text-[9.5px] font-bold ml-1.5 ${check.passed ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400 font-black'
+                                }`}>
                                 {check.passed ? '✓ تایید' : '✗ خطا'}
                               </span>
                               <span className="text-[9px] text-gray-400 block">{check.desc}</span>

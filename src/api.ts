@@ -4,7 +4,7 @@
 
 import { API } from '@/src/lib/functions';
 import { TOKEN_STRING, USER_STRING } from '@/src/lib/constants';
-import type { AuthResponse, LoginCredentials, User, UserRole, NavItem, NavResponse, UserRolesResponse, PermissionsResponse, RoleInfo, PermissionItem, Course, CourseRegistration, CourseStats, CourseSurvey, CourseSurveyStats, CourseCoupon } from '@/src/types';
+import type { AuthResponse, LoginCredentials, User, UserRole, NavItem, NavResponse, UserRolesResponse, PermissionsResponse, RoleInfo, PermissionItem, Course, CourseGroup, CourseRegistration, CourseStats, CourseSurvey, CourseSurveyStats, CourseCoupon } from '@/src/types';
 import { getAvatarUrl } from '@/src/lib/functions';
 
 class ApiService {
@@ -363,6 +363,39 @@ class ApiService {
   async getPinnedMenus(): Promise<string[]> {
     const data = await API<any>('dashboard/pinned-menus');
     return data.data;
+  }
+
+  // ========== Course Groups (گروه‌های آموزشی و کارگاهی) ==========
+
+  /**
+   * Get all course groups.
+   */
+  async getCourseGroups(): Promise<CourseGroup[]> {
+    const data = await API<any>('course-groups');
+    return data.data;
+  }
+
+  /**
+   * Create a new course group.
+   */
+  async createCourseGroup(title: string): Promise<CourseGroup> {
+    const data = await API<any>('course-groups', { title }, 'POST');
+    return data.data;
+  }
+
+  /**
+   * Update a course group.
+   */
+  async updateCourseGroup(id: number, title: string): Promise<CourseGroup> {
+    const data = await API<any>(`course-groups/${id}`, { title }, 'PUT');
+    return data.data;
+  }
+
+  /**
+   * Delete a course group.
+   */
+  async deleteCourseGroup(id: number): Promise<void> {
+    await API(`course-groups/${id}`, {}, 'DELETE');
   }
 }
 

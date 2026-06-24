@@ -134,8 +134,17 @@ export interface ApiError {
 // Course (دوره‌های آموزشی)
 // ============================================================
 
+export interface CourseGroup {
+  id: number;
+  title: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Course {
   id: number;
+  group_id: number | null;
+  group_title: string | null;
   title: string;
   amount: string;
   amount_formatted: string;
