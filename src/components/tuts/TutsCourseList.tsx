@@ -926,21 +926,15 @@ export default function TutsCourseList(props: TutsCourseListProps) {
                                                 <th className="p-2 whitespace-nowrap">شماره دانشجویی</th>
                                                 <th className="p-2 whitespace-nowrap">موبایل</th>
                                                 <th className="p-2 whitespace-nowrap">نوع کاربر</th>
-                                                <th className="p-2 whitespace-nowrap">دوره آموزشی</th>
-                                                <th className="p-2 text-left whitespace-nowrap">مبلغ (ریال)</th>
-                                                <th className="p-2 whitespace-nowrap">نوع پرداخت</th>
-                                                <th className="p-2 whitespace-nowrap">شماره پیگیری</th>
                                                 <th className="p-2 whitespace-nowrap">تاریخ ثبت نام</th>
-                                                <th className="p-2 whitespace-nowrap">تاریخ تایید</th>
-                                                <th className="p-2 text-center whitespace-nowrap">وضعیت</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-gray-100 dark:divide-gray-900">
                                             {(() => {
-                                                const courseRegs = registrants.filter(r => r.courseId === selectedCourseReport.id);
+                                                const courseRegs = registrants.filter(r => r.courseId === selectedCourseReport.id && r.status === 'verified');
                                                 return courseRegs.length === 0 ? (
                                                     <tr>
-                                                        <td colSpan={13} className="p-8 text-center text-gray-400">
+                                                        <td colSpan={7} className="p-8 text-center text-gray-400">
                                                             تاکنون هیچ سندی برای پیش‌ثبت‌نام این کارگاه مهارتی آپلود نگردیده است.
                                                         </td>
                                                     </tr>
@@ -953,19 +947,7 @@ export default function TutsCourseList(props: TutsCourseListProps) {
                                                             <td className="p-2 font-bold text-gray-600 dark:text-gray-400 whitespace-nowrap">{toPersianDigits(reg.studentCode)}</td>
                                                             <td className="p-2 font-bold text-gray-600 dark:text-gray-400 whitespace-nowrap" dir="ltr">{toPersianDigits(reg.mobile)}</td>
                                                             <td className="p-2 text-gray-700 dark:text-gray-300 whitespace-nowrap">{reg.typeText}</td>
-                                                            <td className="p-2 text-gray-700 dark:text-gray-300 font-medium max-w-[160px] truncate" title={reg.courseTitle}>{reg.courseTitle}</td>
-                                                            <td className="p-2 font-bold text-emerald-600 dark:text-emerald-400 text-left whitespace-nowrap">{formatCurrency(reg.amount)}</td>
-                                                            <td className="p-2 whitespace-nowrap text-gray-700 dark:text-gray-300">{reg.paymentMethod}</td>
-                                                            <td className="p-2 font-bold text-gray-800 dark:text-gray-200 whitespace-nowrap" dir="ltr">{reg.trackingCode ? toPersianDigits(reg.trackingCode) : '—'}</td>
                                                             <td className="p-2 text-gray-500 whitespace-nowrap">{toPersianDigits(reg.date)}</td>
-                                                            <td className="p-2 text-gray-500 whitespace-nowrap">{reg.verifiedAt ? toPersianDigits(reg.verifiedAt.split(' ')[0].replace(/-/g, '/')) : '—'}</td>
-                                                            <td className="p-2 text-center whitespace-nowrap">
-                                                                <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold inline-block ${reg.status === 'verified' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' :
-                                                                    reg.status === 'rejected' ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400' :
-                                                                        'bg-amber-500/10 text-amber-600 dark:text-amber-400'}`}>
-                                                                    {reg.status === 'verified' ? 'تایید نهایی' : reg.status === 'rejected' ? 'مردود' : 'در انتظار بررسی'}
-                                                                </span>
-                                                            </td>
                                                         </tr>
                                                     ))
                                                 );

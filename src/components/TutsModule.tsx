@@ -889,7 +889,10 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
   // Certificate preview dialog — uses truly public route (no auth needed, no CORS issues)
   const [previewRegId, setPreviewRegId] = useState<string | null>(null);
   const getPublicViewUrl = (regId: string, download = false) => {
-    return `${BACKEND_API_URL}/api/certificates/public-view/${regId}${download ? '?download=1' : ''}`;
+    if (download) {
+      return `${BACKEND_API_URL}/certificate/${regId}`;
+    }
+    return `${BACKEND_API_URL}/certificate/preview/${regId}`;
   };
 
   // -----------------------------------------
@@ -1472,6 +1475,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
   };
 
   const handlePreviewCertificate = async (registerId: string) => {
+    console.log(registerId);
     // Just open the dialog — no API call, no CORS issues
     // The iframe loads the public route directly
     setPreviewRegId(registerId);
@@ -2598,23 +2602,16 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                             <th className="p-2 whitespace-nowrap">شماره دانشجویی</th>
                             <th className="p-2 whitespace-nowrap">موبایل</th>
                             <th className="p-2 whitespace-nowrap">نوع کاربر</th>
-                            <th className="p-2 whitespace-nowrap">دوره آموزشی</th>
-                            <th className="p-2 text-left whitespace-nowrap">مبلغ (ریال)</th>
-                            <th className="p-2 whitespace-nowrap">نوع پرداخت</th>
-                            <th className="p-2 whitespace-nowrap">شماره پیگیری</th>
                             <th className="p-2 whitespace-nowrap">تاریخ ثبت نام</th>
-                            <th className="p-2 whitespace-nowrap">تاریخ تایید</th>
-                            <th className="p-2 text-center whitespace-nowrap">وضعیت</th>
-                            {currentUserRole === 'admin' && <th className="p-2 text-center whitespace-nowrap">گواهی</th>}
                             {currentUserRole === 'admin' && <th className="p-2 text-center whitespace-nowrap">عملیات گواهی</th>}
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100 dark:divide-gray-900">
                           {(() => {
-                            const courseRegs = registrants.filter(r => r.courseId === selectedCourseReport.id);
+                            const courseRegs = registrants.filter(r => r.courseId === selectedCourseReport.id && r.status === 'verified');
                             return courseRegs.length === 0 ? (
                               <tr>
-                                <td colSpan={currentUserRole === 'admin' ? 15 : 13} className="p-8 text-center text-gray-400">
+                                <td colSpan={currentUserRole === 'admin' ? 8 : 7} className="p-8 text-center text-gray-400">
                                   تاکنون هیچ سندی برای پیش‌ثبت‌نام این کارگاه مهارتی آپلود نگردیده است.
                                 </td>
                               </tr>
@@ -2639,59 +2636,9 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                                   <td className="p-2 text-gray-700 dark:text-gray-300 whitespace-nowrap">
                                     {reg.typeText}
                                   </td>
-                                  <td className="p-2 text-gray-700 dark:text-gray-300 font-medium max-w-[160px] truncate" title={reg.courseTitle}>
-                                    {reg.courseTitle}
-                                  </td>
-                                  <td className="p-2  font-bold text-emerald-600 dark:text-emerald-400 text-left whitespace-nowrap">
-                                    {formatCurrency(reg.amount)}
-                                  </td>
-                                  <td className="p-2 whitespace-nowrap">
-                                    <span className="text-gray-700 dark:text-gray-300">{reg.paymentMethod}</span>
-                                  </td>
-                                  <td className="p-2  font-bold text-gray-800 dark:text-gray-200 whitespace-nowrap" dir="ltr">
-                                    {reg.trackingCode ? toPersianDigits(reg.trackingCode) : '—'}
-                                  </td>
                                   <td className="p-2  text-gray-500 whitespace-nowrap">
                                     {toPersianDigits(reg.date)}
                                   </td>
-                                  <td className="p-2  text-gray-500 whitespace-nowrap">
-                                    {reg.verifiedAt ? toPersianDigits(reg.verifiedAt.split(' ')[0].replace(/-/g, '/')) : '—'}
-                                  </td>
-                                  <td className="p-2 text-center whitespace-nowrap">
-                                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold inline-block ${reg.status === 'verified' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' :
-                                      reg.status === 'rejected' ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400' :
-                                        'bg-amber-500/10 text-amber-600 dark:text-amber-400'
-                                      }`}>
-                                      {reg.status === 'verified' ? 'تایید نهایی' : reg.status === 'rejected' ? 'مردود' : 'در انتظار بررسی'}
-                                    </span>
-                                  </td>
-                                  {/* Certificate Status Column */}
-                                  {currentUserRole === 'admin' && (
-                                    <td className="p-2 text-center whitespace-nowrap">
-                                      {reg.status === 'verified' ? (
-                                        <div className="flex flex-col gap-1 items-center">
-                                          {reg.certificateApproved ? (
-                                            <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                                              <CheckCircle className="w-3 h-3" />
-                                              تایید شده
-                                            </span>
-                                          ) : (
-                                            <span className="text-[10px] font-bold text-gray-400 flex items-center gap-1">
-                                              <XCircle className="w-3 h-3" />
-                                              تایید نشده
-                                            </span>
-                                          )}
-                                          {reg.certificateNumber && (
-                                            <span className="text-[9px] text-gray-500 font-bold" dir="ltr">
-                                              {toPersianDigits(reg.certificateNumber)}
-                                            </span>
-                                          )}
-                                        </div>
-                                      ) : (
-                                        <span className="text-[10px] text-gray-400">—</span>
-                                      )}
-                                    </td>
-                                  )}
                                   {/* Certificate Actions Column */}
                                   {currentUserRole === 'admin' && (
                                     <td className="p-2 text-center">
@@ -2721,10 +2668,10 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                                                   <button
                                                     onClick={() => handlePreviewCertificate(reg.id)}
                                                     className="px-2 py-1 text-[10px] bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-lg font-bold hover:bg-indigo-500/20 transition-all cursor-pointer"
-                                                    title="نمایش گواهی"
+                                                    title="پیش‌نمایش گواهی"
                                                   >
-                                                    <Download className="w-3.5 h-3.5 inline ml-0.5" />
-                                                    دانلود مدرک
+                                                    <Eye className="w-3.5 h-3.5 inline ml-0.5" />
+                                                    پیش نمایش مدرک
                                                   </button>
                                                 ) : (
                                                   <>
@@ -2971,7 +2918,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                         rel="noopener noreferrer"
                       >
                         <Download className="w-3.5 h-3.5" />
-                        دانلود
+                        دانلود مدرک
                       </a>
                     ) : (
                       <button
