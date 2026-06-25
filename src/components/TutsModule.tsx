@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
-  Calendar, User, DollarSign, Users, CheckCircle, XCircle, AlertTriangle,
+  Calendar, User, CheckCircle, XCircle, AlertTriangle,
   FileText, Sparkles, Info, BookOpen, Search, Filter, Layers, Plus, Clock, Copy, Edit2,
   BarChart2, Power, Download, Trash2, X, Upload, Check, Eye, Award,
 } from 'lucide-react';
@@ -230,7 +230,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
 
   useEffect(() => {
     // Determine which data types are needed based on the active moduleId
-    const needsCourses = moduleId === 'tuts-list' || moduleId === 'tuts-stats' || moduleId === 'tuts-surveys';
+    const needsCourses = moduleId === 'tuts-list' || moduleId === 'tuts-reports' || moduleId === 'tuts-stats' || moduleId === 'tuts-surveys';
     const needsRegistrants = moduleId === 'tuts-reports' || moduleId === 'tuts-receipts' || moduleId === 'tuts-stats';
     const needsSurveys = moduleId === 'tuts-surveys' || moduleId === 'tuts-surveys-stats';
     const needsVouchers = moduleId === 'tuts-vouchers';
@@ -1366,7 +1366,6 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
   // -----------------------------------------
   const [reportSearch, setReportSearch] = useState('');
   const [reportCourseFilter, setReportCourseFilter] = useState('');
-  const [reportStatusFilter, setReportStatusFilter] = useState('verified');
 
   const filteredRegistrants = registrants.filter(reg => {
     const matchText = reg.name.toLowerCase().includes(reportSearch.toLowerCase()) ||
@@ -1375,8 +1374,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
       reg.mobile.includes(reportSearch) ||
       reg.trackingCode.includes(reportSearch);
     const matchCourse = reportCourseFilter === '' || reg.courseId === reportCourseFilter;
-    const matchStatus = reportStatusFilter === '' || reg.status === reportStatusFilter;
-    return matchText && matchCourse && matchStatus;
+    return matchText && matchCourse;
   });
 
   const handleExportSimulate = () => {
@@ -1526,12 +1524,6 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
   // -----------------------------------------
   const [selectedStatCourse, setSelectedStatCourse] = useState<string>('all');
 
-  // Compute stats metrics dynamically
-  const totalEnrolledAllWorkshops = courses.reduce((sum, c) => sum + c.enrolled, 0);
-  const totalCapacityAllWorkshops = courses.reduce((sum, c) => sum + c.capacity, 0);
-  const totalEstimatedRevenue = registrants.filter(r => r.status === 'verified').reduce((sum, r) => sum + r.amount, 0);
-  const pendingReceiptCount = registrants.filter(r => r.status === 'pending').length;
-
   const currentModuleTitle = () => {
     switch (moduleId) {
       case 'tuts-list': return 'دوره های آموزشی';
@@ -1575,72 +1567,6 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
       </AnimatePresence>
 
       {/* Header Banner Section */}
-      <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4 mb-6 pb-6 border-b border-gray-100 dark:border-gray-800/60">
-        <div>
-          <div className="flex items-center gap-2 text-teal-600 dark:text-teal-400 font-bold text-xs uppercase mb-1.5">
-            <Sparkles className="w-4 h-4" />
-            <span>پرتال جامع دانشگاهی کارانت</span>
-          </div>
-          <h2 className="text-2xl font-black text-gray-900 dark:text-white flex items-center gap-2">
-            <BookOpen className="w-6 h-6 text-teal-600 dark:text-teal-400" />
-            {currentModuleTitle()}
-          </h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            برگزاری وبینارهای تخصصی، دوره‌های توانمندسازی علمی کوتاه مدت و ثبت پرداخت فیش‌های الحاقی
-          </p>
-        </div>
-      </div>
-
-      {/* QUICK SYSTEM STATS BANNER */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div className="p-4 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800/80 rounded-2xl flex items-center justify-between shadow-xs">
-          <div>
-            <span className="text-[10px] text-gray-400 block font-bold mb-1">کل ظرفیت کارگاه‌ها</span>
-            <span className="text-lg font-black  text-gray-900 dark:text-white">
-              {toPersianDigits(totalEnrolledAllWorkshops)} / {toPersianDigits(totalCapacityAllWorkshops)} <span className="text-xs font-sans font-normal text-gray-400">نفر</span>
-            </span>
-          </div>
-          <div className="p-3 rounded-xl bg-teal-50 dark:bg-teal-950/40 text-teal-600 dark:text-teal-400">
-            <Users className="w-5 h-5" />
-          </div>
-        </div>
-
-        <div className="p-4 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800/80 rounded-2xl flex items-center justify-between shadow-xs">
-          <div>
-            <span className="text-[10px] text-gray-400 block font-bold mb-1">درآمد وصول شده (تایید فیش)</span>
-            <span className="text-lg font-black  text-emerald-600 dark:text-emerald-400">
-              {toPersianDigits((totalEstimatedRevenue / 10).toLocaleString('fa-IR'))} <span className="text-xs font-sans font-normal">تومان</span>
-            </span>
-          </div>
-          <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400">
-            <DollarSign className="w-5 h-5" />
-          </div>
-        </div>
-
-        <div className="p-4 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800/80 rounded-2xl flex items-center justify-between shadow-xs">
-          <div>
-            <span className="text-[10px] text-gray-400 block font-bold mb-1">فیش‌های در انتظار بررسی</span>
-            <span className="text-lg font-black  text-amber-500">
-              {toPersianDigits(pendingReceiptCount)} <span className="text-xs font-sans font-normal text-gray-400">فقره</span>
-            </span>
-          </div>
-          <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-500">
-            <FileText className="w-5 h-5" />
-          </div>
-        </div>
-
-        <div className="p-4 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800/80 rounded-2xl flex items-center justify-between shadow-xs">
-          <div>
-            <span className="text-[10px] text-gray-400 block font-bold mb-1">تعداد دوره‌های آموزشی</span>
-            <span className="text-lg font-black  text-indigo-500">
-              {toPersianDigits(courses.length)} <span className="text-xs font-sans font-normal text-gray-400">عنوان</span>
-            </span>
-          </div>
-          <div className="p-3 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-500">
-            <Calendar className="w-5 h-5" />
-          </div>
-        </div>
-      </div>
 
 
       {/* =========================================================================
@@ -2746,8 +2672,6 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
           setReportSearch={setReportSearch}
           reportCourseFilter={reportCourseFilter}
           setReportCourseFilter={setReportCourseFilter}
-          reportStatusFilter={reportStatusFilter}
-          setReportStatusFilter={setReportStatusFilter}
           reportPage={reportPage}
           setReportPage={setReportPage}
           reportPerPage={reportPerPage}
@@ -2781,8 +2705,6 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
         <TutsStats
           courses={courses}
           categories={categories}
-          totalEnrolledAllWorkshops={totalEnrolledAllWorkshops}
-          totalCapacityAllWorkshops={totalCapacityAllWorkshops}
           statSelectedYear={statSelectedYear}
           setStatSelectedYear={setStatSelectedYear}
           statSelectedCourse={statSelectedCourse}

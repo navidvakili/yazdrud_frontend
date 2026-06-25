@@ -4,7 +4,7 @@
 
 import { API } from '@/src/lib/functions';
 import { API_BASE_URL, TOKEN_STRING, USER_STRING } from '@/src/lib/constants';
-import type { AuthResponse, LoginCredentials, User, UserRole, NavItem, NavResponse, UserRolesResponse, PermissionsResponse, RoleInfo, PermissionItem, Course, CourseGroup, CourseRegistration, CourseStats, CourseSurvey, CourseSurveyStats, CourseCoupon } from '@/src/types';
+import type { AuthResponse, LoginCredentials, User, UserRole, NavItem, NavResponse, UserRolesResponse, PermissionsResponse, RoleInfo, PermissionItem, Course, CourseGroup, CourseRegistration, CourseStats, DetailedCourseStats, CourseSurvey, CourseSurveyStats, CourseCoupon } from '@/src/types';
 import { getAvatarUrl } from '@/src/lib/functions';
 
 class ApiService {
@@ -245,10 +245,25 @@ class ApiService {
   }
 
   /**
-   * Get course statistics.
+   * Get course statistics (aggregate).
    */
   async getCourseStatistics(): Promise<CourseStats> {
     const data = await API<any>('courses/statistics');
+    return data.data;
+  }
+
+  /**
+   * Get detailed course statistics (monthly, seasonal, yearly, chart data) with filters.
+   */
+  async getDetailedCourseStatistics(params?: { year?: string; course_id?: string }): Promise<DetailedCourseStats> {
+    let url = 'courses/statistics/detailed';
+    if (params?.year || params?.course_id) {
+      const qs = new URLSearchParams();
+      if (params.year) qs.set('year', params.year);
+      if (params.course_id) qs.set('course_id', params.course_id);
+      url += '?' + qs.toString();
+    }
+    const data = await API<any>(url);
     return data.data;
   }
 

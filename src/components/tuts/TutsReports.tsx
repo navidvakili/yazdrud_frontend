@@ -15,8 +15,6 @@ interface TutsReportsProps {
     setReportSearch: (v: string) => void;
     reportCourseFilter: string;
     setReportCourseFilter: (v: string) => void;
-    reportStatusFilter: string;
-    setReportStatusFilter: (v: string) => void;
     reportPage: number;
     setReportPage: (p: number) => void;
     reportPerPage: number;
@@ -29,7 +27,6 @@ export default function TutsReports(props: TutsReportsProps) {
         courses, loadingRegistrants,
         reportSearch, setReportSearch,
         reportCourseFilter, setReportCourseFilter,
-        reportStatusFilter, setReportStatusFilter,
         reportPage, setReportPage, reportPerPage,
         filteredRegistrants,
         handleExportSimulate,
@@ -62,17 +59,6 @@ export default function TutsReports(props: TutsReportsProps) {
                         {courses.map(c => (
                             <option key={c.id} value={c.id}>{c.title}</option>
                         ))}
-                    </select>
-
-                    <select
-                        value={reportStatusFilter}
-                        onChange={(e) => { setReportStatusFilter(e.target.value); setReportPage(1); }}
-                        className="w-full text-xs px-3.5 py-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none"
-                    >
-                        <option value="">فیلتر وضعیت سند مالی</option>
-                        <option value="pending">در انتظار تایید</option>
-                        <option value="verified">تایید نهایی شده</option>
-                        <option value="rejected">رد شده</option>
                     </select>
 
                     <button

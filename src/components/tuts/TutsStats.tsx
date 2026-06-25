@@ -2,14 +2,17 @@
 // TutsModule — Stats (Analytics, Charts & KPIs)
 // ============================================================
 
+import { useState, useEffect } from 'react';
 import {
     Filter, Calendar, Users, DollarSign, CheckCircle, FileText,
     TrendingUp, Layers, Sparkles, Download, BarChart3
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
+import api from '@/src/api';
 import type { TutCourse } from './tuts-types';
 import { toPersianDigits, formatCurrency } from './tuts-utils';
+import type { DetailedCourseStats } from '@/src/types';
 
 interface MonthlyData {
     month: string; count: number; amount: number; online: number; bankSlip: number; percentage: number;
@@ -28,8 +31,6 @@ interface StatsData {
 interface TutsStatsProps {
     courses: TutCourse[];
     categories: string[];
-    totalEnrolledAllWorkshops: number;
-    totalCapacityAllWorkshops: number;
     statSelectedYear: string;
     setStatSelectedYear: (v: string) => void;
     statSelectedCourse: string;
@@ -43,7 +44,7 @@ interface TutsStatsProps {
 
 export default function TutsStats(props: TutsStatsProps) {
     const {
-        courses, categories, totalEnrolledAllWorkshops, totalCapacityAllWorkshops,
+        courses, categories,
         statSelectedYear, setStatSelectedYear,
         statSelectedCourse, setStatSelectedCourse,
         statAppliedYear, statAppliedCourse,
@@ -51,71 +52,84 @@ export default function TutsStats(props: TutsStatsProps) {
         showToast,
     } = props;
 
-    // Data computation IIFE (extracted from original inline)
-    const getStatsData = (): StatsData => {
-        if (statAppliedCourse === 'all') {
+    const totalEnrolledAllWorkshops = courses.reduce((sum, c) => sum + c.enrolled, 0);
+    const totalCapacityAllWorkshops = courses.reduce((sum, c) => sum + c.capacity, 0);
+
+    const [detailedStats, setDetailedStats] = useState<DetailedCourseStats | null>(null);
+    const [statsLoading, setStatsLoading] = useState(false);
+
+    // Fetch detailed stats when filters change
+    useEffect(() => {
+        setStatsLoading(true);
+        const yearEnglish = statAppliedYear.replace(/[۰-۹]/g, d => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)));
+        const params: { year?: string; course_id?: string } = { year: yearEnglish };
+        if (statAppliedCourse !== 'all') {
+            params.course_id = statAppliedCourse;
+        }
+        api.getDetailedCourseStatistics(params)
+            .then(data => setDetailedStats(data))
+            .catch(err => { console.error('Error fetching detailed stats:', err); showToast('خطا در دریافت آمار', 'error'); })
+            .finally(() => setStatsLoading(false));
+    }, [statAppliedYear, statAppliedCourse]);
+
+    // Map API response to component StatsData format
+    const currentData: StatsData = (() => {
+        if (!detailedStats) {
             return {
-                totalApproved: 524, totalAmount: 1582310000,
-                onlinePayment: 240, bankSlips: 284,
-                months: [
-                    { month: 'فروردین', count: 2, amount: 1500000, online: 2, bankSlip: 0, percentage: 0.38 },
-                    { month: 'اردیبهشت', count: 427, amount: 1115960000, online: 143, bankSlip: 284, percentage: 81.49 },
-                    { month: 'خرداد', count: 95, amount: 464850000, online: 95, bankSlip: 0, percentage: 18.13 },
-                    { month: 'تیر', count: 0, amount: 0, online: 0, bankSlip: 0, percentage: 0 },
-                    { month: 'مرداد', count: 0, amount: 0, online: 0, bankSlip: 0, percentage: 0 },
-                    { month: 'شهریور', count: 0, amount: 0, online: 0, bankSlip: 0, percentage: 0 },
-                    { month: 'مهر', count: 0, amount: 0, online: 0, bankSlip: 0, percentage: 0 },
-                    { month: 'آبان', count: 0, amount: 0, online: 0, bankSlip: 0, percentage: 0 },
-                    { month: 'آذر', count: 0, amount: 0, online: 0, bankSlip: 0, percentage: 0 },
-                    { month: 'دی', count: 0, amount: 0, online: 0, bankSlip: 0, percentage: 0 },
-                    { month: 'بهمن', count: 0, amount: 0, online: 0, bankSlip: 0, percentage: 0 },
-                    { month: 'اسفند', count: 0, amount: 0, online: 0, bankSlip: 0, percentage: 0 },
-                ],
-                seasons: { spring: { count: 524, amount: 1582310000 }, summer: { count: 0, amount: 0 }, autumn: { count: 0, amount: 0 }, winter: { count: 0, amount: 0 } },
-                avgMonthly: 44, peekMonth: 'اردیبهشت با ۴۲۷ نفر'
+                totalApproved: 0, totalAmount: 0, onlinePayment: 0, bankSlips: 0,
+                months: [],
+                seasons: { spring: { count: 0, amount: 0 }, summer: { count: 0, amount: 0 }, autumn: { count: 0, amount: 0 }, winter: { count: 0, amount: 0 } },
+                avgMonthly: 0, peekMonth: 'ندارد'
             };
         }
-        const course = courses.find(c => c.id === statAppliedCourse);
-        if (!course) return {
-            totalApproved: 0, totalAmount: 0, onlinePayment: 0, bankSlips: 0, months: [],
-            seasons: { spring: { count: 0, amount: 0 }, summer: { count: 0, amount: 0 }, autumn: { count: 0, amount: 0 }, winter: { count: 0, amount: 0 } },
-            avgMonthly: 0, peekMonth: 'ندارد'
-        };
-        const total = course.enrolled;
-        const countFar = Math.round(total * 0.1), countOrd = Math.round(total * 0.7), countKhor = total - countFar - countOrd;
-        const amtFar = countFar * course.cost, amtOrd = countOrd * course.cost, amtKhor = countKhor * course.cost;
-        let onlineRatio = 1.0;
-        if (course.id === 'tut-1') onlineRatio = 0.47;
-        if (course.id === 'tut-2') onlineRatio = 0.41;
-        const totalOnline = Math.round(total * onlineRatio), totalBank = total - totalOnline;
-        const onlineFar = Math.round(countFar * onlineRatio), bankFar = countFar - onlineFar;
-        const onlineOrd = Math.round(countOrd * onlineRatio), bankOrd = countOrd - onlineOrd;
-        const onlineKhor = totalOnline - onlineFar - onlineOrd, bankKhor = totalBank - bankFar - bankOrd;
-        return {
-            totalApproved: total, totalAmount: total * course.cost,
-            onlinePayment: totalOnline, bankSlips: totalBank,
-            months: [
-                { month: 'فروردین', count: countFar, amount: amtFar, online: onlineFar, bankSlip: bankFar, percentage: total > 0 ? Number(((countFar / total) * 100).toFixed(2)) : 0 },
-                { month: 'اردیبهشت', count: countOrd, amount: amtOrd, online: onlineOrd, bankSlip: bankOrd, percentage: total > 0 ? Number(((countOrd / total) * 100).toFixed(2)) : 0 },
-                { month: 'خرداد', count: countKhor, amount: amtKhor, online: onlineKhor, bankSlip: bankKhor, percentage: total > 0 ? Number(((countKhor / total) * 100).toFixed(2)) : 0 },
-                { month: 'تیر', count: 0, amount: 0, online: 0, bankSlip: 0, percentage: 0 },
-                { month: 'مرداد', count: 0, amount: 0, online: 0, bankSlip: 0, percentage: 0 },
-                { month: 'شهریور', count: 0, amount: 0, online: 0, bankSlip: 0, percentage: 0 },
-                { month: 'مهر', count: 0, amount: 0, online: 0, bankSlip: 0, percentage: 0 },
-                { month: 'آبان', count: 0, amount: 0, online: 0, bankSlip: 0, percentage: 0 },
-                { month: 'آذر', count: 0, amount: 0, online: 0, bankSlip: 0, percentage: 0 },
-                { month: 'دی', count: 0, amount: 0, online: 0, bankSlip: 0, percentage: 0 },
-                { month: 'بهمن', count: 0, amount: 0, online: 0, bankSlip: 0, percentage: 0 },
-                { month: 'اسفند', count: 0, amount: 0, online: 0, bankSlip: 0, percentage: 0 },
-            ],
-            seasons: { spring: { count: total, amount: total * course.cost }, summer: { count: 0, amount: 0 }, autumn: { count: 0, amount: 0 }, winter: { count: 0, amount: 0 } },
-            avgMonthly: Math.round(total / 12),
-            peekMonth: `اردیبهشت با ${toPersianDigits(countOrd)} نفر`
-        };
-    };
+        const { total_stats, monthly, seasonal } = detailedStats;
+        const total = total_stats.total_registered;
 
-    const currentData = getStatsData();
+        // Map months
+        const months: MonthlyData[] = monthly.map(m => ({
+            month: m.month_name,
+            count: m.registered_count,
+            amount: m.total_amount,
+            online: m.online_payments,
+            bankSlip: m.bank_payments,
+            percentage: total > 0 ? Number(((m.registered_count / total) * 100).toFixed(2)) : 0,
+        }));
+
+        // Map seasons from array to object
+        const seasonMap: SeasonsData = {
+            spring: { count: 0, amount: 0 },
+            summer: { count: 0, amount: 0 },
+            autumn: { count: 0, amount: 0 },
+            winter: { count: 0, amount: 0 },
+        };
+        const keyMap: Record<number, keyof SeasonsData> = { 1: 'spring', 2: 'summer', 3: 'autumn', 4: 'winter' };
+        seasonal.forEach(s => {
+            const key = keyMap[s.season_id];
+            if (key) {
+                seasonMap[key] = { count: s.registered_count, amount: s.total_amount };
+            }
+        });
+
+        return {
+            totalApproved: total,
+            totalAmount: total_stats.total_amount,
+            onlinePayment: total_stats.online_payments,
+            bankSlips: total_stats.bank_payments,
+            months,
+            seasons: seasonMap,
+            avgMonthly: total_stats.avg_monthly,
+            peekMonth: total_stats.peek_month,
+        };
+    })();
+
     const totalGrossRevenue = courses.reduce((sum, c) => sum + (c.enrolled * c.cost), 0);
+
+    // Year options: from 1400 to current Jalali year
+    const currentJalaliYear = 1405; // ~= 2026
+    const yearOptions: string[] = [];
+    for (let y = 1400; y <= currentJalaliYear; y++) {
+        yearOptions.push(y.toString());
+    }
 
     return (
         <div className="space-y-6">
@@ -132,8 +146,9 @@ export default function TutsStats(props: TutsStatsProps) {
                             <label className="text-[10px] font-bold text-gray-400 block">انتخاب سال مالی</label>
                             <select value={statSelectedYear} onChange={(e) => setStatSelectedYear(e.target.value)}
                                 className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none">
-                                <option value="۱۴۰۵">۱۴۰۵</option>
-                                <option value="۱۴۰۴">۱۴۰۴</option>
+                                {yearOptions.map(y => (
+                                    <option key={y} value={y}>{toPersianDigits(y)}</option>
+                                ))}
                             </select>
                         </div>
                         <div className="space-y-1">

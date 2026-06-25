@@ -189,11 +189,56 @@ export interface CourseRegistration {
 }
 
 export interface CourseStats {
-  total_courses: number;
   active_courses: number;
   total_registrations: number;
-  pending_receipts: number;
+  verified_count: number;
   top_courses: { id: number; title: string; count: number }[];
+}
+
+// ============================================================
+// Detailed Course Statistics (Analytics page — monthly, seasonal, chart)
+// ============================================================
+
+export interface DetailedMonthlyStat {
+  month_id: number;
+  month_name: string;
+  registered_count: number;
+  total_amount: number;
+  online_payments: number;
+  bank_payments: number;
+}
+
+export interface DetailedSeasonalStat {
+  season_id: number;
+  name: string;
+  registered_count: number;
+  total_amount: number;
+}
+
+export interface DetailedYearlyStat {
+  year: number;
+  registered_count: number;
+  total_amount: number;
+}
+
+export interface DetailedCourseStats {
+  year: string;
+  course_id: string | null;
+  total_stats: {
+    total_registered: number;
+    total_amount: number;
+    online_payments: number;
+    bank_payments: number;
+    avg_monthly: number;
+    peek_month: string;
+  };
+  monthly: DetailedMonthlyStat[];
+  seasonal: DetailedSeasonalStat[];
+  yearly: DetailedYearlyStat[];
+  chart_data: {
+    months: string[];
+    registrations: number[];
+  };
 }
 
 // ============================================================
