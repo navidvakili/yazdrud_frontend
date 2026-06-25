@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
-  Calendar, User, DollarSign, Users, CheckCircle, AlertTriangle,
+  Calendar, User, DollarSign, Users, CheckCircle, XCircle, AlertTriangle,
   FileText, Sparkles, Info, BookOpen, Search, Filter, Layers, Plus, Clock, Copy, Edit2,
-  BarChart2, Power, Download, Trash2, X, Upload, Check,
+  BarChart2, Power, Download, Trash2, X, Upload, Check, Eye, Award,
 } from 'lucide-react';
 import { User as UserType } from '@/src/types';
 import api from '@/src/api';
+import { BACKEND_API_URL } from '@/src/lib/constants';
 import Pagination from './Pagination';
 import type { VoucherFormData, SandboxResult } from './tuts/tuts-types';
 import TutsCourseList from './tuts/TutsCourseList';
@@ -56,6 +57,11 @@ interface TutRegistrant {
   bankReceipt: string;
   status: 'pending' | 'verified' | 'rejected';
   rejectionReason?: string;
+  // Certificate fields
+  certificateApproved?: boolean;
+  certificateNumber?: string;
+  certificateIssuedAt?: string;
+  hasCertificate?: boolean;
 }
 
 interface TutSurvey {
@@ -200,7 +206,12 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
       : r.status === 'rejected'
         ? 'rejected'
         : 'pending',
-    rejectionReason: r.rejection_reason || undefined
+    rejectionReason: r.rejection_reason || undefined,
+    // Certificate fields
+    certificateApproved: r.certificate_approved ?? false,
+    certificateNumber: r.certificate?.certificate_number || undefined,
+    certificateIssuedAt: r.certificate?.issued_at || undefined,
+    hasCertificate: !!r.certificate,
   });
 
   // ===== Courses =====
@@ -875,6 +886,12 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     setTimeout(() => setToastMsg(null), 4000);
   };
 
+  // Certificate preview dialog — uses truly public route (no auth needed, no CORS issues)
+  const [previewRegId, setPreviewRegId] = useState<string | null>(null);
+  const getPublicViewUrl = (regId: string, download = false) => {
+    return `${BACKEND_API_URL}/api/certificates/public-view/${regId}${download ? '?download=1' : ''}`;
+  };
+
   // -----------------------------------------
   // 1. TUTS-LIST (WORKSHOPS PRE-REGISTRATION) STATE & HANDLERS
   // -----------------------------------------
@@ -1410,6 +1427,91 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     }
   };
 
+  // ========== Certificate Handlers ==========
+  const [certificateNotif, setCertificateNotif] = useState<string | null>(null);
+
+  const handleApproveCertificate = async (registerId: string) => {
+    try {
+      const res = await api.approveCertificate(Number(registerId));
+      setRegistrants(prev => prev.map(r =>
+        r.id === registerId ? { ...r, certificateApproved: true } : r
+      ));
+      setCertificateNotif(res.message || 'تایید شد.');
+      showToast(res.message || 'ثبت‌نام برای صدور گواهی تایید شد.');
+    } catch (err: any) {
+      showToast(err.message || 'خطا در تایید گواهی', 'error');
+    }
+  };
+
+  const handleRejectCertificate = async (registerId: string) => {
+    try {
+      const res = await api.rejectCertificate(Number(registerId));
+      setRegistrants(prev => prev.map(r =>
+        r.id === registerId ? { ...r, certificateApproved: false, certificateNumber: undefined, hasCertificate: false } : r
+      ));
+      setCertificateNotif(res.message || 'تایید لغو شد.');
+      showToast(res.message || 'تایید صدور گواهی لغو شد.');
+    } catch (err: any) {
+      showToast(err.message || 'خطا در لغو تایید گواهی', 'error');
+    }
+  };
+
+  const handleGenerateCertificate = async (registerId: string, fullname: string) => {
+    try {
+      // Call API to generate the certificate record (creates in DB)
+      const blob = await api.generateCertificate(Number(registerId));
+      // Refresh registrants to get updated certificate info
+      const res = await api.getAllRegistrations({ per_page: 1000 });
+      setRegistrants((res.data || []).map(mapRegistrant));
+      showToast('گواهی با موفقیت صادر شد.');
+      // Reload the iframe by re-setting previewRegId
+      setPreviewRegId((prev: string | null) => prev ? `${prev}` : null);
+    } catch (err: any) {
+      showToast(err.message || 'خطا در صدور گواهی', 'error');
+    }
+  };
+
+  const handlePreviewCertificate = async (registerId: string) => {
+    // Just open the dialog — no API call, no CORS issues
+    // The iframe loads the public route directly
+    setPreviewRegId(registerId);
+  };
+
+  const handleApproveAllCertificates = async () => {
+    if (!reportCourseFilter) {
+      showToast('لطفاً ابتدا یک دوره را انتخاب کنید.', 'error');
+      return;
+    }
+    if (!confirm('آیا از تایید همه ثبت‌نام‌های این دوره برای صدور گواهی مطمئن هستید؟')) return;
+    try {
+      const res = await api.approveAllCertificates(Number(reportCourseFilter));
+      setRegistrants(prev => prev.map(r =>
+        r.courseId === reportCourseFilter ? { ...r, certificateApproved: true } : r
+      ));
+      showToast(res.message || 'همه ثبت‌نام‌ها برای صدور گواهی تایید شدند.');
+    } catch (err: any) {
+      showToast(err.message || 'خطا در تایید همه', 'error');
+    }
+  };
+
+  const handleDownloadAllCertificates = async () => {
+    try {
+      const courseId = reportCourseFilter ? Number(reportCourseFilter) : undefined;
+      const blob = await api.downloadAllCertificates(courseId);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `certificates_${new Date().toISOString().slice(0, 10)}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      showToast('فایل فشرده گواهی‌ها با موفقیت دانلود شد.');
+    } catch (err: any) {
+      showToast(err.message || 'خطا در دانلود فایل فشرده', 'error');
+    }
+  };
+
   // -----------------------------------------
   // 4. TUTS-STATS (CHART SELECTION & INTERACTIVE STATE)
   // -----------------------------------------
@@ -1450,7 +1552,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
             initial={{ opacity: 0, y: -20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -20, scale: 0.95 }}
-            className={`fixed top-4 left-4 right-4 sm:left-auto sm:right-4 z-50 p-4 rounded-2xl shadow-2xl border flex items-center gap-3 max-w-md ${toastMsg.type === 'success' ? 'bg-emerald-50 dark:bg-emerald-950/90 border-emerald-500/20 text-emerald-800 dark:text-emerald-300' :
+            className={`fixed top-4 left-4 right-4 sm:left-auto sm:right-4 z-[60] p-4 rounded-2xl shadow-2xl border flex items-center gap-3 max-w-md ${toastMsg.type === 'success' ? 'bg-emerald-50 dark:bg-emerald-950/90 border-emerald-500/20 text-emerald-800 dark:text-emerald-300' :
               toastMsg.type === 'error' ? 'bg-rose-50 dark:bg-rose-950/90 border-rose-500/20 text-rose-800 dark:text-rose-300' :
                 'bg-blue-50 dark:bg-blue-950/90 border-blue-500/20 text-blue-800 dark:text-blue-300'
               }`}
@@ -2458,6 +2560,32 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                     </div>
                   </div>
 
+                  {/* Certificate Management Bar - for admin */}
+                  {currentUserRole === 'admin' && (
+                    <div className="flex flex-wrap gap-3 items-center bg-amber-50 dark:bg-amber-950/20 p-3 rounded-2xl border border-amber-200/50 dark:border-amber-800/40 mb-6">
+                      <Award className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                      <span className="text-xs font-bold text-amber-700 dark:text-amber-300">مدیریت صدور گواهی:</span>
+                      <button
+                        onClick={handleApproveAllCertificates}
+                        disabled={registrants.filter(r => r.courseId === selectedCourseReport.id && r.status === 'verified').length === 0}
+                        className={`px-3 py-2 text-[10px] font-extrabold rounded-xl flex items-center gap-1.5 transition-all cursor-pointer ${registrants.filter(r => r.courseId === selectedCourseReport.id && r.status === 'verified').length > 0
+                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20'
+                          : 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
+                          }`}
+                      >
+                        <CheckCircle className="w-3.5 h-3.5" />
+                        تایید همه برای صدور گواهی
+                      </button>
+                      <button
+                        onClick={handleDownloadAllCertificates}
+                        className="px-3 py-2 text-[10px] font-extrabold rounded-xl flex items-center gap-1.5 bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 border border-blue-500/20 transition-all cursor-pointer"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        دانلود همه گواهی‌ها
+                      </button>
+                    </div>
+                  )}
+
                   {/* Registrants Table — full columns with independent scroll */}
                   <div className="rounded-2xl border border-gray-150 dark:border-gray-850 bg-white dark:bg-gray-950 mb-6">
                     <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
@@ -2477,6 +2605,8 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                             <th className="p-2 whitespace-nowrap">تاریخ ثبت نام</th>
                             <th className="p-2 whitespace-nowrap">تاریخ تایید</th>
                             <th className="p-2 text-center whitespace-nowrap">وضعیت</th>
+                            {currentUserRole === 'admin' && <th className="p-2 text-center whitespace-nowrap">گواهی</th>}
+                            {currentUserRole === 'admin' && <th className="p-2 text-center whitespace-nowrap">عملیات گواهی</th>}
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100 dark:divide-gray-900">
@@ -2484,7 +2614,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                             const courseRegs = registrants.filter(r => r.courseId === selectedCourseReport.id);
                             return courseRegs.length === 0 ? (
                               <tr>
-                                <td colSpan={13} className="p-8 text-center text-gray-400">
+                                <td colSpan={currentUserRole === 'admin' ? 15 : 13} className="p-8 text-center text-gray-400">
                                   تاکنون هیچ سندی برای پیش‌ثبت‌نام این کارگاه مهارتی آپلود نگردیده است.
                                 </td>
                               </tr>
@@ -2535,6 +2665,92 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                                       {reg.status === 'verified' ? 'تایید نهایی' : reg.status === 'rejected' ? 'مردود' : 'در انتظار بررسی'}
                                     </span>
                                   </td>
+                                  {/* Certificate Status Column */}
+                                  {currentUserRole === 'admin' && (
+                                    <td className="p-2 text-center whitespace-nowrap">
+                                      {reg.status === 'verified' ? (
+                                        <div className="flex flex-col gap-1 items-center">
+                                          {reg.certificateApproved ? (
+                                            <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                                              <CheckCircle className="w-3 h-3" />
+                                              تایید شده
+                                            </span>
+                                          ) : (
+                                            <span className="text-[10px] font-bold text-gray-400 flex items-center gap-1">
+                                              <XCircle className="w-3 h-3" />
+                                              تایید نشده
+                                            </span>
+                                          )}
+                                          {reg.certificateNumber && (
+                                            <span className="text-[9px] text-gray-500 font-bold" dir="ltr">
+                                              {toPersianDigits(reg.certificateNumber)}
+                                            </span>
+                                          )}
+                                        </div>
+                                      ) : (
+                                        <span className="text-[10px] text-gray-400">—</span>
+                                      )}
+                                    </td>
+                                  )}
+                                  {/* Certificate Actions Column */}
+                                  {currentUserRole === 'admin' && (
+                                    <td className="p-2 text-center">
+                                      <div className="flex items-center justify-center gap-1.5">
+                                        {reg.status === 'verified' && (
+                                          <>
+                                            {!reg.certificateApproved ? (
+                                              <button
+                                                onClick={() => handleApproveCertificate(reg.id)}
+                                                className="px-2 py-1 text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-lg font-bold hover:bg-emerald-500/20 transition-all cursor-pointer"
+                                                title="تایید برای صدور گواهی"
+                                              >
+                                                <CheckCircle className="w-3.5 h-3.5 inline ml-0.5" />
+                                                تایید گواهی
+                                              </button>
+                                            ) : (
+                                              <>
+                                                <button
+                                                  onClick={() => handleRejectCertificate(reg.id)}
+                                                  className="px-2 py-1 text-[10px] bg-rose-500/10 text-rose-600 dark:text-rose-400 rounded-lg font-bold hover:bg-rose-500/20 transition-all cursor-pointer"
+                                                  title="لغو تایید گواهی"
+                                                >
+                                                  <XCircle className="w-3.5 h-3.5 inline ml-0.5" />
+                                                  لغو
+                                                </button>
+                                                {!reg.hasCertificate ? (
+                                                  <button
+                                                    onClick={() => handlePreviewCertificate(reg.id)}
+                                                    className="px-2 py-1 text-[10px] bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-lg font-bold hover:bg-indigo-500/20 transition-all cursor-pointer"
+                                                    title="نمایش گواهی"
+                                                  >
+                                                    <Download className="w-3.5 h-3.5 inline ml-0.5" />
+                                                    دانلود مدرک
+                                                  </button>
+                                                ) : (
+                                                  <>
+                                                    <button
+                                                      onClick={() => handlePreviewCertificate(reg.id)}
+                                                      className="p-1.5 rounded-lg text-blue-500 hover:bg-blue-500/10 transition-all cursor-pointer"
+                                                      title="پیش‌نمایش گواهی"
+                                                    >
+                                                      <Eye className="w-3.5 h-3.5" />
+                                                    </button>
+                                                    <button
+                                                      onClick={() => handlePreviewCertificate(reg.id)}
+                                                      className="p-1.5 rounded-lg text-indigo-500 hover:bg-indigo-500/10 transition-all cursor-pointer"
+                                                      title="دانلود گواهی"
+                                                    >
+                                                      <Download className="w-3.5 h-3.5" />
+                                                    </button>
+                                                  </>
+                                                )}
+                                              </>
+                                            )}
+                                          </>
+                                        )}
+                                      </div>
+                                    </td>
+                                  )}
                                 </tr>
                               ))
                             );
@@ -2720,6 +2936,88 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
           confirmDeleteCourse={confirmDeleteCourse}
         />
       )}
+
+      {/* Certificate Preview Dialog */}
+      <AnimatePresence>
+        {previewRegId && (() => {
+          const previewReg = registrants.find(r => r.id === previewRegId);
+          const hasCert = previewReg?.hasCertificate ?? false;
+          return (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+              onClick={() => setPreviewRegId(null)}
+            >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden border border-gray-200 dark:border-gray-700"
+                onClick={e => e.stopPropagation()}
+              >
+                {/* Header */}
+                <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+                  <h3 className="text-sm font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
+                    <Award className="w-5 h-5 text-indigo-500" />
+                    {hasCert ? 'پیش‌نمایش گواهی' : 'مدیریت گواهی'}
+                  </h3>
+                  <div className="flex items-center gap-2">
+                    {hasCert ? (
+                      <a
+                        href={getPublicViewUrl(previewRegId, true)}
+                        className="px-3 py-1.5 text-xs font-bold bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
+                        rel="noopener noreferrer"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        دانلود
+                      </a>
+                    ) : (
+                      <button
+                        onClick={() => handleGenerateCertificate(previewRegId, previewReg?.name ?? '')}
+                        className="px-3 py-1.5 text-xs font-bold bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        صدور گواهی
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setPreviewRegId(null)}
+                      className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 transition-all cursor-pointer"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+                {/* Content */}
+                {hasCert ? (
+                  <div className="flex-1 bg-gray-100 dark:bg-gray-800 min-h-[70vh]">
+                    <iframe
+                      src={getPublicViewUrl(previewRegId)}
+                      className="w-full h-full min-h-[70vh]"
+                      style={{ border: 'none' }}
+                      title="پیش‌نمایش گواهی"
+                    />
+                  </div>
+                ) : (
+                  <div className="flex-1 min-h-[30vh] flex items-center justify-center p-8">
+                    <div className="text-center">
+                      <Award className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                        گواهی برای این ثبت‌نام هنوز صادر نشده است.
+                      </p>
+                      <p className="text-xs text-gray-400 dark:text-gray-500">
+                        برای صدور گواهی، روی دکمه "صدور گواهی" در بالای دیالوگ کلیک کنید.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </motion.div>
+            </motion.div>
+          );
+        })()}
+      </AnimatePresence>
     </div >
   );
 }

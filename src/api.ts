@@ -3,7 +3,7 @@
 // ============================================================
 
 import { API } from '@/src/lib/functions';
-import { TOKEN_STRING, USER_STRING } from '@/src/lib/constants';
+import { API_BASE_URL, TOKEN_STRING, USER_STRING } from '@/src/lib/constants';
 import type { AuthResponse, LoginCredentials, User, UserRole, NavItem, NavResponse, UserRolesResponse, PermissionsResponse, RoleInfo, PermissionItem, Course, CourseGroup, CourseRegistration, CourseStats, CourseSurvey, CourseSurveyStats, CourseCoupon } from '@/src/types';
 import { getAvatarUrl } from '@/src/lib/functions';
 
@@ -409,6 +409,87 @@ class ApiService {
    */
   async deleteCourseGroup(id: number): Promise<void> {
     await API(`course-groups/${id}`, {}, 'DELETE');
+  }
+
+  // ========== Certificates (صدور گواهی دوره‌ها) ==========
+
+  /**
+   * Get registrations for certificate management with optional filters.
+   */
+  async getCertificateRegistrations(params?: {
+    course_id?: number;
+    certificate_status?: string;
+    has_certificate?: boolean;
+    search?: string;
+    page?: number;
+    per_page?: number;
+  }): Promise<{ data: any[]; meta: any }> {
+    const query = new URLSearchParams();
+    if (params?.course_id) query.set('course_id', String(params.course_id));
+    if (params?.certificate_status) query.set('certificate_status', params.certificate_status);
+    if (params?.has_certificate !== undefined) query.set('has_certificate', String(params.has_certificate));
+    if (params?.search) query.set('search', params.search);
+    if (params?.page) query.set('page', String(params.page));
+    if (params?.per_page) query.set('per_page', String(params.per_page));
+    const qs = query.toString();
+    const url = qs ? `certificates?${qs}` : 'certificates';
+    return API<any>(url);
+  }
+
+  /**
+   * Approve a registration for certificate issuance.
+   */
+  async approveCertificate(registerId: number): Promise<any> {
+    const data = await API<any>(`certificates/approve/${registerId}`, {}, 'POST');
+    return data;
+  }
+
+  /**
+   * Remove certificate approval from a registration.
+   */
+  async rejectCertificate(registerId: number): Promise<any> {
+    const data = await API<any>(`certificates/reject/${registerId}`, {}, 'POST');
+    return data;
+  }
+
+  /**
+   * Approve all registrations of a course for certificate issuance.
+   */
+  async approveAllCertificates(courseId: number): Promise<any> {
+    const data = await API<any>('certificates/approve-all', { course_id: courseId }, 'POST');
+    return data;
+  }
+
+  /**
+   * Generate and download a single certificate PDF.
+   * Returns the PDF blob for download.
+   */
+  async generateCertificate(registerId: number): Promise<Blob> {
+    const token = localStorage.getItem(TOKEN_STRING);
+    const response = await fetch(`${API_BASE_URL}/certificates/generate/${registerId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'خطا در صدور گواهی');
+    }
+    return response.blob();
+  }
+
+  /**
+   * Download all certificates as a ZIP file.
+   */
+  async downloadAllCertificates(courseId?: number): Promise<Blob> {
+    const token = localStorage.getItem(TOKEN_STRING);
+    const params = courseId ? `?course_id=${courseId}` : '';
+    const response = await fetch(`${API_BASE_URL}/certificates/download-all${params}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'خطا در دریافت فایل فشرده');
+    }
+    return response.blob();
   }
 }
 

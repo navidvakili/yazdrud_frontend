@@ -42,6 +42,11 @@ export interface TutRegistrant {
     bankReceipt: string;
     status: 'pending' | 'verified' | 'rejected';
     rejectionReason?: string;
+    // Certificate fields
+    certificateApproved?: boolean;
+    certificateNumber?: string;
+    certificateIssuedAt?: string;
+    hasCertificate?: boolean;
 }
 
 export interface TutSurvey {

@@ -41,6 +41,9 @@ export default function TutsReports(props: TutsReportsProps) {
         setSelectedReceiptForReview, setShowRejectBox,
     } = props;
 
+    // Only show certificate columns for verified registrants
+    const isAdmin = currentUserRole === 'admin';
+
     return (
         <div className="space-y-5">
             {/* Filters Area */}
@@ -121,19 +124,20 @@ export default function TutsReports(props: TutsReportsProps) {
                                             <th className="p-2">تاریخ ثبت نام</th>
                                             <th className="p-2">تاریخ تایید</th>
                                             <th className="p-2 text-center">وضعیت</th>
-                                            {currentUserRole === 'admin' && <th className="p-2 text-center">عملیات</th>}
+                                            {isAdmin && <th className="p-2 text-center">عملیات</th>}
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-100 dark:divide-gray-800/40">
                                         {paginatedRegistrants.length === 0 ? (
                                             <tr>
-                                                <td colSpan={currentUserRole === 'admin' ? 14 : 13} className="p-12 text-center text-gray-400">
+                                                <td colSpan={isAdmin ? 15 : 13} className="p-12 text-center text-gray-400">
                                                     هیچ پرونده ثبتی یا آماری مطابق با فیلتر شما ثبت نشده است.
                                                 </td>
                                             </tr>
                                         ) : (
                                             paginatedRegistrants.map((reg, idx) => {
                                                 const globalIdx = (safePage - 1) * reportPerPage + idx + 1;
+                                                const isVerified = reg.status === 'verified';
                                                 return (
                                                     <tr key={reg.id} className="hover:bg-gray-55/40 dark:hover:bg-gray-850/10 transition-colors">
                                                         <td className="p-2 text-center font-bold text-gray-400 w-10">{toPersianDigits(globalIdx)}</td>
@@ -161,7 +165,8 @@ export default function TutsReports(props: TutsReportsProps) {
                                                                 </div>
                                                             )}
                                                         </td>
-                                                        {currentUserRole === 'admin' && (
+                                                        {/* Actions Column */}
+                                                        {isAdmin && (
                                                             <td className="p-2 text-center">
                                                                 <div className="flex items-center justify-center gap-1.5">
                                                                     {reg.status === 'pending' && (
