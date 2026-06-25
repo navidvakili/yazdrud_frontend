@@ -199,68 +199,6 @@ export function useTutsData(moduleId: string, showToast: (text: string, type?: '
 }
 
 // =================================================================
-// Hook 3: Course Categories
-// =================================================================
-export function useCourseCategories(showToast: (text: string, type?: 'success' | 'error' | 'info') => void) {
-    const [courseGroups, setCourseGroups] = useState<{ id: number; title: string }[]>([]);
-    const [categories, setCategories] = useState<string[]>([]);
-    const [categoriesLoading, setCategoriesLoading] = useState(true);
-    const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
-    const [newCategoryName, setNewCategoryName] = useState('');
-
-    useEffect(() => {
-        api.getCourseGroups()
-            .then(groups => {
-                setCourseGroups(groups);
-                setCategories(groups.map((g: any) => g.title));
-            })
-            .catch(() => {
-                const saved = localStorage.getItem('tuts_categories');
-                if (saved) {
-                    try { setCategories(JSON.parse(saved)); } catch { /* ignore */ }
-                }
-            })
-            .finally(() => setCategoriesLoading(false));
-    }, []);
-
-    const handleAddCategory = async (e: React.FormEvent) => {
-        e.preventDefault();
-        const trimmed = newCategoryName.trim();
-        if (!trimmed) { showToast('لطفاً عنوان گروه را وارد کنید.', 'error'); return; }
-        if (categories.includes(trimmed)) { showToast('این گروه آموزشی از قبل تعریف شده است.', 'error'); return; }
-        try {
-            const created = await api.createCourseGroup(trimmed);
-            setCourseGroups(prev => [...prev, created]);
-            setCategories(prev => [...prev, created.title]);
-            setNewCategoryName('');
-            showToast(`گروه آموزشی "${trimmed}" با موفقیت تعریف شد.`);
-        } catch {
-            showToast('خطا در تعریف گروه آموزشی.', 'error');
-        }
-    };
-
-    const handleDeleteCategory = async (catToDelete: string) => {
-        const group = courseGroups.find(g => g.title === catToDelete);
-        if (!confirm(`آیا از حذف گروه "${catToDelete}" اطمینان دارید؟`)) return;
-        try {
-            if (group) { await api.deleteCourseGroup(group.id); }
-            setCourseGroups(prev => prev.filter(g => g.title !== catToDelete));
-            setCategories(prev => prev.filter(c => c !== catToDelete));
-            showToast(`گروه آموزشی "${catToDelete}" حذف گردید.`, 'info');
-        } catch {
-            showToast(`خطا در حذف گروه "${catToDelete}".`, 'error');
-        }
-    };
-
-    return {
-        courseGroups, categories, categoriesLoading,
-        isCategoryModalOpen, setIsCategoryModalOpen,
-        newCategoryName, setNewCategoryName,
-        handleAddCategory, handleDeleteCategory,
-    };
-}
-
-// =================================================================
 // Hook 4: Course CRUD Operations
 // =================================================================
 export function useCourseCRUD(
