@@ -886,13 +886,17 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     setTimeout(() => setToastMsg(null), 4000);
   };
 
-  // Certificate preview dialog — uses truly public route (no auth needed, no CORS issues)
+  // Certificate preview dialog — public web route loaded directly in iframe (no CORS)
   const [previewRegId, setPreviewRegId] = useState<string | null>(null);
+  const [iframeKey, setIframeKey] = useState(0);
+  const [iframeLoading, setIframeLoading] = useState(false);
+
   const getPublicViewUrl = (regId: string, download = false) => {
     if (download) {
       return `${BACKEND_API_URL}/certificate/${regId}`;
     }
-    return `${BACKEND_API_URL}/certificate/preview/${regId}`;
+    // For preview (iframe), use relative path → goes through Vite proxy in dev, keeps same origin
+    return `/certificate/preview/${regId}`;
   };
 
   // -----------------------------------------
@@ -1435,7 +1439,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
 
   const handleApproveCertificate = async (registerId: string) => {
     try {
-      const res = await api.approveCertificate(Number(registerId));
+      const res = await api.approveCertificate(registerId);
       setRegistrants(prev => prev.map(r =>
         r.id === registerId ? { ...r, certificateApproved: true } : r
       ));
@@ -1448,7 +1452,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
 
   const handleRejectCertificate = async (registerId: string) => {
     try {
-      const res = await api.rejectCertificate(Number(registerId));
+      const res = await api.rejectCertificate(registerId);
       setRegistrants(prev => prev.map(r =>
         r.id === registerId ? { ...r, certificateApproved: false, certificateNumber: undefined, hasCertificate: false } : r
       ));
@@ -1461,14 +1465,14 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
 
   const handleGenerateCertificate = async (registerId: string, fullname: string) => {
     try {
-      // Call API to generate the certificate record (creates in DB)
-      const blob = await api.generateCertificate(Number(registerId));
+      // Open the public certificate URL in a new tab — browser handles the download natively
+      window.open(`${BACKEND_API_URL}/certificate/${registerId}`, '_blank');
       // Refresh registrants to get updated certificate info
       const res = await api.getAllRegistrations({ per_page: 1000 });
       setRegistrants((res.data || []).map(mapRegistrant));
       showToast('گواهی با موفقیت صادر شد.');
-      // Reload the iframe by re-setting previewRegId
-      setPreviewRegId((prev: string | null) => prev ? `${prev}` : null);
+      // Reload the iframe by incrementing the key
+      setIframeKey(k => k + 1);
     } catch (err: any) {
       showToast(err.message || 'خطا در صدور گواهی', 'error');
     }
@@ -1476,8 +1480,9 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
 
   const handlePreviewCertificate = async (registerId: string) => {
     console.log(registerId);
-    // Just open the dialog — no API call, no CORS issues
-    // The iframe loads the public route directly
+    // Reset loading state, then open the dialog
+    setIframeLoading(true);
+    setIframeKey(0);
     setPreviewRegId(registerId);
   };
 
@@ -2884,7 +2889,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
         />
       )}
 
-      {/* Certificate Preview Dialog */}
+      {/* Certificate Preview Dialog — PDF Viewer using direct public URL (no CORS) */}
       <AnimatePresence>
         {previewRegId && (() => {
           const previewReg = registrants.find(r => r.id === previewRegId);
@@ -2895,7 +2900,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
-              onClick={() => setPreviewRegId(null)}
+              onClick={() => { setPreviewRegId(null); setIframeLoading(false); setIframeKey(0); }}
             >
               <motion.div
                 initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -2908,7 +2913,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                 <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
                   <h3 className="text-sm font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
                     <Award className="w-5 h-5 text-indigo-500" />
-                    {hasCert ? 'پیش‌نمایش گواهی' : 'مدیریت گواهی'}
+                    پیش‌نمایش گواهی
                   </h3>
                   <div className="flex items-center gap-2">
                     {hasCert ? (
@@ -2930,36 +2935,32 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                       </button>
                     )}
                     <button
-                      onClick={() => setPreviewRegId(null)}
+                      onClick={() => { setPreviewRegId(null); setIframeLoading(false); setIframeKey(0); }}
                       className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 transition-all cursor-pointer"
                     >
                       <X className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
-                {/* Content */}
-                {hasCert ? (
-                  <div className="flex-1 bg-gray-100 dark:bg-gray-800 min-h-[70vh]">
-                    <iframe
-                      src={getPublicViewUrl(previewRegId)}
-                      className="w-full h-full min-h-[70vh]"
-                      style={{ border: 'none' }}
-                      title="پیش‌نمایش گواهی"
-                    />
-                  </div>
-                ) : (
-                  <div className="flex-1 min-h-[30vh] flex items-center justify-center p-8">
-                    <div className="text-center">
-                      <Award className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-                      <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                        گواهی برای این ثبت‌نام هنوز صادر نشده است.
-                      </p>
-                      <p className="text-xs text-gray-400 dark:text-gray-500">
-                        برای صدور گواهی، روی دکمه "صدور گواهی" در بالای دیالوگ کلیک کنید.
-                      </p>
+                {/* Content — iframe loads the public web route directly */}
+                <div className="flex-1 bg-gray-100 dark:bg-gray-800 min-h-[70vh] relative">
+                  {iframeLoading && (
+                    <div className="absolute inset-0 flex items-center justify-center z-10">
+                      <div className="text-center">
+                        <div className="w-10 h-10 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin mx-auto mb-3" />
+                        <p className="text-xs text-gray-500">در حال بارگذاری گواهی...</p>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                  <iframe
+                    key={iframeKey}
+                    src={getPublicViewUrl(previewRegId)}
+                    className={`w-full h-full min-h-[70vh] ${iframeLoading ? 'opacity-0' : 'opacity-100'}`}
+                    style={{ border: 'none' }}
+                    title="پیش‌نمایش گواهی"
+                    onLoad={() => setIframeLoading(false)}
+                  />
+                </div>
               </motion.div>
             </motion.div>
           );

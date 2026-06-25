@@ -2,7 +2,7 @@
 // API Functions — توابع ارتباط با بک‌اند (مطابق الگوی sau_public)
 // ============================================================
 
-import { API_BASE_URL, TOKEN_STRING, USER_STRING, SIGNS_STORAGE_PATH } from './constants';
+import { API_BASE_URL, BACKEND_API_URL, TOKEN_STRING, USER_STRING, SIGNS_STORAGE_PATH } from './constants';
 
 // ========== Core API Function ==========
 

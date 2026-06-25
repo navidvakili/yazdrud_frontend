@@ -1,9 +1,11 @@
 // ============================================================
-// Constants — مقادیر ثابت برنامه (مطابق الگوی sau_public)
+// Constants — مقادیر ثابت برنامه 
 // ============================================================
 
-/** آدرس سرور بک‌اند لاراول */
-export const BACKEND_API_URL = 'http://localhost:8000';
+/** آدرس سرور بک‌اند لاراول (بر اساس محیط) */
+export const BACKEND_API_URL = import.meta.env.DEV
+    ? 'http://127.0.0.1:8000'
+    : 'http://172.16.10.10:8080';
 
 /** پیشوند API (BACKEND_API_URL + /api) */
 export const API_BASE_URL = `${BACKEND_API_URL}/api`;
@@ -27,4 +29,4 @@ export const SIGNS_STORAGE_PATH = `${BACKEND_API_URL}/storage/signs`;
 export const MAX_TABS = 6;
 
 /** مدت زمان غیرفعال بودن کاربر (بر حسب میلی‌ثانیه) قبل از فعال شدن حالت standby */
-export const STANDBY_TIMEOUT = 10 * 60 * 1000; // 15 دقیقه
+export const STANDBY_TIMEOUT = 10 * 60 * 1000; // 10 دقیقه

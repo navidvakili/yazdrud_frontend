@@ -439,7 +439,7 @@ class ApiService {
   /**
    * Approve a registration for certificate issuance.
    */
-  async approveCertificate(registerId: number): Promise<any> {
+  async approveCertificate(registerId: string): Promise<any> {
     const data = await API<any>(`certificates/approve/${registerId}`, {}, 'POST');
     return data;
   }
@@ -447,7 +447,7 @@ class ApiService {
   /**
    * Remove certificate approval from a registration.
    */
-  async rejectCertificate(registerId: number): Promise<any> {
+  async rejectCertificate(registerId: string): Promise<any> {
     const data = await API<any>(`certificates/reject/${registerId}`, {}, 'POST');
     return data;
   }
@@ -458,22 +458,6 @@ class ApiService {
   async approveAllCertificates(courseId: number): Promise<any> {
     const data = await API<any>('certificates/approve-all', { course_id: courseId }, 'POST');
     return data;
-  }
-
-  /**
-   * Generate and download a single certificate PDF.
-   * Returns the PDF blob for download.
-   */
-  async generateCertificate(registerId: number): Promise<Blob> {
-    const token = localStorage.getItem(TOKEN_STRING);
-    const response = await fetch(`${API_BASE_URL}/certificates/generate/${registerId}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || 'خطا در صدور گواهی');
-    }
-    return response.blob();
   }
 
   /**

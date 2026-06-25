@@ -3,13 +3,20 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 import { defineConfig } from 'vite';
 
-/** CSP for production build — stricter, no unsafe-eval */
-export const PRODUCTION_CSP = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: http://localhost:8000; font-src 'self' data:; connect-src 'self' http://localhost:8000";
-
-/** CSP for development — unsafe-eval needed for Vite HMR */
-const DEV_CSP = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: http://localhost:8000; font-src 'self' data:; connect-src 'self' http://localhost:8000";
+function makeCsp(mode: string, backendUrl: string): string {
+  const base = `default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: ${backendUrl}; font-src 'self' data:; connect-src 'self' ${backendUrl}`;
+  if (mode === 'development') {
+    return base.replace("script-src 'self' 'unsafe-inline'", "script-src 'self' 'unsafe-inline' 'unsafe-eval'");
+  }
+  return base;
+}
 
 export default defineConfig(({ mode }) => {
+  // آدرس بک‌اند — دقیقاً منطبق با src/lib/constants.ts
+  const backendUrl = mode === 'development'
+    ? 'http://127.0.0.1:8000'
+    : 'http://172.16.10.10:8080';
+
   return {
     plugins: [react(), tailwindcss()],
     resolve: {
@@ -19,7 +26,13 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       headers: {
-        'Content-Security-Policy': mode === 'production' ? PRODUCTION_CSP : DEV_CSP,
+        'Content-Security-Policy': makeCsp(mode, backendUrl),
+      },
+      proxy: {
+        '/certificate': {
+          target: backendUrl,
+          changeOrigin: true,
+        },
       },
     },
   };
