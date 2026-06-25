@@ -35,7 +35,7 @@ export default function TabLimitAlert({
               ظرفیت تب‌های مرکز کار پر شده است!
             </h4>
             <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed font-sans font-medium">
-              پرتال جامع دانشگاهی کارانت (ویژه دانشگاه علم و هنر) حداکثر مجهز به <strong>{MAX_TABS} تب باز همزمان</strong> را مجاز می‌شناسد. لطفاً جهت باز کردن بخش جدید علمی، ابتدا یکی از تب‌های غیرضروری را به کمک کلید ضربدر ببندید.
+              نرم‌افزار یکپارچهٔ آموزشی نیکا (ویژه دانشگاه علم و هنر) حداکثر مجهز به <strong>{MAX_TABS} تب باز همزمان</strong> را مجاز می‌شناسد. لطفاً جهت باز کردن بخش جدید علمی، ابتدا یکی از تب‌های غیرضروری را به کمک کلید ضربدر ببندید.
             </p>
 
             <div className="pt-3 border-t border-red-500/10 dark:border-red-500/5 space-y-2">
@@ -44,11 +44,10 @@ export default function TabLimitAlert({
               </p>
               <button
                 onClick={handleClearAllTabs}
-                className={`w-full py-2.5 px-3 rounded-xl border text-[11px] font-black transition-all cursor-pointer ${
-                  confirmClearActive
+                className={`w-full py-2.5 px-3 rounded-xl border text-[11px] font-black transition-all cursor-pointer ${confirmClearActive
                     ? 'bg-red-600 border-red-600 text-white animate-pulse'
                     : 'border-red-200 dark:border-red-900/40 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20'
-                }`}
+                  }`}
               >
                 <Trash2 className="w-3.5 h-3.5 inline-block ml-1 -mt-0.5" />
                 {confirmClearActive ? 'بله، تایید نهایی و پاک‌سازی کامل' : 'بستن و پاکسازی کل تب‌های فعال'}

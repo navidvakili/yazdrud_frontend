@@ -250,7 +250,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     if (needsRegistrants && !fetchedRef.current.registrants) {
       setLoadingRegistrants(true);
       fetchedRef.current.registrants = true;
-      api.getAllRegistrations({ per_page: 1000, status: 'verified' })
+      api.getAllRegistrations({ per_page: 10000 })
         .then(res => {
           const mapped = (res.data || []).map(mapRegistrant);
           setRegistrants(mapped);
@@ -344,7 +344,9 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     api.getCourseGroups()
       .then(groups => {
         setCourseGroups(groups);
-        setCategories(groups.map((g: any) => g.title));
+        const groupTitles = groups.map((g: any) => g.title);
+        // Always include 'عمومی' as a category option for uncategorized courses
+        setCategories(groupTitles.includes('عمومی') ? groupTitles : ['عمومی', ...groupTitles]);
       })
       .catch(() => {
         // Fallback to localStorage if API fails
@@ -1371,11 +1373,12 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
   const [reportCourseFilter, setReportCourseFilter] = useState('');
 
   const filteredRegistrants = registrants.filter(reg => {
+    const searchStr = toEnglishDigits(reportSearch.toLowerCase());
     const matchText = reg.name.toLowerCase().includes(reportSearch.toLowerCase()) ||
-      reg.nationalCode.includes(reportSearch) ||
-      reg.studentCode.includes(reportSearch) ||
-      reg.mobile.includes(reportSearch) ||
-      reg.trackingCode.includes(reportSearch);
+      toEnglishDigits(reg.nationalCode).includes(searchStr) ||
+      toEnglishDigits(reg.studentCode).includes(searchStr) ||
+      toEnglishDigits(reg.mobile).includes(searchStr) ||
+      toEnglishDigits(reg.trackingCode).includes(searchStr);
     const matchCourse = reportCourseFilter === '' || reg.courseId === reportCourseFilter;
     return matchText && matchCourse;
   });
@@ -1541,8 +1544,10 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
   };
 
   const filteredCoursesForListing = courses.filter(c => {
-    const matchSearch = c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.lecturer.toLowerCase().includes(searchQuery.toLowerCase());
+    const q = searchQuery.toLowerCase();
+    const matchSearch = c.title.toLowerCase().includes(q) ||
+      c.lecturer.toLowerCase().includes(q) ||
+      (c.description && c.description.toLowerCase().includes(q));
     const matchCategory = selectedCategory === '' || c.category === selectedCategory;
     return matchSearch && matchCategory;
   });

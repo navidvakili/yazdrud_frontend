@@ -275,7 +275,7 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
                   rel="noopener noreferrer"
                   className="text-[9px] text-gray-300 hover:text-teal-600 transition-colors mt-1 inline-block"
                 >
-                  برنامه نویس و توسعه دهنده توسط شرکت فناوری اطلاعات
+                  برنامه نویس و توسعه دهنده توسط شرکت فناوری اطلاعات کارانت
                 </a>
               </div>
             </div>

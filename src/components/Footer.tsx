@@ -23,7 +23,7 @@ export default function Footer({ user }: FooterProps) {
           rel="noopener noreferrer"
           className="text-[9px] text-gray-300 dark:text-slate-600 hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
         >
-          برنامه نویس و توسعه دهنده توسط شرکت فناوری اطلاعات
+          برنامه نویس و توسعه دهنده توسط شرکت فناوری اطلاعات کارانت
         </a>
       </div>
       <div className="flex items-center gap-3">
