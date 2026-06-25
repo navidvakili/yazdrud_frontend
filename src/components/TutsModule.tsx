@@ -1366,7 +1366,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
   // -----------------------------------------
   const [reportSearch, setReportSearch] = useState('');
   const [reportCourseFilter, setReportCourseFilter] = useState('');
-  const [reportStatusFilter, setReportStatusFilter] = useState('');
+  const [reportStatusFilter, setReportStatusFilter] = useState('verified');
 
   const filteredRegistrants = registrants.filter(reg => {
     const matchText = reg.name.toLowerCase().includes(reportSearch.toLowerCase()) ||
