@@ -2,16 +2,14 @@
 // TutsModule — Reports (Registrants Report List with Filters)
 // ============================================================
 
-import { Search, FileText, Trash2 } from 'lucide-react';
+import { Search, FileText } from 'lucide-react';
 import type { TutCourse, TutRegistrant } from './tuts-types';
 import { toPersianDigits, formatCurrency } from './tuts-utils';
 import { LoadingSpinner } from './tuts-components';
 import Pagination from '../Pagination';
 
 interface TutsReportsProps {
-    currentUserRole: string;
     courses: TutCourse[];
-    registrants: TutRegistrant[];
     loadingRegistrants: boolean;
     reportSearch: string;
     setReportSearch: (v: string) => void;
@@ -24,25 +22,18 @@ interface TutsReportsProps {
     reportPerPage: number;
     filteredRegistrants: TutRegistrant[];
     handleExportSimulate: () => void;
-    handleDeleteRegistrant: (id: string) => void;
-    setSelectedReceiptForReview: (r: TutRegistrant | null) => void;
-    setShowRejectBox: (v: boolean) => void;
 }
 
 export default function TutsReports(props: TutsReportsProps) {
     const {
-        currentUserRole, courses, loadingRegistrants,
+        courses, loadingRegistrants,
         reportSearch, setReportSearch,
         reportCourseFilter, setReportCourseFilter,
         reportStatusFilter, setReportStatusFilter,
         reportPage, setReportPage, reportPerPage,
         filteredRegistrants,
-        handleExportSimulate, handleDeleteRegistrant,
-        setSelectedReceiptForReview, setShowRejectBox,
+        handleExportSimulate,
     } = props;
-
-    // Only show certificate columns for verified registrants
-    const isAdmin = currentUserRole === 'admin';
 
     return (
         <div className="space-y-5">
@@ -124,13 +115,12 @@ export default function TutsReports(props: TutsReportsProps) {
                                             <th className="p-2">تاریخ ثبت نام</th>
                                             <th className="p-2">تاریخ تایید</th>
                                             <th className="p-2 text-center">وضعیت</th>
-                                            {isAdmin && <th className="p-2 text-center">عملیات</th>}
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-100 dark:divide-gray-800/40">
                                         {paginatedRegistrants.length === 0 ? (
                                             <tr>
-                                                <td colSpan={isAdmin ? 15 : 13} className="p-12 text-center text-gray-400">
+                                                <td colSpan={13} className="p-12 text-center text-gray-400">
                                                     هیچ پرونده ثبتی یا آماری مطابق با فیلتر شما ثبت نشده است.
                                                 </td>
                                             </tr>
@@ -165,31 +155,7 @@ export default function TutsReports(props: TutsReportsProps) {
                                                                 </div>
                                                             )}
                                                         </td>
-                                                        {/* Actions Column */}
-                                                        {isAdmin && (
-                                                            <td className="p-2 text-center">
-                                                                <div className="flex items-center justify-center gap-1.5">
-                                                                    {reg.status === 'pending' && (
-                                                                        <button
-                                                                            onClick={() => {
-                                                                                setSelectedReceiptForReview(reg);
-                                                                                setShowRejectBox(false);
-                                                                            }}
-                                                                            className="px-2 py-1 text-[10px] bg-teal-500/10 text-teal-600 dark:text-teal-400 rounded-lg font-bold hover:bg-teal-500/20 transition-all cursor-pointer"
-                                                                        >
-                                                                            بررسی مدارک
-                                                                        </button>
-                                                                    )}
-                                                                    <button
-                                                                        onClick={() => handleDeleteRegistrant(reg.id)}
-                                                                        className="p-1 rounded-lg text-rose-500 hover:bg-rose-500/10 transition-all cursor-pointer"
-                                                                        title="حذف پرونده"
-                                                                    >
-                                                                        <Trash2 className="w-4 h-4" />
-                                                                    </button>
-                                                                </div>
-                                                            </td>
-                                                        )}
+
                                                     </tr>
                                                 );
                                             })

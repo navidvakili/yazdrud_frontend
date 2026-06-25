@@ -250,7 +250,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     if (needsRegistrants && !fetchedRef.current.registrants) {
       setLoadingRegistrants(true);
       fetchedRef.current.registrants = true;
-      api.getAllRegistrations({ per_page: 1000 })
+      api.getAllRegistrations({ per_page: 1000, status: 'verified' })
         .then(res => {
           const mapped = (res.data || []).map(mapRegistrant);
           setRegistrants(mapped);
@@ -1430,17 +1430,6 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     setShowRejectBox(false);
     setRejectionInput('');
     showToast(`فیش واریزی ${regToReject.name} رد صلاحیت شد و علت به کارتابل دانشجو ارسال گردید.`, 'info');
-  };
-
-  const handleDeleteRegistrant = (id: string) => {
-    if (confirm('آیا از حذف این رکورد پیش‌ثبت‌نام مطمئن هستید؟')) {
-      const target = registrants.find(r => r.id === id);
-      setRegistrants(prev => prev.filter(r => r.id !== id));
-      if (target && target.status === 'verified') {
-        setCourses(prev => prev.map(c => c.id === target.courseId ? { ...c, enrolled: Math.max(0, c.enrolled - 1) } : c));
-      }
-      showToast('سند پیش‌ثبت‌نام مورد نظر با موفقیت حذف گردید.', 'info');
-    }
   };
 
   // ========== Certificate Handlers ==========
@@ -2751,9 +2740,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
 
       {moduleId === 'tuts-reports' && (
         <TutsReports
-          currentUserRole={currentUserRole}
           courses={courses}
-          registrants={registrants}
           loadingRegistrants={loadingRegistrants}
           reportSearch={reportSearch}
           setReportSearch={setReportSearch}
@@ -2766,9 +2753,6 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
           reportPerPage={reportPerPage}
           filteredRegistrants={filteredRegistrants}
           handleExportSimulate={handleExportSimulate}
-          handleDeleteRegistrant={handleDeleteRegistrant}
-          setSelectedReceiptForReview={setSelectedReceiptForReview}
-          setShowRejectBox={setShowRejectBox}
         />
       )}
 
