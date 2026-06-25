@@ -8,8 +8,14 @@ import {
 import { User as UserType } from '@/src/types';
 import api from '@/src/api';
 import { BACKEND_API_URL } from '@/src/lib/constants';
+import { Document, Page, pdfjs } from 'react-pdf';
+import 'react-pdf/dist/Page/TextLayer.css';
+import 'react-pdf/dist/Page/AnnotationLayer.css';
 import Pagination from './Pagination';
 import type { VoucherFormData, SandboxResult } from './tuts/tuts-types';
+
+// Configure PDF.js worker — served from /public/ to avoid CSP issues with CDN
+pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 import TutsCourseList from './tuts/TutsCourseList';
 import TutsReports from './tuts/TutsReports';
 import TutsReceipts from './tuts/TutsReceipts';
@@ -886,16 +892,20 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     setTimeout(() => setToastMsg(null), 4000);
   };
 
-  // Certificate preview dialog — public web route loaded directly in iframe (no CORS)
+  // Certificate preview dialog — custom PDF viewer with react-pdf
   const [previewRegId, setPreviewRegId] = useState<string | null>(null);
-  const [iframeKey, setIframeKey] = useState(0);
-  const [iframeLoading, setIframeLoading] = useState(false);
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const [pdfError, setPdfError] = useState<string | null>(null);
+  const [numPages, setNumPages] = useState(0);
+  const [pageNumber, setPageNumber] = useState(1);
+  const [pdfScale, setPdfScale] = useState(1.0);
+  const [pdfKey, setPdfKey] = useState(0);
 
   const getPublicViewUrl = (regId: string, download = false) => {
     if (download) {
       return `${BACKEND_API_URL}/certificate/${regId}`;
     }
-    // For preview (iframe), use relative path → goes through Vite proxy in dev, keeps same origin
+    // For preview, use relative path → goes through Vite proxy (same-origin)
     return `/certificate/preview/${regId}`;
   };
 
@@ -997,31 +1007,30 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
 
   // Course Report selection
   const [selectedCourseReport, setSelectedCourseReport] = useState<TutCourse | null>(null);
+  const [reportFetchKey, setReportFetchKey] = useState(0);
 
   // ===== Fetch registrations on-demand when course report dialog opens =====
   useEffect(() => {
     if (!selectedCourseReport) return;
-    // Only fetch if registrants array is empty OR this course's data is missing
-    const hasDataForThisCourse = registrants.some(r => r.courseId === selectedCourseReport.id);
-    if (hasDataForThisCourse) return;
 
     const courseIdNum = parseInt(selectedCourseReport.id);
     if (isNaN(courseIdNum)) return;
 
     setLoadingRegistrants(true);
+    setPdfError(null);
+    // Re-fetch registrations for this course every time dialog opens
     api.getCourseRegistrations(courseIdNum)
       .then(data => {
         const mapped = (data || []).map(mapRegistrant);
-        // Merge with existing registrants (avoid duplicates)
-        setRegistrants(prev => {
-          const existingIds = new Set(prev.map(r => r.id));
-          const newOnes = mapped.filter(r => !existingIds.has(r.id));
-          return [...prev, ...newOnes];
-        });
+        // Replace existing registrants for this course with fresh data
+        setRegistrants(prev => [
+          ...prev.filter(r => r.courseId !== selectedCourseReport.id),
+          ...mapped,
+        ]);
       })
       .catch(err => console.error('Error fetching course registrations:', err))
       .finally(() => setLoadingRegistrants(false));
-  }, [selectedCourseReport]);
+  }, [selectedCourseReport, reportFetchKey]);
 
   const handleUpdateCourse = (e: React.FormEvent) => {
     e.preventDefault();
@@ -1471,31 +1480,33 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
       const res = await api.getAllRegistrations({ per_page: 1000 });
       setRegistrants((res.data || []).map(mapRegistrant));
       showToast('گواهی با موفقیت صادر شد.');
-      // Reload the iframe by incrementing the key
-      setIframeKey(k => k + 1);
+      // Reload the PDF viewer by incrementing the key
+      setPdfKey(k => k + 1);
     } catch (err: any) {
       showToast(err.message || 'خطا در صدور گواهی', 'error');
     }
   };
 
   const handlePreviewCertificate = async (registerId: string) => {
-    console.log(registerId);
-    // Reset loading state, then open the dialog
-    setIframeLoading(true);
-    setIframeKey(0);
+    // Reset loading/error state, then open the dialog
+    setPdfError(null);
+    setPdfLoading(true);
+    setPageNumber(1);
+    setPdfKey(0);
     setPreviewRegId(registerId);
   };
 
   const handleApproveAllCertificates = async () => {
-    if (!reportCourseFilter) {
+    const courseId = selectedCourseReport?.id;
+    if (!courseId) {
       showToast('لطفاً ابتدا یک دوره را انتخاب کنید.', 'error');
       return;
     }
     if (!confirm('آیا از تایید همه ثبت‌نام‌های این دوره برای صدور گواهی مطمئن هستید؟')) return;
     try {
-      const res = await api.approveAllCertificates(Number(reportCourseFilter));
+      const res = await api.approveAllCertificates(Number(courseId));
       setRegistrants(prev => prev.map(r =>
-        r.courseId === reportCourseFilter ? { ...r, certificateApproved: true } : r
+        r.courseId === courseId ? { ...r, certificateApproved: true } : r
       ));
       showToast(res.message || 'همه ثبت‌نام‌ها برای صدور گواهی تایید شدند.');
     } catch (err: any) {
@@ -1505,7 +1516,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
 
   const handleDownloadAllCertificates = async () => {
     try {
-      const courseId = reportCourseFilter ? Number(reportCourseFilter) : undefined;
+      const courseId = selectedCourseReport?.id ? Number(selectedCourseReport.id) : undefined;
       const blob = await api.downloadAllCertificates(courseId);
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -1836,7 +1847,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                                     <Edit2 className="w-3.5 h-3.5" />
                                   </button>
                                   <button
-                                    onClick={() => setSelectedCourseReport(course)}
+                                    onClick={() => { setSelectedCourseReport(course); setReportFetchKey(k => k + 1); }}
                                     className="p-1.5 bg-white dark:bg-gray-900 border border-gray-150 dark:border-gray-800 rounded-lg text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950 transition-all cursor-pointer"
                                     title="گزارش ثبت‌نام‌ها"
                                   >
@@ -2900,7 +2911,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
-              onClick={() => { setPreviewRegId(null); setIframeLoading(false); setIframeKey(0); }}
+              onClick={() => { setPreviewRegId(null); setPdfLoading(false); setPdfError(null); setPageNumber(1); setPdfKey(0); }}
             >
               <motion.div
                 initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -2935,31 +2946,99 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                       </button>
                     )}
                     <button
-                      onClick={() => { setPreviewRegId(null); setIframeLoading(false); setIframeKey(0); }}
+                      onClick={() => { setPreviewRegId(null); setPdfLoading(false); setPdfError(null); setPageNumber(1); setPdfKey(0); }}
                       className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 transition-all cursor-pointer"
                     >
                       <X className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
-                {/* Content — iframe loads the public web route directly */}
-                <div className="flex-1 bg-gray-100 dark:bg-gray-800 min-h-[70vh] relative">
-                  {iframeLoading && (
+                {/* Content — custom PDF viewer using react-pdf */}
+                <div className="flex-1 bg-gray-100 dark:bg-gray-800 min-h-[70vh] relative flex flex-col">
+                  {pdfError ? (
                     <div className="absolute inset-0 flex items-center justify-center z-10">
-                      <div className="text-center">
-                        <div className="w-10 h-10 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin mx-auto mb-3" />
-                        <p className="text-xs text-gray-500">در حال بارگذاری گواهی...</p>
+                      <div className="text-center max-w-xs">
+                        <AlertTriangle className="w-12 h-12 text-amber-400 mx-auto mb-3" />
+                        <p className="text-sm text-gray-500 mb-2">{pdfError}</p>
+                        <p className="text-xs text-gray-400">لطفاً مجدداً تلاش کنید یا با پشتیبانی تماس بگیرید.</p>
                       </div>
                     </div>
+                  ) : (
+                    <>
+                      {pdfLoading && (
+                        <div className="absolute inset-0 flex items-center justify-center z-10">
+                          <div className="text-center">
+                            <div className="w-10 h-10 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin mx-auto mb-3" />
+                            <p className="text-xs text-gray-500">در حال بارگذاری گواهی...</p>
+                          </div>
+                        </div>
+                      )}
+                      <div className={`flex-1 overflow-auto p-4 flex justify-center ${pdfLoading ? 'opacity-0 absolute' : 'opacity-100'}`}>
+                        <Document
+                          key={pdfKey}
+                          file={getPublicViewUrl(previewRegId)}
+                          onLoadSuccess={({ numPages }) => {
+                            setNumPages(numPages);
+                            setPdfLoading(false);
+                            setPdfError(null);
+                          }}
+                          onLoadError={(error) => {
+                            console.error('PDF load error:', error);
+                            setPdfLoading(false);
+                            setPdfError('امکان بارگذاری گواهی وجود ندارد.');
+                          }}
+                          loading={null}
+                        >
+                          <Page
+                            pageNumber={pageNumber}
+                            scale={pdfScale}
+                            renderTextLayer={false}
+                            renderAnnotationLayer={false}
+                            className="shadow-xl rounded-lg"
+                          />
+                        </Document>
+                      </div>
+                      {/* PDF Navigation Controls */}
+                      {!pdfLoading && numPages > 0 && (
+                        <div className="flex items-center justify-center gap-3 p-2 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+                          <button
+                            onClick={() => setPageNumber(p => Math.max(1, p - 1))}
+                            disabled={pageNumber <= 1}
+                            className="px-2.5 py-1 text-[10px] font-bold rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+                          >
+                            قبلی
+                          </button>
+                          <span className="text-[10px] text-gray-500 font-bold">
+                            {toPersianDigits(pageNumber)} از {toPersianDigits(numPages)}
+                          </span>
+                          <button
+                            onClick={() => setPageNumber(p => Math.min(numPages, p + 1))}
+                            disabled={pageNumber >= numPages}
+                            className="px-2.5 py-1 text-[10px] font-bold rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+                          >
+                            بعدی
+                          </button>
+                          <div className="mr-4 flex items-center gap-1">
+                            <button
+                              onClick={() => setPdfScale(s => Math.max(0.5, s - 0.1))}
+                              className="px-2 py-1 text-[10px] font-bold rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all cursor-pointer"
+                            >
+                              −
+                            </button>
+                            <span className="text-[10px] text-gray-500 min-w-[40px] text-center font-bold">
+                              {Math.round(pdfScale * 100)}%
+                            </span>
+                            <button
+                              onClick={() => setPdfScale(s => Math.min(2.0, s + 0.1))}
+                              className="px-2 py-1 text-[10px] font-bold rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all cursor-pointer"
+                            >
+                              +
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </>
                   )}
-                  <iframe
-                    key={iframeKey}
-                    src={getPublicViewUrl(previewRegId)}
-                    className={`w-full h-full min-h-[70vh] ${iframeLoading ? 'opacity-0' : 'opacity-100'}`}
-                    style={{ border: 'none' }}
-                    title="پیش‌نمایش گواهی"
-                    onLoad={() => setIframeLoading(false)}
-                  />
                 </div>
               </motion.div>
             </motion.div>
