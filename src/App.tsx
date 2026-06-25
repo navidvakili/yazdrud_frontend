@@ -47,7 +47,7 @@ export default function App() {
   const [activePanel, setActivePanel] = useState<string | null>(null);
   const [showLimitAlert, setShowLimitAlert] = useState(false);
   const [confirmClearActive, setConfirmClearActive] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
+  const [tabRefreshKeys, setTabRefreshKeys] = useState<Record<string, number>>({});
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   // Standby (auto-lock) state
@@ -285,10 +285,34 @@ export default function App() {
     }
   };
 
-  // Refresh active tab
+  // Refresh only the currently focused tab
   const handleRefreshTab = useCallback(() => {
-    setRefreshKey(prev => prev + 1);
-  }, []);
+    if (activeTabId) {
+      setTabRefreshKeys(prev => ({
+        ...prev,
+        [activeTabId]: (prev[activeTabId] || 0) + 1,
+      }));
+    }
+  }, [activeTabId]);
+
+  // Sync sidebar category selection when active tab changes
+  useEffect(() => {
+    if (!activeTabId) {
+      setSelectedMainCat(null);
+      return;
+    }
+    const tab = tabs.find(t => t.id === activeTabId);
+    const moduleType = tab?.moduleType || activeTabId;
+    for (const cat of menuCategories) {
+      const match = cat.submenus.some(sub => sub.targetId === moduleType) || cat.targetId === moduleType;
+      if (match) {
+        setSelectedMainCat(cat.key);
+        return;
+      }
+    }
+    // Tab not in any menu category (e.g., profile, change-password) → close drawer
+    setSelectedMainCat(null);
+  }, [activeTabId, tabs, menuCategories]);
 
   // Tab management
   const handleOpenTab = useCallback((id: string, title: string, iconName: string, forceNewInstance: boolean = false) => {
@@ -479,14 +503,14 @@ export default function App() {
 
           {/* Canvas — all tabs kept alive, only active one visible */}
           <main className="flex-1 overflow-y-auto p-4 sm:p-6 pb-20 custom-scrollbar">
-            <div key={refreshKey}>
+            <div>
               {/* Dashboard — only when no active tab */}
               {activeTabId === null && renderModuleForTab(null)}
 
               {/* All opened tabs kept alive to preserve state on switch */}
               {tabs.map(tab => (
                 <div
-                  key={tab.id}
+                  key={`${tab.id}_${tabRefreshKeys[tab.id] || 0}`}
                   className={activeTabId === tab.id ? '' : 'hidden'}
                 >
                   {renderModuleForTab(tab.id)}
