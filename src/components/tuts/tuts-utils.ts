@@ -26,6 +26,13 @@ export function formatCurrency(amount: number): string {
     return toPersianDigits(amount.toLocaleString('fa-IR')) + ' ریال';
 }
 
+/** Format a numeric input value with comma separators (e.g., "4500000" → "4,500,000") */
+export function formatCostInput(value: string): string {
+    const cleaned = value.replace(/[^\d]/g, '');
+    if (!cleaned) return '';
+    return parseInt(cleaned, 10).toLocaleString('en-US');
+}
+
 /** Map API course object to TutCourse */
 export function mapCourse(c: any): TutCourse {
     return {

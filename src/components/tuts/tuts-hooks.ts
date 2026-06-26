@@ -9,7 +9,7 @@ import type {
     ToastMessage, SandboxResult, StatsData, SurveyFormData,
     VoucherFormData, PreRegFormData, CourseFormData, ReceiptReviewData,
 } from './tuts-types';
-import { mapCourse, mapVoucher, mapRegistrant, toPersianDigits, formatCurrency } from './tuts-utils';
+import { mapCourse, mapVoucher, mapRegistrant, toPersianDigits, toEnglishDigits, formatCurrency } from './tuts-utils';
 
 // =================================================================
 // Hook 1: Toast Notifications
@@ -241,7 +241,7 @@ export function useCourseCRUD(
     // Delete confirmation
     const [courseToDelete, setCourseToDelete] = useState<TutCourse | null>(null);
 
-    const handleCreateNewCourse = (e: React.FormEvent) => {
+    const handleCreateNewCourse = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newCourseTitle || !newCourseLecturer || !newCourseCost) {
             showToast('لطفاً فیلدهای ستاره‌دار و الزامی را پر کنید.', 'error');
@@ -250,27 +250,34 @@ export function useCourseCRUD(
         const price = parseInt(newCourseCost.replace(/[^\d]/g, ''));
         if (isNaN(price)) { showToast('مبلغ شهریه نامعتبر است.', 'error'); return; }
 
-        const newC: TutCourse = {
-            id: `tut-${courses.length + 1}`,
-            title: newCourseTitle,
-            lecturer: newCourseLecturer,
-            duration: newCourseDuration || '۱۲ ساعت',
-            cost: price,
-            enrolled: 0,
-            capacity: parseInt(newCourseCapacity) || 30,
-            startDate: newCourseStartDate,
-            status: 'active',
-            category: newCourseCategory,
-            description: newCourseDescription || 'توضیحات دوره به زودی منتشر خواهد شد.',
-        };
+        try {
+            const startDate = toEnglishDigits(newCourseStartDate);
+            const durationNum = parseInt(newCourseDuration.replace(/[^\d]/g, '')) || null;
 
-        setCourses([newC, ...courses]);
-        setIsNewCourseModalOpen(false);
-        showToast(`دوره کارگاهی جدید "${newCourseTitle}" با موفقیت تعریف گردید.`);
-        setNewCourseTitle('');
-        setNewCourseLecturer('');
-        setNewCourseCost('');
-        setNewCourseDescription('');
+            const courseData = {
+                title: newCourseTitle,
+                instructor: newCourseLecturer,
+                amount: price,
+                capacity: parseInt(newCourseCapacity) || 30,
+                duration: durationNum,
+                start_date: startDate || null,
+                description: newCourseDescription || '',
+                active: true,
+            };
+
+            const result = await api.createCourse(courseData);
+            const newC = mapCourse(result);
+            setCourses([newC, ...courses]);
+            setIsNewCourseModalOpen(false);
+            showToast(`دوره کارگاهی جدید "${newCourseTitle}" با موفقیت تعریف گردید.`);
+            setNewCourseTitle('');
+            setNewCourseLecturer('');
+            setNewCourseCost('');
+            setNewCourseDescription('');
+        } catch (error: any) {
+            const msg = error?.errors ? Object.values(error.errors).flat().join(' — ') : error.message;
+            showToast(msg || 'خطا در ایجاد دوره جدید', 'error');
+        }
     };
 
     const startEditing = (course: TutCourse) => {
@@ -278,58 +285,64 @@ export function useCourseCRUD(
         setEditCourseTitle(course.title);
         setEditCourseLecturer(course.lecturer);
         setEditCourseDuration(course.duration);
-        setEditCourseCost(String(course.cost));
+        setEditCourseCost(course.cost.toLocaleString('en-US'));
         setEditCourseCapacity(String(course.capacity));
         setEditCourseStartDate(course.startDate);
         setEditCourseCategory(course.category);
         setEditCourseDescription(course.description);
     };
 
-    const handleUpdateCourse = (e: React.FormEvent) => {
+    const handleUpdateCourse = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!editingCourse) return;
         if (!editCourseTitle || !editCourseLecturer || !editCourseCost) {
             showToast('لطفاً فیلدهای ستاره‌دار و الزامی را پر کنید.', 'error');
             return;
         }
-        const price = typeof editCourseCost === 'number' ? editCourseCost : parseInt(editCourseCost.toString().replace(/[^\d]/g, ''));
+        const price = parseInt(editCourseCost.toString().replace(/[^\d]/g, ''));
         if (isNaN(price)) { showToast('مبلغ شهریه نامعتبر است.', 'error'); return; }
 
-        setCourses(prev => prev.map(c =>
-            c.id === editingCourse.id
-                ? {
-                    ...c,
-                    title: editCourseTitle,
-                    lecturer: editCourseLecturer,
-                    duration: editCourseDuration || '۱۲ ساعت',
-                    cost: price,
-                    capacity: parseInt(editCourseCapacity) || 30,
-                    startDate: editCourseStartDate,
-                    category: editCourseCategory,
-                    description: editCourseDescription || 'توضیحات دوره به زودی منتشر خواهد شد.',
-                }
-                : c,
-        ));
-        setEditingCourse(null);
-        showToast(`دوره کارگاهی "${editCourseTitle}" با موفقیت بروزرسانی گردید.`);
+        try {
+            const startDate = toEnglishDigits(editCourseStartDate);
+            const durationNum = parseInt(editCourseDuration.replace(/[^\d]/g, '')) || null;
+
+            const courseData = {
+                title: editCourseTitle,
+                instructor: editCourseLecturer,
+                amount: price,
+                capacity: parseInt(editCourseCapacity) || 30,
+                duration: durationNum,
+                start_date: startDate || null,
+                description: editCourseDescription || '',
+            };
+
+            const result = await api.updateCourse(parseInt(editingCourse.id), courseData);
+            const updated = mapCourse(result);
+            setCourses(prev => prev.map(c =>
+                c.id === editingCourse.id ? updated : c,
+            ));
+            setEditingCourse(null);
+            showToast(`دوره کارگاهی "${editCourseTitle}" با موفقیت بروزرسانی گردید.`);
+        } catch (error: any) {
+            const msg = error?.errors ? Object.values(error.errors).flat().join(' — ') : error.message;
+            showToast(msg || 'خطا در بروزرسانی دوره', 'error');
+        }
     };
 
-    const handleToggleCourseStatus = (id: string) => {
-        setCourses(prev =>
-            prev.map(c => {
-                if (c.id === id) {
-                    const nextStatus = c.status === 'ended' ? 'active' : 'ended';
-                    showToast(
-                        nextStatus === 'active'
-                            ? `دوره "${c.title}" مجدداً فعال گردید.`
-                            : `دوره "${c.title}" غیرفعال (پایان‌یافته) گردید.`,
-                        'info',
-                    );
-                    return { ...c, status: nextStatus };
-                }
-                return c;
-            }),
-        );
+    const handleToggleCourseStatus = async (id: string) => {
+        try {
+            const result = await api.toggleCourseActive(parseInt(id));
+            const updated = mapCourse(result);
+            setCourses(prev => prev.map(c => c.id === id ? updated : c));
+            showToast(
+                updated.status === 'active'
+                    ? `دوره "${updated.title}" مجدداً فعال گردید.`
+                    : `دوره "${updated.title}" غیرفعال (پایان‌یافته) گردید.`,
+                'info',
+            );
+        } catch (error: any) {
+            showToast(error.message || 'خطا در تغییر وضعیت دوره', 'error');
+        }
     };
 
     const handleDeleteCourse = (id: string) => {
@@ -338,13 +351,17 @@ export function useCourseCRUD(
         setCourseToDelete(course);
     };
 
-    const confirmDeleteCourse = () => {
+    const confirmDeleteCourse = async () => {
         if (!courseToDelete) return;
-        const id = courseToDelete.id;
-        setCourses(prev => prev.filter(c => c.id !== id));
-        setRegistrants(prev => prev.filter(r => r.courseId !== id));
-        showToast(`دوره آموزشی "${courseToDelete.title}" با موفقیت حذف گردید.`, 'info');
-        setCourseToDelete(null);
+        try {
+            await api.deleteCourse(parseInt(courseToDelete.id));
+            setCourses(prev => prev.filter(c => c.id !== courseToDelete.id));
+            setRegistrants(prev => prev.filter(r => r.courseId !== courseToDelete.id));
+            showToast(`دوره آموزشی "${courseToDelete.title}" با موفقیت حذف گردید.`, 'info');
+            setCourseToDelete(null);
+        } catch (error: any) {
+            showToast(error.message || 'خطا در حذف دوره', 'error');
+        }
     };
 
     const handleCopyCourseUrl = (course: TutCourse) => {

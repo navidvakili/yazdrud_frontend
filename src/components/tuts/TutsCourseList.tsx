@@ -10,9 +10,10 @@ import {
     Check, FileText as FileTextIcon,
 } from 'lucide-react';
 import type { TutCourse, TutVoucher, TutRegistrant, ToastMessage } from './tuts-types';
-import { toPersianDigits, formatCurrency } from './tuts-utils';
+import { toPersianDigits, formatCurrency, formatCostInput } from './tuts-utils';
 import { LoadingSpinner } from './tuts-components';
 import Pagination from '../Pagination';
+import { JalaliDatepicker } from './JalaliDatepicker';
 
 interface TutsCourseListProps {
     // User & Role
@@ -735,7 +736,7 @@ export default function TutsCourseList(props: TutsCourseListProps) {
                                     </div>
                                     <div>
                                         <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">شهریه ثبت‌نام (ریال) *</label>
-                                        <input type="text" required value={newCourseCost} onChange={(e) => setNewCourseCost(e.target.value)}
+                                        <input type="text" required value={newCourseCost} onChange={(e) => setNewCourseCost(formatCostInput(e.target.value))}
                                             placeholder="مثال: ۴,۵۰۰,۰۰۰"
                                             className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none" />
                                     </div>
@@ -749,9 +750,7 @@ export default function TutsCourseList(props: TutsCourseListProps) {
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">تاریخ شروع دوره</label>
-                                        <input type="text" value={newCourseStartDate} onChange={(e) => setNewCourseStartDate(e.target.value)}
-                                            placeholder="۱۴۰۵/۰۵/۱۵"
-                                            className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none" />
+                                        <JalaliDatepicker value={newCourseStartDate} onChange={setNewCourseStartDate} />
                                     </div>
                                 </div>
                                 <div>
@@ -827,7 +826,7 @@ export default function TutsCourseList(props: TutsCourseListProps) {
                                     </div>
                                     <div>
                                         <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">شهریه ثبت‌نام (ریال) *</label>
-                                        <input type="text" required value={editCourseCost} onChange={(e) => setEditCourseCost(e.target.value)}
+                                        <input type="text" required value={editCourseCost} onChange={(e) => setEditCourseCost(formatCostInput(e.target.value))}
                                             placeholder="مثال: ۴,۵۰۰,۰۰۰"
                                             className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none" />
                                     </div>
@@ -841,9 +840,7 @@ export default function TutsCourseList(props: TutsCourseListProps) {
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">تاریخ شروع دوره</label>
-                                        <input type="text" value={editCourseStartDate} onChange={(e) => setEditCourseStartDate(e.target.value)}
-                                            placeholder="۱۴۰۵/۰۵/۱۵"
-                                            className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none" />
+                                        <JalaliDatepicker value={editCourseStartDate} onChange={setEditCourseStartDate} />
                                     </div>
                                 </div>
                                 <div>
