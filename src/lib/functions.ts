@@ -43,10 +43,13 @@ export const API = async <T = any>(URL: string, params: any = {}, method: string
     networkStatus.reportApiFailure();
     throw error;
   }
-  networkStatus.reportApiSuccess();
+  // Only report success for actual network success — 4xx/5xx are not network failures
+  if (response.status >= 200 && response.status < 300) {
+    networkStatus.reportApiSuccess();
+  }
 
   // Handle 401 Unauthorized — اما نه برای لاگین (اجازه بده LoginForm مدیریت کند)
-  if (response.status === 401 && !URL.includes('/login')) {
+  if (response.status === 401 && !url.includes('/login')) {
     localStorage.removeItem(TOKEN_STRING);
     localStorage.removeItem(USER_STRING);
     window.location.reload();
