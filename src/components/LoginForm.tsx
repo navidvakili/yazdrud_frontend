@@ -213,75 +213,12 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
   return (
     <div className="min-h-screen flex relative overflow-hidden bg-white">
       {/* =====================================================================
-          TWO-PANEL LAYOUT: Branding (right, RTL — سبز) | Login Form (left — سفید)
+          TWO-PANEL LAYOUT: Login Form (left) | Branding (right)
           ===================================================================== */}
       <div className="w-full min-h-screen grid grid-cols-1 lg:grid-cols-12">
 
-        {/* ===== RIGHT PANEL: Branding & University Info (6 cols) — سبز ===== */}
-        <div
-          className="lg:col-span-6 flex flex-col justify-center px-6 sm:px-10 lg:px-16 py-10 order-2 lg:order-1"
-          style={{
-            background: 'linear-gradient(135deg, #0d9488 0%, #115e59 50%, #134e4a 100%)',
-          }}
-        >
-          <motion.div
-            initial={{ opacity: 0, x: -30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6, delay: 0.1 }}
-            className="max-w-xl"
-          >
-            {/* Badge */}
-            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-teal-500/30 text-teal-100 text-xs font-bold mb-5 backdrop-blur-md">
-              <GraduationCap className="w-4 h-4 shrink-0 text-teal-300" />
-              <span>نرم‌افزار یکپارچهٔ مدیریت دانشگاهی</span>
-            </div>
-
-            {/* Headline */}
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white leading-tight sm:leading-snug mb-4">
-              سامانه جامع آموزش،
-              <br />
-              پژوهش و امور مالی
-            </h1>
-
-            <p className="text-teal-50/70 text-sm sm:text-base leading-7 sm:leading-8 mb-8 text-justify">
-              پرتال یکپارچه دانشگاه علم و هنر، بستری امن و هوشمند برای مدیریت تمامی فرآیندهای آموزشی، پژوهشی و مالی دانشگاه.
-              با استفاده از این سامانه، اساتید، دانشجویان و کارکنان می‌توانند به سادگی به خدمات مورد نیاز خود دسترسی داشته باشند.
-            </p>
-
-            {/* Feature items */}
-            <div className="flex flex-col gap-4 mb-10">
-              {[
-                { title: 'مدیریت دوره‌های آموزشی', desc: 'ثبت‌نام، برنامه‌ریزی و پایش پیشرفت تحصیلی' },
-                { title: 'پروفایل یکپارچه', desc: 'مدیریت اطلاعات فردی، تحصیلی و اداری در یک جا' },
-                { title: 'گزارش‌های هوشمند', desc: 'داشبوردهای تحلیلی برای تصمیم‌گیری بهتر' },
-              ].map((item, index) => (
-                <div key={index} className="flex items-start gap-3 text-right">
-                  <div className="w-6 h-6 rounded-full bg-teal-400/20 flex items-center justify-center shrink-0 mt-0.5">
-                    <div className="w-2 h-2 rounded-full bg-teal-300" />
-                  </div>
-                  <div>
-                    <h4 className="text-white text-sm font-bold mb-0.5">{item.title}</h4>
-                    <p className="text-teal-100/60 text-xs leading-5">{item.desc}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* University footer link */}
-            <div className="flex items-center gap-4 border-t border-white/10 pt-6">
-              <div className="w-10 h-10 rounded-xl bg-teal-500/20 flex items-center justify-center text-teal-300 font-black text-sm">
-                SAU
-              </div>
-              <div className="flex flex-col">
-                <span className="text-xs text-white font-bold">دانشگاه علم و هنر یزد</span>
-                <span className="text-[10px] text-teal-200/50">دانشگاه علم و هنر</span>
-              </div>
-            </div>
-          </motion.div>
-        </div>
-
         {/* ===== LEFT PANEL: Login Form (6 cols) — سفید ===== */}
-        <div className="lg:col-span-6 flex items-center justify-center px-6 sm:px-10 py-10 order-1 lg:order-2 bg-white">
+        <div className="lg:col-span-6 flex items-center justify-center px-6 sm:px-10 py-10 order-1 lg:order-1 bg-white">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -304,22 +241,15 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
                 </p>
               </div>
 
-              {/* Error message */}
-              <AnimatePresence>
-                {error && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="mb-5 p-3 rounded-xl bg-rose-50 border border-rose-200 flex items-start gap-2.5"
-                  >
-                    <AlertCircle className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
-                    <span className="text-xs font-medium text-rose-700">
-                      {error}
-                    </span>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+              {/* Error message — plain conditional, no animation */}
+              {error && (
+                <div key="login-error" className="mb-5 p-3 rounded-xl bg-rose-50 border border-rose-200 flex items-start gap-2.5 shadow-sm">
+                  <AlertCircle className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
+                  <span className="text-xs font-medium text-rose-700 leading-relaxed">
+                    {error}
+                  </span>
+                </div>
+              )}
 
               {/* Login Form */}
               <form onSubmit={handleSubmit} className="space-y-4">
@@ -427,6 +357,67 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
                 >
                   برنامه نویس و توسعه دهنده توسط شرکت فناوری اطلاعات کارانت
                 </a>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+
+        {/* ===== RIGHT PANEL: Branding & University Info (6 cols) — سبز ===== */}
+        <div
+          className="lg:col-span-6 flex flex-col justify-center px-6 sm:px-10 lg:px-16 py-10 order-2 lg:order-2"
+          style={{
+            background: 'linear-gradient(135deg, #0d9488 0%, #115e59 50%, #134e4a 100%)',
+          }}
+        >
+          <motion.div
+            initial={{ opacity: 0, x: 30 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.6, delay: 0.1 }}
+            className="max-w-xl"
+          >
+            {/* Badge */}
+            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-teal-500/30 text-teal-100 text-xs font-bold mb-5 backdrop-blur-md">
+              <GraduationCap className="w-4 h-4 shrink-0 text-teal-300" />
+              <span>نرم‌افزار یکپارچهٔ مدیریت دانشگاهی یکتا</span>
+            </div>
+
+            {/* Headline */}
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white leading-tight sm:leading-snug mb-4">
+              سامانه جامع آموزش، پژوهش و امور مالی
+            </h1>
+
+            <p className="text-teal-50/70 text-sm sm:text-base leading-7 sm:leading-8 mb-8 text-justify">
+              پرتال یکپارچه دانشگاه علم و هنر، بستری امن و هوشمند برای مدیریت تمامی فرآیندهای آموزشی، پژوهشی و مالی دانشگاه.
+              با استفاده از این سامانه، اساتید، دانشجویان و کارکنان می‌توانند به سادگی به خدمات مورد نیاز خود دسترسی داشته باشند.
+            </p>
+
+            {/* Feature items */}
+            <div className="flex flex-col gap-4 mb-10">
+              {[
+                { title: 'خدمات جامع آموزشی، مالی و رفاهی', desc: 'مدیریت پایان‌نامه‌ها و مصاحبه‌های دکتری، پرداخت شهریه و درخواست وام، خوابگاه‌ها، رویدادهای دانشجویی و انتخابات انجمن‌ها' },
+                { title: 'پروفایل یکپارچه', desc: 'مدیریت اطلاعات فردی، تحصیلی و اداری در یک جا' },
+                { title: 'گزارش‌های هوشمند', desc: 'داشبوردهای تحلیلی برای تصمیم‌گیری بهتر' },
+              ].map((item, index) => (
+                <div key={index} className="flex items-start gap-3 text-right">
+                  <div className="w-6 h-6 rounded-full bg-teal-400/20 flex items-center justify-center shrink-0 mt-0.5">
+                    <div className="w-2 h-2 rounded-full bg-teal-300" />
+                  </div>
+                  <div>
+                    <h4 className="text-white text-sm font-bold mb-0.5">{item.title}</h4>
+                    <p className="text-teal-100/60 text-xs leading-5">{item.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* University footer link */}
+            <div className="flex items-center gap-4 border-t border-white/10 pt-6">
+              <div className="w-10 h-10 rounded-xl bg-teal-500/20 flex items-center justify-center text-teal-300 font-black text-sm">
+                SAU
+              </div>
+              <div className="flex flex-col">
+                <span className="text-xs text-white font-bold">دانشگاه علم و هنر </span>
+                <span className="text-[10px] text-teal-200/50">وزارت علوم، تحقیقات و فناوری</span>
               </div>
             </div>
           </motion.div>
