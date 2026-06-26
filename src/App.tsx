@@ -32,6 +32,7 @@ import LogoutModal from '@/src/components/LogoutModal';
 import StandbyModal from '@/src/components/StandbyModal';
 import TabLimitAlert from '@/src/components/TabLimitAlert';
 import SessionWarningModal from '@/src/components/SessionWarningModal';
+import NetworkStatus from '@/src/components/NetworkStatus';
 
 export default function App() {
   // ========== Core State ==========
@@ -660,6 +661,9 @@ export default function App() {
 
       {/* ===== Footer ===== */}
       <Footer user={user} />
+
+      {/* Network status bar — fixed at bottom */}
+      <NetworkStatus />
 
       {/* Logout confirmation modal */}
       <LogoutModal

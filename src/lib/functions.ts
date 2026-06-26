@@ -3,6 +3,7 @@
 // ============================================================
 
 import { API_BASE_URL, BACKEND_API_URL, TOKEN_STRING, USER_STRING, SIGNS_STORAGE_PATH } from './constants';
+import { networkStatus } from './networkStatus';
 
 // ========== Core API Function ==========
 
@@ -35,7 +36,14 @@ export const API = async <T = any>(URL: string, params: any = {}, method: string
     options.body = JSON.stringify(params);
   }
 
-  const response = await fetch(url, options);
+  let response: Response;
+  try {
+    response = await fetch(url, options);
+  } catch (error) {
+    networkStatus.reportApiFailure();
+    throw error;
+  }
+  networkStatus.reportApiSuccess();
 
   // Handle 401 Unauthorized — اما نه برای لاگین (اجازه بده LoginForm مدیریت کند)
   if (response.status === 401 && !URL.includes('/login')) {
@@ -76,11 +84,18 @@ export const APISendFiles = async <T = any>(URL: string, formData: FormData): Pr
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers,
-    body: formData,
-  });
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+  } catch (error) {
+    networkStatus.reportApiFailure();
+    throw error;
+  }
+  networkStatus.reportApiSuccess();
 
   if (!response.ok) {
     throw new Error(`HTTP error! status: ${response.status}`);
@@ -111,7 +126,14 @@ export const downloadFile = async (URL: string, filename: string | null = null):
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const response = await fetch(url, { method: 'GET', headers });
+  let response: Response;
+  try {
+    response = await fetch(url, { method: 'GET', headers });
+  } catch (error) {
+    networkStatus.reportApiFailure();
+    throw error;
+  }
+  networkStatus.reportApiSuccess();
 
   if (!response.ok) {
     throw new Error('Failed to download file');
