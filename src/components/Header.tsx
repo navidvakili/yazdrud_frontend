@@ -4,7 +4,7 @@
 
 import { useState } from 'react';
 import {
-  Search, X, User, Check, LogOut,
+  Search, X, User, Check, LogOut, Menu,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import type { User as UserType, Tab, RoleInfo } from '@/src/types';
@@ -22,12 +22,13 @@ interface HeaderProps {
   handleToggleTheme: () => void;
   handleChangeRole: (role: string) => void;
   setShowLogoutModal: (show: boolean) => void;
+  setIsMobileMenuOpen: (open: boolean) => void;
 }
 
 export default function Header({
   user, userRoles, menuCategories, tabs, theme,
   handleOpenTab, setSelectedMainCat,
-  handleToggleTheme, handleChangeRole, setShowLogoutModal,
+  handleToggleTheme, handleChangeRole, setShowLogoutModal, setIsMobileMenuOpen,
 }: HeaderProps) {
   const [menuSearchQuery, setMenuSearchQuery] = useState('');
   const [showUserDropdown, setShowUserDropdown] = useState(false);
@@ -36,6 +37,14 @@ export default function Header({
     <header className="p-3.5 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 shrink-0 flex items-center justify-between">
       {/* Logo */}
       <div className="flex items-center gap-3">
+        {/* Hamburger button — visible on mobile only */}
+        <button
+          onClick={() => setIsMobileMenuOpen(true)}
+          className="lg:hidden p-2 rounded-xl text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all cursor-pointer"
+          title="منوی اصلی"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
         <img src="/logo_nika.png" alt="نیکا" className="h-9 w-auto" />
         <div>
           <h1 className="font-black text-sm text-gray-900 dark:text-white">

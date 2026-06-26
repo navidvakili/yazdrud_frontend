@@ -125,7 +125,7 @@ export default function TutsStats(props: TutsStatsProps) {
     const totalGrossRevenue = courses.reduce((sum, c) => sum + (c.enrolled * c.cost), 0);
 
     // Year options: from 1400 to current Jalali year
-    const currentJalaliYear = 1405; // ~= 2026
+    const currentJalaliYear = new Date().getFullYear() - 621; // approx conversion
     const yearOptions: string[] = [];
     for (let y = 1400; y <= currentJalaliYear; y++) {
         yearOptions.push(y.toString());

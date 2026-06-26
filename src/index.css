@@ -169,6 +169,23 @@
   box-shadow: 0 0 15px rgba(20, 184, 166, 0.1);
 }
 
+/* Slide-in from right (for mobile sidebar — RTL layout) */
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.3s ease-out;
+}
+
 /* Direction utilities */
 .ltr-dir {
   direction: ltr;

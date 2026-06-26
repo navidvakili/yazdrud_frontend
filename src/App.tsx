@@ -63,6 +63,9 @@ export default function App() {
   // Pinned menus for dashboard quick access
   const [pinnedMenus, setPinnedMenus] = useState<string[]>([]);
 
+  // Mobile sidebar state
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
   // ========== Effects ==========
 
   // Apply theme to DOM + persist to localStorage + save to backend profile
@@ -471,6 +474,7 @@ export default function App() {
         handleToggleTheme={handleToggleTheme}
         handleChangeRole={handleChangeRole}
         setShowLogoutModal={setShowLogoutModal}
+        setIsMobileMenuOpen={setIsMobileMenuOpen}
       />
 
       {/* ===== 2. Three-Column Layout ===== */}
@@ -485,6 +489,8 @@ export default function App() {
           handleOpenTab={handleOpenTab}
           tabs={tabs}
           activeTabId={activeTabId}
+          isMobileMenuOpen={isMobileMenuOpen}
+          setIsMobileMenuOpen={setIsMobileMenuOpen}
         />
 
         {/* ===== Column B: Main Workspace ===== */}
@@ -521,7 +527,7 @@ export default function App() {
         </div>
 
         {/* ===== Column C: Auxiliary Tools ===== */}
-        <div className="border-r border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shrink-0 flex flex-col justify-between items-center py-4 z-45">
+        <div className="hidden lg:flex border-r border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shrink-0 flex-col justify-between items-center py-4 z-45">
           <div className="space-y-4 px-2">
             <button
               onClick={() => setActivePanel(activePanel === 'chat' ? null : 'chat')}
