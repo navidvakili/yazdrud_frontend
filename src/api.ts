@@ -493,6 +493,47 @@ class ApiService {
     }
     return response.blob();
   }
+
+  // ========== Session Warnings (Concurrent Login) ==========
+
+  /**
+   * Create a session warning for concurrent login attempt (unauthenticated).
+   * Returns warning_id and poll_token. Sends browser fingerprint data.
+   */
+  async createSessionWarning(username: string, password: string, browserFingerprint?: string): Promise<{ warning_id: number; poll_token: string }> {
+    const data = await API<any>('session-warnings', { username, password, browser_fingerprint: browserFingerprint }, 'POST');
+    return data.data;
+  }
+
+  /**
+   * Check the status of a session warning (unauthenticated, uses poll_token as query param).
+   */
+  async checkSessionWarningStatus(warningId: number, pollToken: string): Promise<{ status: string }> {
+    const data = await API<any>(`session-warnings/${warningId}/status?poll_token=${encodeURIComponent(pollToken)}`, {}, 'GET');
+    return data.data;
+  }
+
+  /**
+   * Get pending warnings for the current user (authenticated, old session polling).
+   * Each warning includes device info about the new login attempt.
+   */
+  async getPendingWarnings(): Promise<{
+    id: number;
+    created_at: string;
+    ip_address: string | null;
+    user_agent: string | null;
+    browser_fingerprint: string | null;
+  }[]> {
+    const data = await API<any>('session-warnings/pending');
+    return data.data;
+  }
+
+  /**
+   * Respond to a session warning (accept or reject) - authenticated.
+   */
+  async respondToWarning(warningId: number, status: 'accepted' | 'rejected'): Promise<void> {
+    await API(`session-warnings/${warningId}/respond`, { status }, 'POST');
+  }
 }
 
 export const api = new ApiService();

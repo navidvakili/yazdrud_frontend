@@ -2,7 +2,7 @@
 // LoginForm — فرم ورود با اتصال به API واقعی
 // ============================================================
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   User,
@@ -15,8 +15,11 @@ import {
   AlertTriangle,
   X,
   GraduationCap,
+  Send,
+  Clock,
 } from 'lucide-react';
 import api from '@/src/api';
+import { getBrowserFingerprint } from '@/src/lib/functions';
 import type { User as UserType } from '@/src/types';
 
 interface LoginFormProps {
@@ -31,6 +34,16 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [remember, setRemember] = useState(false);
   const [concurrentSession, setConcurrentSession] = useState<{ username: string; password: string } | null>(null);
+
+  // Warning-based concurrent login flow (3rd button)
+  const [warningState, setWarningState] = useState<{
+    warningId: number;
+    pollToken: string;
+    username: string;
+    password: string;
+  } | null>(null);
+  const [warningError, setWarningError] = useState<string | null>(null);
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const handleForceLogin = async () => {
     if (!concurrentSession) return;
@@ -56,6 +69,88 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
   const cancelConcurrentSession = () => {
     setConcurrentSession(null);
   };
+
+  // ===== Warning-based concurrent login (3rd button) =====
+
+  const handleWarningLogin = async () => {
+    if (!concurrentSession) return;
+    const { username, password } = concurrentSession;
+    setWarningError(null);
+    const fingerprint = getBrowserFingerprint();
+    try {
+      const result = await api.createSessionWarning(username, password, fingerprint);
+      setWarningState({
+        warningId: result.warning_id,
+        pollToken: result.poll_token,
+        username,
+        password,
+      });
+      setConcurrentSession(null); // Close the old modal
+    } catch (err: any) {
+      if (err.status === 401) {
+        setWarningError('نام کاربری یا گذرواژه اشتباه است.');
+      } else if (err.status === 400 && err.errors?.no_active_session) {
+        // No active session anymore — just do force login
+        try {
+          const response = await api.login({ username, password, force: true });
+          onLoginSuccess(response.user);
+        } catch {
+          setWarningError('خطا در ورود. لطفاً دوباره تلاش کنید.');
+        }
+      } else {
+        setWarningError(err.message || 'خطا در ایجاد هشدار. لطفاً دوباره تلاش کنید.');
+      }
+    }
+  };
+
+  // Poll for warning status when warningState is set
+  useEffect(() => {
+    if (!warningState) {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
+      }
+      return;
+    }
+
+    pollingRef.current = setInterval(async () => {
+      try {
+        const result = await api.checkSessionWarningStatus(warningState.warningId, warningState.pollToken);
+        if (result.status === 'accepted') {
+          // Old session accepted — proceed with force login
+          if (pollingRef.current) {
+            clearInterval(pollingRef.current);
+            pollingRef.current = null;
+          }
+          setWarningState(null);
+          try {
+            const response = await api.login({ username: warningState.username, password: warningState.password, force: true });
+            onLoginSuccess(response.user);
+          } catch {
+            setWarningError('خطا در ورود. لطفاً دوباره تلاش کنید.');
+          }
+        } else if (result.status === 'rejected') {
+          // Old session rejected
+          if (pollingRef.current) {
+            clearInterval(pollingRef.current);
+            pollingRef.current = null;
+          }
+          setWarningState(null);
+          setWarningError('درخواست ورود شما توسط نشست قبلی رد شد.');
+        }
+        // If 'pending', keep polling
+      } catch {
+        // Polling error — ignore and retry
+      }
+    }, 3000);
+
+    return () => {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
+      }
+    };
+  }, [warningState, onLoginSuccess]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -342,22 +437,111 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
               </h3>
               <p className="text-sm text-gray-600 leading-relaxed mb-6">
                 این کاربر در حال حاضر در دستگاه دیگری وارد سیستم شده است.
-                اگر ادامه دهید، نشست (session) قبلی باطل خواهد شد.
+                لطفاً یکی از گزینه‌های زیر را انتخاب کنید:
               </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={cancelConcurrentSession}
-                  className="flex-1 py-2.5 rounded-xl border border-gray-300 text-gray-700 text-sm font-bold hover:bg-gray-50 transition-all cursor-pointer"
-                >
-                  انصراف
-                </button>
+              <div className="flex flex-col gap-2">
                 <button
                   onClick={handleForceLogin}
-                  className="flex-1 py-2.5 rounded-xl bg-amber-500 text-white text-sm font-bold hover:bg-amber-600 transition-all shadow-lg cursor-pointer"
+                  className="w-full py-2.5 rounded-xl bg-amber-500 text-white text-sm font-bold hover:bg-amber-600 transition-all shadow-lg cursor-pointer"
                 >
                   ادامه و باطل کردن نشست قبلی
                 </button>
+                <button
+                  onClick={handleWarningLogin}
+                  className="w-full py-2.5 rounded-xl border border-teal-500 text-teal-700 text-sm font-bold hover:bg-teal-50 transition-all cursor-pointer"
+                >
+                  ادامه با هشدار به نشست موازی
+                </button>
+                <button
+                  onClick={cancelConcurrentSession}
+                  className="w-full py-2.5 rounded-xl border border-gray-300 text-gray-700 text-sm font-bold hover:bg-gray-50 transition-all cursor-pointer"
+                >
+                  انصراف
+                </button>
               </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ===== Waiting for Approval Modal ===== */}
+      <AnimatePresence>
+        {warningState && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 text-center"
+            >
+              <div className="w-14 h-14 rounded-full bg-teal-100 flex items-center justify-center mx-auto mb-4">
+                <Clock className="w-7 h-7 text-teal-600" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">
+                در انتظار تأیید
+              </h3>
+              <p className="text-sm text-gray-600 leading-relaxed mb-4">
+                برای نشست قبلی یک هشدار ارسال شد. لطفاً منتظر تأیید آن بمانید...
+              </p>
+              <div className="flex items-center justify-center gap-2 mb-4">
+                <Loader2 className="w-5 h-5 animate-spin text-teal-600" />
+                <span className="text-xs text-gray-500">در انتظار پاسخ نشست قبلی</span>
+              </div>
+              <button
+                onClick={() => {
+                  if (pollingRef.current) {
+                    clearInterval(pollingRef.current);
+                    pollingRef.current = null;
+                  }
+                  setWarningState(null);
+                  setWarningError(null);
+                }}
+                className="w-full py-2.5 rounded-xl border border-gray-300 text-gray-700 text-sm font-bold hover:bg-gray-50 transition-all cursor-pointer"
+              >
+                انصراف
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ===== Warning Error Modal ===== */}
+      <AnimatePresence>
+        {warningError && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+            onClick={() => setWarningError(null)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 text-center"
+            >
+              <div className="w-14 h-14 rounded-full bg-rose-100 flex items-center justify-center mx-auto mb-4">
+                <AlertCircle className="w-7 h-7 text-rose-600" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">
+                خطا
+              </h3>
+              <p className="text-sm text-gray-600 leading-relaxed mb-6">
+                {warningError}
+              </p>
+              <button
+                onClick={() => setWarningError(null)}
+                className="w-full py-2.5 rounded-xl bg-teal-600 text-white text-sm font-bold hover:bg-teal-700 transition-all shadow-lg cursor-pointer"
+              >
+                بازگشت
+              </button>
             </motion.div>
           </motion.div>
         )}

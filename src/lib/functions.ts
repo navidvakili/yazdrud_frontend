@@ -189,3 +189,31 @@ export const getAvatarUrl = (sign: string | null | undefined): string => {
   }
   return '/default-avatar.svg';
 };
+
+/**
+ * Collect browser fingerprint data to identify the current device/browser.
+ * Returns a JSON string with device and browser characteristics.
+ */
+export const getBrowserFingerprint = (): string => {
+  if (typeof window === 'undefined') return '{}';
+
+  const data: Record<string, any> = {
+    screenWidth: window.screen?.width,
+    screenHeight: window.screen?.height,
+    colorDepth: window.screen?.colorDepth,
+    pixelRatio: window.devicePixelRatio,
+    timezone: Intl.DateTimeFormat?.().resolvedOptions?.().timeZone,
+    language: navigator.language,
+    languages: navigator.languages,
+    platform: navigator.platform,
+    hardwareConcurrency: navigator.hardwareConcurrency,
+    deviceMemory: (navigator as any).deviceMemory,
+    cookieEnabled: navigator.cookieEnabled,
+    doNotTrack: navigator.doNotTrack,
+    maxTouchPoints: navigator.maxTouchPoints,
+    vendor: navigator.vendor,
+    productSub: navigator.productSub,
+  };
+
+  return JSON.stringify(data);
+};

@@ -30,6 +30,7 @@ import Footer from '@/src/components/Footer';
 import LogoutModal from '@/src/components/LogoutModal';
 import StandbyModal from '@/src/components/StandbyModal';
 import TabLimitAlert from '@/src/components/TabLimitAlert';
+import SessionWarningModal from '@/src/components/SessionWarningModal';
 
 export default function App() {
   // ========== Core State ==========
@@ -65,6 +66,16 @@ export default function App() {
 
   // Mobile sidebar state
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Session warning (concurrent login) state
+  const [pendingWarning, setPendingWarning] = useState<{
+    id: number;
+    ip_address: string | null;
+    user_agent: string | null;
+    browser_fingerprint: string | null;
+  } | null>(null);
+  const [warningRespondLoading, setWarningRespondLoading] = useState(false);
+  const warningPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // ========== Effects ==========
 
@@ -195,6 +206,66 @@ export default function App() {
       fetchPinnedMenus();
     }
   }, [viewState, fetchNavigation, fetchPinnedMenus]);
+
+  // ========== Session Warning Polling (Concurrent Login Detection) ==========
+  useEffect(() => {
+    if (viewState !== 'authenticated') {
+      // Clear any pending warning and stop polling
+      setPendingWarning(null);
+      if (warningPollRef.current) {
+        clearInterval(warningPollRef.current);
+        warningPollRef.current = null;
+      }
+      return;
+    }
+
+    // Poll every 5 seconds for pending warnings
+    warningPollRef.current = setInterval(async () => {
+      try {
+        const warnings = await api.getPendingWarnings();
+        if (warnings && warnings.length > 0) {
+          const w = warnings[0];
+          setPendingWarning({
+            id: w.id,
+            ip_address: w.ip_address,
+            user_agent: w.user_agent,
+            browser_fingerprint: w.browser_fingerprint,
+          });
+        } else {
+          // No pending warnings, but don't clear if modal is showing
+          // (avoid flicker — user might be reading it)
+        }
+      } catch {
+        // Ignore polling errors
+      }
+    }, 5000);
+
+    return () => {
+      if (warningPollRef.current) {
+        clearInterval(warningPollRef.current);
+        warningPollRef.current = null;
+      }
+    };
+  }, [viewState]);
+
+  // Handle responding to a warning
+  const handleWarningRespond = useCallback(async (warningId: number, status: 'accepted' | 'rejected') => {
+    setWarningRespondLoading(true);
+    try {
+      await api.respondToWarning(warningId, status);
+      setPendingWarning(null);
+      if (status === 'accepted') {
+        // If we accepted, our tokens are revoked, so force logout
+        await handleLogout();
+        // Show a message that the session has been transferred
+      }
+    } catch {
+      // Error handling
+    } finally {
+      setWarningRespondLoading(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Derive MenuCategory[] from NavItem[] (dynamic API data)
   const menuCategories = useMemo<MenuCategory[]>(() => {
@@ -609,6 +680,13 @@ export default function App() {
         isStandby={isStandby}
         user={user}
         onUnlock={handleUnlock}
+      />
+
+      {/* Session Warning Modal (concurrent login detection) */}
+      <SessionWarningModal
+        warning={pendingWarning}
+        onRespond={handleWarningRespond}
+        isLoading={warningRespondLoading}
       />
     </div>
   );
