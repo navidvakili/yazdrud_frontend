@@ -537,6 +537,24 @@ class ApiService {
     await API(`session-warnings/${warningId}/respond`, { status }, 'POST');
   }
 
+  /**
+   * Login after warning accepted — creates a new token without revoking old ones.
+   * Called by Browser 2 after Browser 1 has accepted the parallel session warning.
+   */
+  async sessionWarningLogin(warningId: number, pollToken: string, browserFingerprint?: string): Promise<AuthResponse> {
+    const data = await API<any>('session-warnings/login', {
+      warning_id: warningId,
+      poll_token: pollToken,
+      browser_fingerprint: browserFingerprint,
+    }, 'POST');
+    const responseData = data.data;
+    const user = this.mapBackendUser(responseData.user);
+    const token: string = responseData.access_token;
+    localStorage.setItem(TOKEN_STRING, token);
+    localStorage.setItem(USER_STRING, JSON.stringify(user));
+    return { token, user };
+  }
+
   // ========== Active Sessions Management ==========
 
   /**
