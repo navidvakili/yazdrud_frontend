@@ -42,6 +42,12 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
     username: string;
     password: string;
   } | null>(null);
+  const [acceptedState, setAcceptedState] = useState<{
+    warningId: number;
+    pollToken: string;
+    username: string;
+    password: string;
+  } | null>(null);
   const [warningError, setWarningError] = useState<string | null>(null);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -68,6 +74,27 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
 
   const cancelConcurrentSession = () => {
     setConcurrentSession(null);
+  };
+
+  const handleAcceptedLogin = async () => {
+    if (!acceptedState) return;
+    setIsLoading(true);
+    const fingerprint = getBrowserFingerprint();
+    try {
+      const response = await api.sessionWarningLogin(acceptedState.warningId, acceptedState.pollToken, fingerprint);
+      setAcceptedState(null);
+      onLoginSuccess(response.user);
+    } catch (err: any) {
+      if (err.status === 409) {
+        setError('نشست قبلی دیگر معتبر نیست. لطفاً دوباره تلاش کنید.');
+      } else if (err.status === 404) {
+        setError('هشدار یافت نشد. ممکن است منقضی شده باشد.');
+      } else {
+        setError('خطا در ورود. لطفاً دوباره تلاش کنید.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // ===== Warning-based concurrent login (3rd button) =====
@@ -117,18 +144,13 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
       try {
         const result = await api.checkSessionWarningStatus(warningState.warningId, warningState.pollToken);
         if (result.status === 'accepted') {
-          // Old session accepted — proceed with force login
+          // Old session accepted — stop polling and show the proceed button
           if (pollingRef.current) {
             clearInterval(pollingRef.current);
             pollingRef.current = null;
           }
+          setAcceptedState({ warningId: warningState.warningId, pollToken: warningState.pollToken, username: warningState.username, password: warningState.password });
           setWarningState(null);
-          try {
-            const response = await api.login({ username: warningState.username, password: warningState.password, force: true });
-            onLoginSuccess(response.user);
-          } catch {
-            setWarningError('خطا در ورود. لطفاً دوباره تلاش کنید.');
-          }
         } else if (result.status === 'rejected') {
           // Old session rejected
           if (pollingRef.current) {
@@ -505,6 +527,64 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
               >
                 انصراف
               </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ===== Accepted — Click to Login Modal ===== */}
+      <AnimatePresence>
+        {acceptedState && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 text-center"
+            >
+              <div className="w-14 h-14 rounded-full bg-teal-100 flex items-center justify-center mx-auto mb-4">
+                <LogIn className="w-7 h-7 text-teal-600" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">
+                نشست قبلی تأیید شد
+              </h3>
+              <p className="text-sm text-gray-600 leading-relaxed mb-6">
+                نشست قبلی درخواست ورود شما را تأیید کرد. برای ورود به سامانه، دکمه زیر را کلیک کنید.
+              </p>
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={handleAcceptedLogin}
+                  disabled={isLoading}
+                  className="w-full py-2.5 rounded-xl bg-teal-600 text-white text-sm font-bold hover:bg-teal-700 transition-all shadow-lg flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      در حال ورود...
+                    </>
+                  ) : (
+                    <>
+                      <LogIn className="w-5 h-5" />
+                      ورود به سامانه
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={() => {
+                    setAcceptedState(null);
+                    setError('فرایند ورود لغو شد.');
+                  }}
+                  disabled={isLoading}
+                  className="w-full py-2.5 rounded-xl border border-gray-300 text-gray-700 text-sm font-bold hover:bg-gray-50 transition-all cursor-pointer"
+                >
+                  انصراف
+                </button>
+              </div>
             </motion.div>
           </motion.div>
         )}
