@@ -256,9 +256,8 @@ export default function App() {
       await api.respondToWarning(warningId, status);
       setPendingWarning(null);
       if (status === 'accepted') {
-        // If we accepted, our tokens are revoked, so force logout
-        await handleLogout();
-        // Show a message that the session has been transferred
+        // Permission granted — new session can proceed with force login.
+        // Current session stays active until the new session actually logs in.
       }
     } catch {
       // Error handling
