@@ -7,7 +7,7 @@ import {
   Calendar, DollarSign, FileText, Smile, MessageSquare as MessageSquareIcon,
   Sparkles, Heart, CreditCard, Building, Folder, ShieldCheck, Layers,
   Upload, Settings, Clock, Home, GraduationCap, Bell, HelpCircle,
-  Search, X, LogOut, Plus, LayoutDashboard, ChevronLeft,
+  Search, X, LogOut, Plus, LayoutDashboard, ChevronLeft, Globe,
   type LucideIcon,
 } from 'lucide-react';
 import type { PortalNotification } from '@/src/types';
@@ -68,6 +68,7 @@ export const faToLucideName: Record<string, string> = {
   'fa fa-layers': 'Layers',
   'fa fa-clock': 'Clock',
   'fa fa-award': 'Award',
+  'fa fa-globe': 'Globe',
   'fa fa-briefcase': 'Briefcase',
   'fa fa-check-circle': 'CheckCircle',
   'fa fa-smile': 'Smile',

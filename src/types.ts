@@ -307,3 +307,37 @@ export interface ReceiptReview {
   status: string;
   rejection_reason?: string;
 }
+
+// ============================================================
+// Active Sessions Management
+// ============================================================
+
+export interface ActiveSession {
+  token_id: string;
+  ip_address: string | null;
+  user_agent: string | null;
+  browser_fingerprint: string | null;
+  browser: string;
+  platform: string;
+  login_at: string;
+  updated_at: string;
+  expires_at: string | null;
+  is_current: boolean;
+}
+
+export interface AdminSession extends ActiveSession {
+  user_id: string;
+  full_name: string;
+  role: string;
+}
+
+export interface UserSessionsResponse {
+  data: {
+    current_session: ActiveSession | null;
+    other_sessions: ActiveSession[];
+  };
+}
+
+export interface AdminSessionsResponse {
+  data: AdminSession[];
+}

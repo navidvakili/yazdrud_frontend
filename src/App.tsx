@@ -22,6 +22,7 @@ import FinancialManagement from '@/src/components/FinancialManagement';
 import ThesisManagement from '@/src/components/ThesisManagement';
 import LegacyModules from '@/src/components/LegacyModules';
 import TutsModule from '@/src/components/TutsModule';
+import AdminSessionsPanel from '@/src/components/AdminSessionsPanel';
 import FloatingPanels from '@/src/components/FloatingPanels';
 import Header from '@/src/components/Header';
 import Sidebar from '@/src/components/Sidebar';
@@ -507,6 +508,8 @@ export default function App() {
       case 'theses-scientific':
       case 'theses-permits':
         return <ThesisManagement userRole={user?.role || 'student'} initialView={moduleType} />;
+      case 'admin-sessions':
+        return <AdminSessionsPanel />;
       default:
         const activeSub = menuCategories
           .flatMap(cat => cat.submenus || [])

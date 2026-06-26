@@ -4,8 +4,8 @@
 
 import { API } from '@/src/lib/functions';
 import { API_BASE_URL, TOKEN_STRING, USER_STRING } from '@/src/lib/constants';
-import type { AuthResponse, LoginCredentials, User, UserRole, NavItem, NavResponse, UserRolesResponse, PermissionsResponse, RoleInfo, PermissionItem, Course, CourseGroup, CourseRegistration, CourseStats, DetailedCourseStats, CourseSurvey, CourseSurveyStats, CourseCoupon } from '@/src/types';
-import { getAvatarUrl } from '@/src/lib/functions';
+import type { AuthResponse, LoginCredentials, User, UserRole, NavItem, NavResponse, UserRolesResponse, PermissionsResponse, RoleInfo, PermissionItem, Course, CourseGroup, CourseRegistration, CourseStats, DetailedCourseStats, CourseSurvey, CourseSurveyStats, CourseCoupon, ActiveSession, AdminSession, UserSessionsResponse, AdminSessionsResponse } from '@/src/types';
+import { getAvatarUrl, getBrowserFingerprint } from '@/src/lib/functions';
 
 class ApiService {
   /**
@@ -38,8 +38,10 @@ class ApiService {
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
     // Remove force from payload, pass as separate flag if needed
     const { force, ...payload } = credentials;
+    // Collect browser fingerprint and send to backend
+    const fingerprint = getBrowserFingerprint();
     // Backend expects force as a form param
-    const data = await API<any>('login', { ...payload, force }, 'POST');
+    const data = await API<any>('login', { ...payload, force, browser_fingerprint: fingerprint }, 'POST');
     // Backend returns: { message: "...", data: { user: {...}, access_token: "...", token_type: "..." } }
     const responseData = data.data;
     const user = this.mapBackendUser(responseData.user);
@@ -533,6 +535,40 @@ class ApiService {
    */
   async respondToWarning(warningId: number, status: 'accepted' | 'rejected'): Promise<void> {
     await API(`session-warnings/${warningId}/respond`, { status }, 'POST');
+  }
+
+  // ========== Active Sessions Management ==========
+
+  /**
+   * Get current user's active sessions.
+   */
+  async getActiveSessions(): Promise<UserSessionsResponse> {
+    const data = await API<any>('user/sessions');
+    return data;
+  }
+
+  /**
+   * Revoke a specific session (token) for the current user.
+   */
+  async revokeSession(tokenId: string): Promise<{ message: string }> {
+    const data = await API<any>(`user/sessions/${tokenId}/revoke`, {}, 'POST');
+    return data;
+  }
+
+  /**
+   * Admin: Get all active sessions across all users.
+   */
+  async getAllActiveSessions(): Promise<AdminSessionsResponse> {
+    const data = await API<any>('admin/sessions');
+    return data;
+  }
+
+  /**
+   * Admin: Revoke any user's session.
+   */
+  async adminRevokeSession(tokenId: string): Promise<{ message: string }> {
+    const data = await API<any>(`admin/sessions/${tokenId}/revoke`, {}, 'POST');
+    return data;
   }
 }
 
