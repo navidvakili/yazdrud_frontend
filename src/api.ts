@@ -222,12 +222,13 @@ class ApiService {
   /**
    * Get all registrations (with optional filters).
    */
-  async getAllRegistrations(params?: { course_id?: number; status?: string; page?: number; per_page?: number }): Promise<{ data: CourseRegistration[]; meta: any }> {
+  async getAllRegistrations(params?: { course_id?: number; status?: string; page?: number; per_page?: number; payment_method?: string }): Promise<{ data: CourseRegistration[]; meta: any }> {
     const query = new URLSearchParams();
     if (params?.course_id) query.set('course_id', String(params.course_id));
     if (params?.status) query.set('status', params.status);
     if (params?.page) query.set('page', String(params.page));
     if (params?.per_page) query.set('per_page', String(params.per_page));
+    if (params?.payment_method) query.set('payment_method', params.payment_method);
     const qs = query.toString();
     const url = qs ? `courses/registrations?${qs}` : 'courses/registrations';
     return API<any>(url);

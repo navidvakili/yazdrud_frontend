@@ -182,6 +182,26 @@ export default function TutsReceipts(props: TutsReceiptsProps) {
                                 </button>
                             </div>
 
+                            {/* Bank Receipt Image — تصویر فیش بانکی واریز شده */}
+                            {selectedReceiptForReview.bankReceipt && (
+                                <div className="rounded-2xl overflow-hidden border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-950">
+                                    <div className="text-[10px] font-bold text-gray-500 dark:text-gray-400 px-4 pt-3 pb-1 flex items-center gap-1.5">
+                                        <Info className="w-3 h-3" />
+                                        تصویر فیش بانکی واریز شده
+                                    </div>
+                                    <div
+                                        className="cursor-pointer"
+                                        onClick={() => window.open(selectedReceiptForReview.bankReceipt, '_blank')}
+                                    >
+                                        <img
+                                            src={selectedReceiptForReview.bankReceipt}
+                                            alt="تصویر فیش بانکی"
+                                            className="w-full h-auto max-h-[400px] object-contain"
+                                        />
+                                    </div>
+                                </div>
+                            )}
+
                             {/* SIMULATED SLIP / RECEIPT CARD */}
                             <div className="border border-indigo-500/15 rounded-3xl bg-gradient-to-br from-indigo-50/25 to-white dark:from-indigo-950/10 dark:to-gray-950 p-5 shadow-xs relative overflow-hidden text-right select-none">
                                 <div className="absolute top-12 left-1/2 -translate-x-1/2 text-center text-gray-200/25 dark:text-gray-800/15 text-5xl font-black rotate-12 uppercase">

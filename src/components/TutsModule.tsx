@@ -227,8 +227,17 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
 
   // ===== Lazy Data Fetching: each section fetches only its own data when activated =====
   const fetchedRef = useRef({ courses: false, registrants: false, surveys: false, vouchers: false });
+  const lastFetchModuleRef = useRef<string | null>(null);
 
   useEffect(() => {
+    // When switching between receipts tab (bank-only) and other tabs (all), re-fetch registrants
+    const wasReceiptsTab = lastFetchModuleRef.current === 'tuts-receipts';
+    const isNowReceiptsTab = moduleId === 'tuts-receipts';
+    if (fetchedRef.current.registrants && wasReceiptsTab !== isNowReceiptsTab) {
+      fetchedRef.current.registrants = false;
+    }
+    lastFetchModuleRef.current = moduleId;
+
     // Determine which data types are needed based on the active moduleId
     const needsCourses = moduleId === 'tuts-list' || moduleId === 'tuts-reports' || moduleId === 'tuts-stats' || moduleId === 'tuts-surveys';
     const needsRegistrants = moduleId === 'tuts-reports' || moduleId === 'tuts-receipts' || moduleId === 'tuts-stats';
@@ -250,7 +259,13 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     if (needsRegistrants && !fetchedRef.current.registrants) {
       setLoadingRegistrants(true);
       fetchedRef.current.registrants = true;
-      api.getAllRegistrations({ per_page: 10000 })
+      const isReceiptsTab = moduleId === 'tuts-receipts';
+      const params: Record<string, any> = { per_page: 10000 };
+      // For receipts tab, only fetch bank receipt payments (همانند پروژه قدیمی)
+      if (isReceiptsTab) {
+        params.payment_method = 'bank';
+      }
+      api.getAllRegistrations(params)
         .then(res => {
           const mapped = (res.data || []).map(mapRegistrant);
           setRegistrants(mapped);
