@@ -36,7 +36,10 @@ class ApiService {
   // ========== Authentication ==========
 
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
-    const data = await API<any>('login', credentials, 'POST');
+    // Remove force from payload, pass as separate flag if needed
+    const { force, ...payload } = credentials;
+    // Backend expects force as a form param
+    const data = await API<any>('login', { ...payload, force }, 'POST');
     // Backend returns: { message: "...", data: { user: {...}, access_token: "...", token_type: "..." } }
     const responseData = data.data;
     const user = this.mapBackendUser(responseData.user);

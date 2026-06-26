@@ -123,6 +123,7 @@ export interface AuthResponse {
 export interface LoginCredentials {
   username: string;
   password: string;
+  force?: boolean;
 }
 
 export interface ApiError {

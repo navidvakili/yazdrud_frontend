@@ -12,6 +12,8 @@ import {
   LogIn,
   Loader2,
   AlertCircle,
+  AlertTriangle,
+  X,
   GraduationCap,
 } from 'lucide-react';
 import api from '@/src/api';
@@ -28,6 +30,32 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [remember, setRemember] = useState(false);
+  const [concurrentSession, setConcurrentSession] = useState<{ username: string; password: string } | null>(null);
+
+  const handleForceLogin = async () => {
+    if (!concurrentSession) return;
+    setIsLoading(true);
+    setConcurrentSession(null);
+    try {
+      const response = await api.login({ username: concurrentSession.username, password: concurrentSession.password, force: true });
+      onLoginSuccess(response.user);
+    } catch (err: any) {
+      if (err.status === 422 && err.errors) {
+        const firstError = (Object.values(err.errors).flat()[0] as string) || 'اطلاعات وارد شده معتبر نیست.';
+        setError(firstError);
+      } else if (err.status === 401) {
+        setError('نام کاربری یا گذرواژه اشتباه است.');
+      } else {
+        setError(err.message || 'خطا در ارتباط با سرور. لطفاً بعداً تلاش کنید.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const cancelConcurrentSession = () => {
+    setConcurrentSession(null);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,6 +75,11 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
       const response = await api.login({ username: username.trim(), password });
       onLoginSuccess(response.user);
     } catch (err: any) {
+      // Concurrent session detection — user already logged in elsewhere
+      if (err.status === 409 && err.errors?.session) {
+        setConcurrentSession({ username: username.trim(), password });
+        return;
+      }
       if (err.status === 422 && err.errors) {
         const firstError = (Object.values(err.errors).flat()[0] as string) || 'اطلاعات وارد شده معتبر نیست.';
         setError(firstError);
@@ -283,6 +316,52 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
         </div>
 
       </div>
+
+      {/* ===== Concurrent Session Warning Modal ===== */}
+      <AnimatePresence>
+        {concurrentSession && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+            onClick={cancelConcurrentSession}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 text-center"
+            >
+              <div className="w-14 h-14 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-4">
+                <AlertTriangle className="w-7 h-7 text-amber-600" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">
+                نشست فعال قبلی
+              </h3>
+              <p className="text-sm text-gray-600 leading-relaxed mb-6">
+                این کاربر در حال حاضر در دستگاه دیگری وارد سیستم شده است.
+                اگر ادامه دهید، نشست (session) قبلی باطل خواهد شد.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={cancelConcurrentSession}
+                  className="flex-1 py-2.5 rounded-xl border border-gray-300 text-gray-700 text-sm font-bold hover:bg-gray-50 transition-all cursor-pointer"
+                >
+                  انصراف
+                </button>
+                <button
+                  onClick={handleForceLogin}
+                  className="flex-1 py-2.5 rounded-xl bg-amber-500 text-white text-sm font-bold hover:bg-amber-600 transition-all shadow-lg cursor-pointer"
+                >
+                  ادامه و باطل کردن نشست قبلی
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
