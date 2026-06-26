@@ -85,7 +85,8 @@ export default function SessionWarningModal({ warning, onRespond, isLoading }: S
                         </h3>
                         <p className="text-sm text-gray-600 leading-relaxed mb-4 text-center">
                             یک تلاش ورود هم‌زمان برای حساب کاربری شما شناسایی شد.
-                            در صورت تأیید، نشست فعلی شما باطل شده و نشست جدید فعال می‌شود.
+                            در صورت تأیید، نشست جدید اجازهٔ ورود پیدا می‌کند.
+                            نشست فعلی شما تا زمانی که نشست جدید وارد نشده، فعال می‌ماند.
                         </p>
 
                         {/* Device Info Card */}
