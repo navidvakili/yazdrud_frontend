@@ -5,7 +5,7 @@
 import { useState, useEffect } from 'react';
 import {
     Filter, Calendar, Users, DollarSign, CheckCircle, FileText,
-    TrendingUp, Layers, Sparkles, Download, BarChart3
+    TrendingUp, Layers, Sparkles, Download, BarChart3, Loader2
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
@@ -173,145 +173,161 @@ export default function TutsStats(props: TutsStatsProps) {
                     {statAppliedCourse !== 'all' && (<><span className="mx-1">•</span><span>دوره: {courses.find(c => c.id === statAppliedCourse)?.title}</span></>)}
                 </div>
 
-                {/* KPI Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {[
-                        { label: 'کل ثبت‌نام‌های تایید شده', value: `${toPersianDigits(currentData.totalApproved)} نفر`, icon: Users, color: 'text-pink-500', bg: 'bg-pink-500/10' },
-                        { label: 'کل مبلغ دریافتی (ریال)', value: toPersianDigits(currentData.totalAmount.toLocaleString('fa-IR')), icon: DollarSign, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-                        { label: 'پرداخت آنلاین', value: `${toPersianDigits(currentData.onlinePayment)} تراکنش`, icon: CheckCircle, color: 'text-blue-500', bg: 'bg-blue-500/10' },
-                        { label: 'فیش بانکی تایید شده', value: `${toPersianDigits(currentData.bankSlips)} فیش`, icon: FileText, color: 'text-purple-500', bg: 'bg-purple-500/10' },
-                    ].map((kpi, i) => (
-                        <div key={i} className="p-4 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-850 rounded-2xl flex items-center justify-between shadow-xs">
-                            <div>
-                                <span className="text-[10px] text-gray-400 block font-bold mb-1">{kpi.label}</span>
-                                <span className="text-xl font-black text-gray-900 dark:text-white">{kpi.value}</span>
-                            </div>
-                            <div className={`w-10 h-10 rounded-xl ${kpi.bg} ${kpi.color} flex items-center justify-center`}>
-                                <kpi.icon className="w-5 h-5" />
-                            </div>
-                        </div>
-                    ))}
-                </div>
-
-                {/* Recharts Area Chart */}
-                <div className="p-5 rounded-3xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800/80 shadow-xs">
-                    <h5 className="text-xs font-black text-gray-900 dark:text-white mb-4 flex items-center gap-1.5">
-                        <TrendingUp className="w-4 h-4 text-teal-600" />
-                        روند ثبت‌نام در ۱۲ ماه اخیر (سال {toPersianDigits(statAppliedYear)})
-                    </h5>
-                    <div className="h-72 w-full text-xs" dir="ltr">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={currentData.months} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
-                                <defs>
-                                    <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4} />
-                                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                                    </linearGradient>
-                                </defs>
-                                <CartesianGrid strokeDasharray="3 3" className="stroke-gray-100 dark:stroke-gray-800" />
-                                <XAxis dataKey="month" className="fill-gray-400 dark:fill-gray-500" tickLine={false} axisLine={false} />
-                                <YAxis className="fill-gray-400 dark:fill-gray-500" tickLine={false} axisLine={false} tickFormatter={(v) => toPersianDigits(v)} />
-                                <Tooltip formatter={(value: any) => [toPersianDigits(value) + ' نفر', 'تعداد ثبت‌نام']} labelFormatter={(label) => `ماه: ${label}`}
-                                    contentStyle={{ background: '#1e293b', border: 'none', borderRadius: '12px', color: '#fff', textAlign: 'right' }} />
-                                <Area type="monotone" dataKey="count" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorCount)" />
-                            </AreaChart>
-                        </ResponsiveContainer>
+                {/* Stats data area with loading state */}
+                {statsLoading && !detailedStats ? (
+                    <div className="flex flex-col items-center justify-center py-20 gap-4">
+                        <Loader2 className="w-10 h-10 text-teal-600 animate-spin" />
+                        <span className="text-xs text-gray-400 font-bold">در حال دریافت اطلاعات آماری...</span>
                     </div>
-                </div>
+                ) : (
+                <div className="relative">
+                    {/* Overlay spinner during refresh */}
+                    {statsLoading && detailedStats && (
+                        <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60 dark:bg-gray-950/60 rounded-2xl">
+                            <Loader2 className="w-8 h-8 text-teal-600 animate-spin" />
+                        </div>
+                    )}
 
-                {/* Monthly Stats Table + Seasonal */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div className="p-5 rounded-3xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800/80 shadow-xs lg:col-span-2 space-y-4">
-                        <h5 className="text-xs font-black text-gray-900 dark:text-white">آمار ماهانه - سال {toPersianDigits(statAppliedYear)}</h5>
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-right text-xs">
-                                <thead>
-                                    <tr className="bg-gray-55 dark:bg-gray-950 border-b border-gray-100 dark:border-gray-850 text-gray-400 dark:text-gray-500 font-extrabold">
-                                        <th className="p-2.5">ماه</th>
-                                        <th className="p-2.5 text-center">تعداد ثبت‌نام</th>
-                                        <th className="p-2.5 text-left">مبلغ دریافتی (ریال)</th>
-                                        <th className="p-2.5 text-center">پرداخت آنلاین</th>
-                                        <th className="p-2.5 text-center">فیش بانکی</th>
-                                        <th className="p-2.5 text-left">درصد</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-100 dark:divide-gray-850">
-                                    {currentData.months.map(m => (
-                                        <tr key={m.month} className="hover:bg-gray-55/40 dark:hover:bg-gray-950/40 transition-colors">
-                                            <td className="p-2.5 font-bold text-gray-800 dark:text-gray-200">{m.month}</td>
-                                            <td className="p-2.5 text-center font-bold">{toPersianDigits(m.count)}</td>
-                                            <td className="p-2.5 text-left text-emerald-600 dark:text-emerald-400 font-bold">{toPersianDigits(m.amount.toLocaleString('fa-IR'))}</td>
-                                            <td className="p-2.5 text-center text-gray-500">{toPersianDigits(m.online)}</td>
-                                            <td className="p-2.5 text-center text-gray-500">{toPersianDigits(m.bankSlip)}</td>
-                                            <td className="p-2.5 text-left">
-                                                <div className="flex items-center justify-end gap-1.5">
-                                                    <span className="text-gray-400 text-[10px]">{toPersianDigits(m.percentage)}٪</span>
-                                                    <div className="w-12 h-1.5 bg-gray-100 dark:bg-gray-850 rounded-full overflow-hidden inline-block relative">
-                                                        <div className="absolute right-0 top-0 h-full bg-blue-600 rounded-full" style={{ width: `${m.percentage}%` }}></div>
-                                                    </div>
-                                                </div>
-                                            </td>
+                    {/* KPI Cards */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        {[
+                            { label: 'کل ثبت‌نام‌های تایید شده', value: `${toPersianDigits(currentData.totalApproved)} نفر`, icon: Users, color: 'text-pink-500', bg: 'bg-pink-500/10' },
+                            { label: 'کل مبلغ دریافتی (ریال)', value: toPersianDigits(currentData.totalAmount.toLocaleString('fa-IR')), icon: DollarSign, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+                            { label: 'پرداخت آنلاین', value: `${toPersianDigits(currentData.onlinePayment)} تراکنش`, icon: CheckCircle, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+                            { label: 'فیش بانکی تایید شده', value: `${toPersianDigits(currentData.bankSlips)} فیش`, icon: FileText, color: 'text-purple-500', bg: 'bg-purple-500/10' },
+                        ].map((kpi, i) => (
+                            <div key={i} className="p-4 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-850 rounded-2xl flex items-center justify-between shadow-xs">
+                                <div>
+                                    <span className="text-[10px] text-gray-400 block font-bold mb-1">{kpi.label}</span>
+                                    <span className="text-xl font-black text-gray-900 dark:text-white">{kpi.value}</span>
+                                </div>
+                                <div className={`w-10 h-10 rounded-xl ${kpi.bg} ${kpi.color} flex items-center justify-center`}>
+                                    <kpi.icon className="w-5 h-5" />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Recharts Area Chart */}
+                    <div className="p-5 rounded-3xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800/80 shadow-xs">
+                        <h5 className="text-xs font-black text-gray-900 dark:text-white mb-4 flex items-center gap-1.5">
+                            <TrendingUp className="w-4 h-4 text-teal-600" />
+                            روند ثبت‌نام در ۱۲ ماه اخیر (سال {toPersianDigits(statAppliedYear)})
+                        </h5>
+                        <div className="h-72 w-full text-xs" dir="ltr">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <AreaChart data={currentData.months} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+                                    <defs>
+                                        <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4} />
+                                            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                                        </linearGradient>
+                                    </defs>
+                                    <CartesianGrid strokeDasharray="3 3" className="stroke-gray-100 dark:stroke-gray-800" />
+                                    <XAxis dataKey="month" className="fill-gray-400 dark:fill-gray-500" tickLine={false} axisLine={false} />
+                                    <YAxis className="fill-gray-400 dark:fill-gray-500" tickLine={false} axisLine={false} tickFormatter={(v) => toPersianDigits(v)} />
+                                    <Tooltip formatter={(value: any) => [toPersianDigits(value) + ' نفر', 'تعداد ثبت‌نام']} labelFormatter={(label) => `ماه: ${label}`}
+                                        contentStyle={{ background: '#1e293b', border: 'none', borderRadius: '12px', color: '#fff', textAlign: 'right' }} />
+                                    <Area type="monotone" dataKey="count" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorCount)" />
+                                </AreaChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
+
+                    {/* Monthly Stats Table + Seasonal */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div className="p-5 rounded-3xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800/80 shadow-xs lg:col-span-2 space-y-4">
+                            <h5 className="text-xs font-black text-gray-900 dark:text-white">آمار ماهانه - سال {toPersianDigits(statAppliedYear)}</h5>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-right text-xs">
+                                    <thead>
+                                        <tr className="bg-gray-55 dark:bg-gray-950 border-b border-gray-100 dark:border-gray-850 text-gray-400 dark:text-gray-500 font-extrabold">
+                                            <th className="p-2.5">ماه</th>
+                                            <th className="p-2.5 text-center">تعداد ثبت‌نام</th>
+                                            <th className="p-2.5 text-left">مبلغ دریافتی (ریال)</th>
+                                            <th className="p-2.5 text-center">پرداخت آنلاین</th>
+                                            <th className="p-2.5 text-center">فیش بانکی</th>
+                                            <th className="p-2.5 text-left">درصد</th>
                                         </tr>
-                                    ))}
-                                    <tr className="bg-gray-50 dark:bg-gray-950 font-black border-t-2 border-gray-200 dark:border-gray-800">
-                                        <td className="p-3">جمع کل</td>
-                                        <td className="p-3 text-center">{toPersianDigits(currentData.totalApproved)}</td>
-                                        <td className="p-3 text-left text-emerald-600 dark:text-emerald-400">{toPersianDigits(currentData.totalAmount.toLocaleString('fa-IR'))}</td>
-                                        <td className="p-3 text-center">{toPersianDigits(currentData.onlinePayment)}</td>
-                                        <td className="p-3 text-center">{toPersianDigits(currentData.bankSlips)}</td>
-                                        <td className="p-3 text-left">۱۰۰٪</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <div className="space-y-6">
-                        {/* Seasonal breakdown */}
-                        <div className="p-5 rounded-3xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800/80 shadow-xs space-y-4">
-                            <h5 className="text-xs font-black text-gray-900 dark:text-white flex items-center gap-1.5">
-                                <Layers className="w-4 h-4 text-indigo-500" />
-                                آمار فصلی - سال {toPersianDigits(statAppliedYear)}
-                            </h5>
-                            <div className="grid grid-cols-2 gap-3">
-                                {[
-                                    { season: 'بهار', data: currentData.seasons.spring, color: 'rose' },
-                                    { season: 'تابستان', data: currentData.seasons.summer, color: 'amber' },
-                                    { season: 'پاییز', data: currentData.seasons.autumn, color: 'emerald' },
-                                    { season: 'زمستان', data: currentData.seasons.winter, color: 'indigo' },
-                                ].map(({ season, data, color }) => (
-                                    <div key={season} className={`p-3 bg-${color}-50/40 dark:bg-${color}-950/10 border border-${color}-500/10 rounded-2xl text-center`}>
-                                        <span className={`text-[10px] text-${color}-500 block font-bold mb-1`}>{season}</span>
-                                        <span className={`text-sm font-black text-${color}-600 dark:text-${color}-400 block`}>{toPersianDigits(data.count)} نفر</span>
-                                        <span className="text-[9px] text-gray-400">{toPersianDigits(data.amount.toLocaleString('fa-IR'))} ریال</span>
-                                    </div>
-                                ))}
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100 dark:divide-gray-850">
+                                        {currentData.months.map(m => (
+                                            <tr key={m.month} className="hover:bg-gray-55/40 dark:hover:bg-gray-950/40 transition-colors">
+                                                <td className="p-2.5 font-bold text-gray-800 dark:text-gray-200">{m.month}</td>
+                                                <td className="p-2.5 text-center font-bold">{toPersianDigits(m.count)}</td>
+                                                <td className="p-2.5 text-left text-emerald-600 dark:text-emerald-400 font-bold">{toPersianDigits(m.amount.toLocaleString('fa-IR'))}</td>
+                                                <td className="p-2.5 text-center text-gray-500">{toPersianDigits(m.online)}</td>
+                                                <td className="p-2.5 text-center text-gray-500">{toPersianDigits(m.bankSlip)}</td>
+                                                <td className="p-2.5 text-left">
+                                                    <div className="flex items-center justify-end gap-1.5">
+                                                        <span className="text-gray-400 text-[10px]">{toPersianDigits(m.percentage)}٪</span>
+                                                        <div className="w-12 h-1.5 bg-gray-100 dark:bg-gray-850 rounded-full overflow-hidden inline-block relative">
+                                                            <div className="absolute right-0 top-0 h-full bg-blue-600 rounded-full" style={{ width: `${m.percentage}%` }}></div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                        <tr className="bg-gray-50 dark:bg-gray-950 font-black border-t-2 border-gray-200 dark:border-gray-800">
+                                            <td className="p-3">جمع کل</td>
+                                            <td className="p-3 text-center">{toPersianDigits(currentData.totalApproved)}</td>
+                                            <td className="p-3 text-left text-emerald-600 dark:text-emerald-400">{toPersianDigits(currentData.totalAmount.toLocaleString('fa-IR'))}</td>
+                                            <td className="p-3 text-center">{toPersianDigits(currentData.onlinePayment)}</td>
+                                            <td className="p-3 text-center">{toPersianDigits(currentData.bankSlips)}</td>
+                                            <td className="p-3 text-left">۱۰۰٪</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
 
-                        {/* Report summary card */}
-                        <div className="p-5 rounded-3xl bg-teal-500/5 border border-teal-500/15 shadow-xs space-y-4">
-                            <h5 className="text-xs font-black text-teal-800 dark:text-teal-400 flex items-center gap-1.5">
-                                <Sparkles className="w-4 h-4 text-teal-600" />
-                                خلاصه گزارش دوره‌ها
-                            </h5>
-                            <div className="space-y-2.5 text-xs">
-                                {[
-                                    { label: 'میانگین ماهانه ثبت نام:', value: `${toPersianDigits(currentData.avgMonthly)} نفر`, color: 'bg-teal-500' },
-                                    { label: 'پربازدیدترین ماه سال:', value: toPersianDigits(currentData.peekMonth), color: 'bg-blue-500' },
-                                    { label: 'مجموع پذیرش دانشجو:', value: `${toPersianDigits(currentData.totalApproved)} نفر`, color: 'bg-pink-500' },
-                                ].map((item, i) => (
-                                    <div key={i} className="flex items-center gap-2 p-2 bg-white dark:bg-gray-900 rounded-xl border border-teal-500/10">
-                                        <div className={`w-2 h-2 rounded-full ${item.color}`}></div>
-                                        <span className="text-gray-400 font-bold text-[10px]">{item.label}</span>
-                                        <span className="font-black text-gray-800 dark:text-gray-200 mr-auto">{item.value}</span>
-                                    </div>
-                                ))}
+                        <div className="space-y-6">
+                            {/* Seasonal breakdown */}
+                            <div className="p-5 rounded-3xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800/80 shadow-xs space-y-4">
+                                <h5 className="text-xs font-black text-gray-900 dark:text-white flex items-center gap-1.5">
+                                    <Layers className="w-4 h-4 text-indigo-500" />
+                                    آمار فصلی - سال {toPersianDigits(statAppliedYear)}
+                                </h5>
+                                <div className="grid grid-cols-2 gap-3">
+                                    {[
+                                        { season: 'بهار', data: currentData.seasons.spring, color: 'rose' },
+                                        { season: 'تابستان', data: currentData.seasons.summer, color: 'amber' },
+                                        { season: 'پاییز', data: currentData.seasons.autumn, color: 'emerald' },
+                                        { season: 'زمستان', data: currentData.seasons.winter, color: 'indigo' },
+                                    ].map(({ season, data, color }) => (
+                                        <div key={season} className={`p-3 bg-${color}-50/40 dark:bg-${color}-950/10 border border-${color}-500/10 rounded-2xl text-center`}>
+                                            <span className={`text-[10px] text-${color}-500 block font-bold mb-1`}>{season}</span>
+                                            <span className={`text-sm font-black text-${color}-600 dark:text-${color}-400 block`}>{toPersianDigits(data.count)} نفر</span>
+                                            <span className="text-[9px] text-gray-400">{toPersianDigits(data.amount.toLocaleString('fa-IR'))} ریال</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Report summary card */}
+                            <div className="p-5 rounded-3xl bg-teal-500/5 border border-teal-500/15 shadow-xs space-y-4">
+                                <h5 className="text-xs font-black text-teal-800 dark:text-teal-400 flex items-center gap-1.5">
+                                    <Sparkles className="w-4 h-4 text-teal-600" />
+                                    خلاصه گزارش دوره‌ها
+                                </h5>
+                                <div className="space-y-2.5 text-xs">
+                                    {[
+                                        { label: 'میانگین ماهانه ثبت نام:', value: `${toPersianDigits(currentData.avgMonthly)} نفر`, color: 'bg-teal-500' },
+                                        { label: 'پربازدیدترین ماه سال:', value: toPersianDigits(currentData.peekMonth), color: 'bg-blue-500' },
+                                        { label: 'مجموع پذیرش دانشجو:', value: `${toPersianDigits(currentData.totalApproved)} نفر`, color: 'bg-pink-500' },
+                                    ].map((item, i) => (
+                                        <div key={i} className="flex items-center gap-2 p-2 bg-white dark:bg-gray-900 rounded-xl border border-teal-500/10">
+                                            <div className={`w-2 h-2 rounded-full ${item.color}`}></div>
+                                            <span className="text-gray-400 font-bold text-[10px]">{item.label}</span>
+                                            <span className="font-black text-gray-800 dark:text-gray-200 mr-auto">{item.value}</span>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
+            )}
 
             {/* ===== Second Block: Course KPIs, Progress Bars, Breakdown Table ===== */}
             <div className="space-y-6">
@@ -349,7 +365,7 @@ export default function TutsStats(props: TutsStatsProps) {
                             <TrendingUp className="w-4 h-4 text-teal-600" />
                             توزیع آمار کل ثبت‌نامی‌ها نسبت به ظرفیت کلاس‌ها
                         </h5>
-                        <div className="space-y-4">
+                        <div className="space-y-4 max-h-[400px] overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700 scrollbar-track-transparent pr-1">
                             {courses.map(c => {
                                 const percent = (c.enrolled / c.capacity) * 100;
                                 return (
@@ -452,6 +468,7 @@ export default function TutsStats(props: TutsStatsProps) {
                         </table>
                     </div>
                 </div>
+            </div>
             </div>
         </div>
     );
