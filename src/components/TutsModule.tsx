@@ -24,6 +24,8 @@ import TutsSurveys from './tuts/TutsSurveys';
 import TutsSurveysStats from './tuts/TutsSurveysStats';
 import TutsVouchers from './tuts/TutsVouchers';
 import TutsModals from './tuts/TutsModals';
+import { JalaliDatepicker } from './tuts/JalaliDatepicker';
+import { formatCostInput } from './tuts/tuts-utils';
 
 interface TutsModuleProps {
   user: UserType | null;
@@ -41,6 +43,7 @@ interface TutCourse {
   enrolled: number;
   capacity: number;
   startDate: string;
+  endDate: string;
   status: 'active' | 'completed' | 'ended';
   description: string;
   category: string;
@@ -169,6 +172,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     enrolled: (c.confirmed_count ?? c.registered_count) || 0,
     capacity: c.capacity || 30,
     startDate: c.start_date ? (c.start_date.includes('/') ? c.start_date : c.start_date.replace(/-/g, '/')) : '۱۴۰۵/۰۱/۰۱',
+    endDate: c.end_date ? (c.end_date.includes('/') ? c.end_date : c.end_date.replace(/-/g, '/')) : '',
     status: c.active ? 'active' : 'ended',
     category: c.group_title || c.category || 'عمومی',
     description: c.description || 'توضیحات دوره به زودی منتشر خواهد شد.'
@@ -979,8 +983,10 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
   const [newCourseStartDate, setNewCourseStartDate] = useState('۱۴۰۵/۰۵/۱۵');
   const [newCourseCategory, setNewCourseCategory] = useState(() => categories[0] || 'علوم تربیتی و روانشناسی');
   const [newCourseDescription, setNewCourseDescription] = useState('');
+  const [newCourseEndDate, setNewCourseEndDate] = useState('');
+  const [newCourseActive, setNewCourseActive] = useState(true);
 
-  const handleCreateNewCourse = (e: React.FormEvent) => {
+  const handleCreateNewCourse = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCourseTitle || !newCourseLecturer || !newCourseCost) {
       showToast('لطفاً فیلدهای ستاره‌دار و الزامی را پر کنید.', 'error');
@@ -993,28 +999,47 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
       return;
     }
 
-    const newC: TutCourse = {
-      id: `tut-${courses.length + 1}`,
-      title: newCourseTitle,
-      lecturer: newCourseLecturer,
-      duration: newCourseDuration || '۱۲ ساعت',
-      cost: price,
-      enrolled: 0,
-      capacity: parseInt(newCourseCapacity) || 30,
-      startDate: newCourseStartDate,
-      status: 'active',
-      category: newCourseCategory,
-      description: newCourseDescription || 'توضیحات دوره به زودی منتشر خواهد شد.'
-    };
+    // Map category to group_id
+    const matchedGroup = courseGroups.find(g => g.title === newCourseCategory);
+    const groupId = matchedGroup ? matchedGroup.id : null;
 
-    setCourses([newC, ...courses]);
-    setIsNewCourseModalOpen(false);
-    showToast(`دوره کارگاهی جدید "${newCourseTitle}" با موفقیت تعریف گردید.`);
-    // Reset Form
-    setNewCourseTitle('');
-    setNewCourseLecturer('');
-    setNewCourseCost('');
-    setNewCourseDescription('');
+    // Clean dates: convert Persian digits to English
+    const startDateEng = toEnglishDigits(newCourseStartDate);
+    const endDateEng = newCourseEndDate ? toEnglishDigits(newCourseEndDate) : '';
+
+    try {
+      const created = await api.createCourse({
+        title: newCourseTitle,
+        instructor: newCourseLecturer,
+        amount: price,
+        capacity: parseInt(newCourseCapacity) || 30,
+        duration: newCourseDuration || '12 ساعت',
+        start_date: startDateEng,
+        end_date: endDateEng || null,
+        description: newCourseDescription || '',
+        active: newCourseActive,
+        group_id: groupId,
+      });
+
+      const mappedCourse = mapCourse(created);
+      setCourses([mappedCourse, ...courses]);
+      setIsNewCourseModalOpen(false);
+      showToast(`دوره کارگاهی جدید "${newCourseTitle}" با موفقیت تعریف گردید.`);
+      // Reset Form
+      setNewCourseTitle('');
+      setNewCourseLecturer('');
+      setNewCourseCost('');
+      setNewCourseDuration('');
+      setNewCourseCapacity('30');
+      setNewCourseStartDate('۱۴۰۵/۰۵/۱۵');
+      setNewCourseEndDate('');
+      setNewCourseActive(true);
+      setNewCourseCategory(categories[0] || '');
+      setNewCourseDescription('');
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || 'خطا در ارتباط با سرور';
+      showToast(`خطا در تعریف دوره: ${msg}`, 'error');
+    }
   };
 
   // Editing course states (Admin only)
@@ -1027,6 +1052,8 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
   const [editCourseStartDate, setEditCourseStartDate] = useState('');
   const [editCourseCategory, setEditCourseCategory] = useState('');
   const [editCourseDescription, setEditCourseDescription] = useState('');
+  const [editCourseEndDate, setEditCourseEndDate] = useState('');
+  const [editCourseActive, setEditCourseActive] = useState(true);
 
   // Course Report selection
   const [selectedCourseReport, setSelectedCourseReport] = useState<TutCourse | null>(null);
@@ -1055,7 +1082,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
       .finally(() => setLoadingRegistrants(false));
   }, [selectedCourseReport, reportFetchKey]);
 
-  const handleUpdateCourse = (e: React.FormEvent) => {
+  const handleUpdateCourse = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingCourse) return;
     if (!editCourseTitle || !editCourseLecturer || !editCourseCost) {
@@ -1063,42 +1090,62 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
       return;
     }
 
-    const price = typeof editCourseCost === 'number' ? editCourseCost : parseInt(editCourseCost.toString().replace(/[^\d]/g, ''));
+    const price = parseInt(editCourseCost.toString().replace(/[^\d]/g, ''));
     if (isNaN(price)) {
       showToast('مبلغ شهریه نامعتبر است.', 'error');
       return;
     }
 
-    setCourses(prev => prev.map(c => c.id === editingCourse.id ? {
-      ...c,
-      title: editCourseTitle,
-      lecturer: editCourseLecturer,
-      duration: editCourseDuration || '۱۲ ساعت',
-      cost: price,
-      capacity: parseInt(editCourseCapacity) || 30,
-      startDate: editCourseStartDate,
-      category: editCourseCategory,
-      description: editCourseDescription || 'توضیحات دوره به زودی منتشر خواهد شد.'
-    } : c));
+    // Map category to group_id
+    const matchedGroup = courseGroups.find(g => g.title === editCourseCategory);
+    const groupId = matchedGroup ? matchedGroup.id : null;
 
-    setEditingCourse(null);
-    showToast(`دوره کارگاهی "${editCourseTitle}" با موفقیت بروزرسانی گردید.`);
+    // Clean dates
+    const startDateEng = toEnglishDigits(editCourseStartDate);
+    const endDateEng = editCourseEndDate ? toEnglishDigits(editCourseEndDate) : '';
+
+    try {
+      const courseId = parseInt(editingCourse.id);
+      const updated = await api.updateCourse(courseId, {
+        title: editCourseTitle,
+        instructor: editCourseLecturer,
+        amount: price,
+        capacity: parseInt(editCourseCapacity) || 30,
+        duration: editCourseDuration || '12 ساعت',
+        start_date: startDateEng,
+        end_date: endDateEng || null,
+        description: editCourseDescription || '',
+        active: editCourseActive,
+        group_id: groupId,
+      });
+
+      const mappedCourse = mapCourse(updated);
+      setCourses(prev => prev.map(c => c.id === editingCourse.id ? mappedCourse : c));
+      setEditingCourse(null);
+      showToast(`دوره کارگاهی "${editCourseTitle}" با موفقیت بروزرسانی گردید.`);
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || 'خطا در ارتباط با سرور';
+      showToast(`خطا در بروزرسانی دوره: ${msg}`, 'error');
+    }
   };
 
-  const handleToggleCourseStatus = (id: string) => {
-    setCourses(prev => prev.map(c => {
-      if (c.id === id) {
-        const nextStatus = c.status === 'ended' ? 'active' : 'ended';
-        showToast(
-          nextStatus === 'active'
-            ? `دوره "${c.title}" مجدداً فعال گردید.`
-            : `دوره "${c.title}" غیرفعال (پایان‌یافته) گردید.`,
-          'info'
-        );
-        return { ...c, status: nextStatus };
-      }
-      return c;
-    }));
+  const handleToggleCourseStatus = async (id: string) => {
+    try {
+      const courseId = parseInt(id);
+      const updated = await api.toggleCourseActive(courseId);
+      const mappedCourse = mapCourse(updated);
+      setCourses(prev => prev.map(c => c.id === id ? mappedCourse : c));
+      const newStatus = mappedCourse.status;
+      showToast(
+        newStatus === 'active'
+          ? `دوره "${mappedCourse.title}" مجدداً فعال گردید.`
+          : `دوره "${mappedCourse.title}" غیرفعال (پایان‌یافته) گردید.`,
+        'info'
+      );
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || 'خطا در ارتباط با سرور';
+      showToast(`خطا در تغییر وضعیت دوره: ${msg}`, 'error');
+    }
   };
 
   const handleDeleteCourse = (id: string) => {
@@ -1107,13 +1154,21 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     setCourseToDelete(course);
   };
 
-  const confirmDeleteCourse = () => {
+  const confirmDeleteCourse = async () => {
     if (!courseToDelete) return;
     const id = courseToDelete.id;
-    setCourses(prev => prev.filter(c => c.id !== id));
-    setRegistrants(prev => prev.filter(r => r.courseId !== id));
-    showToast(`دوره آموزشی "${courseToDelete.title}" با موفقیت حذف گردید.`, 'info');
-    setCourseToDelete(null);
+    const title = courseToDelete.title;
+    try {
+      const courseId = parseInt(id);
+      await api.deleteCourse(courseId);
+      setCourses(prev => prev.filter(c => c.id !== id));
+      setRegistrants(prev => prev.filter(r => r.courseId !== id));
+      showToast(`دوره آموزشی "${title}" با موفقیت حذف گردید.`, 'info');
+      setCourseToDelete(null);
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || 'خطا در ارتباط با سرور';
+      showToast(`خطا در حذف دوره: ${msg}`, 'error');
+    }
   };
 
   const handleExportSingleCourseExcel = (course: TutCourse) => {
@@ -1800,6 +1855,8 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                                           setEditCourseStartDate(course.startDate);
                                           setEditCourseCategory(course.category);
                                           setEditCourseDescription(course.description);
+                                          setEditCourseEndDate(course.endDate);
+                                          setEditCourseActive(course.status === 'active');
                                         }}
                                         className="p-1.5 bg-white dark:bg-gray-900 border border-gray-150 dark:border-gray-800 rounded-lg text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950 transition-all cursor-pointer"
                                         title="ویرایش دوره"
@@ -1950,6 +2007,8 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                                           setEditCourseStartDate(course.startDate);
                                           setEditCourseCategory(course.category);
                                           setEditCourseDescription(course.description);
+                                          setEditCourseEndDate(course.endDate);
+                                          setEditCourseActive(course.status === 'active');
                                         }}
                                         className="p-1.5 bg-white dark:bg-gray-900 border border-gray-150 dark:border-gray-800 rounded-lg text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950 transition-all cursor-pointer"
                                         title="ویرایش دوره"
@@ -2065,6 +2124,10 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                       <span className="text-[10px] text-gray-400 dark:text-gray-500 font-sans block mb-1">تاریخ شروع کلاسی:</span>
                       <span className="font-bold text-gray-800 dark:text-gray-200">{toPersianDigits(selectedCourseForDetail.startDate)}</span>
                     </div>
+                    <div className="p-3 bg-gray-50 dark:bg-gray-950 rounded-xl border border-gray-100 dark:border-gray-850">
+                      <span className="text-[10px] text-gray-400 dark:text-gray-500 font-sans block mb-1">تاریخ پایان دوره:</span>
+                      <span className="font-bold text-gray-800 dark:text-gray-200">{selectedCourseForDetail.endDate ? toPersianDigits(selectedCourseForDetail.endDate) : '---'}</span>
+                    </div>
                   </div>
 
                   <button
@@ -2080,6 +2143,8 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                       setEditCourseStartDate(course.startDate);
                       setEditCourseCategory(course.category);
                       setEditCourseDescription(course.description);
+                      setEditCourseEndDate(course.endDate);
+                      setEditCourseActive(course.status === 'active');
                     }}
                     className="w-full py-3 bg-teal-600 hover:bg-teal-700 text-white font-extrabold text-xs rounded-2xl transition-all cursor-pointer shadow-sm shadow-teal-600/15 flex items-center justify-center gap-1.5"
                   >
@@ -2439,7 +2504,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                           type="text"
                           required
                           value={newCourseCost}
-                          onChange={(e) => setNewCourseCost(e.target.value)}
+                          onChange={(e) => setNewCourseCost(formatCostInput(e.target.value))}
                           placeholder="مثال: ۴,۵۰۰,۰۰۰"
                           className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none "
                         />
@@ -2458,15 +2523,34 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">تاریخ شروع دوره</label>
-                        <input
-                          type="text"
+                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">تاریخ شروع دوره *</label>
+                        <JalaliDatepicker
                           value={newCourseStartDate}
-                          onChange={(e) => setNewCourseStartDate(e.target.value)}
-                          placeholder="۱۴۰۵/۰۵/۱۵"
-                          className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none "
+                          onChange={(date) => setNewCourseStartDate(date)}
                         />
                       </div>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">تاریخ پایان دوره</label>
+                        <JalaliDatepicker
+                          value={newCourseEndDate}
+                          onChange={(date) => setNewCourseEndDate(date)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <label className="block text-xs font-bold text-gray-700 dark:text-gray-300">وضعیت دوره:</label>
+                      <button
+                        type="button"
+                        dir="ltr"
+                        onClick={() => setNewCourseActive(!newCourseActive)}
+                        className={`relative inline-flex items-center h-6 w-11 rounded-full transition-colors ${newCourseActive ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+                      >
+                        <span className={`inline-block w-4 h-4 rounded-full bg-white shadow-sm transform transition-transform ${newCourseActive ? 'translate-x-6' : 'translate-x-1'}`} />
+                      </button>
+                      <span className={`text-xs font-bold ${newCourseActive ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400'}`}>
+                        {newCourseActive ? 'فعال' : 'غیرفعال'}
+                      </span>
                     </div>
 
                     <div>
@@ -2579,7 +2663,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                           type="text"
                           required
                           value={editCourseCost}
-                          onChange={(e) => setEditCourseCost(e.target.value)}
+                          onChange={(e) => setEditCourseCost(formatCostInput(e.target.value))}
                           placeholder="مثال: ۴,۵۰۰,۰۰۰"
                           className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none "
                         />
@@ -2598,15 +2682,34 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">تاریخ شروع دوره</label>
-                        <input
-                          type="text"
+                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">تاریخ شروع دوره *</label>
+                        <JalaliDatepicker
                           value={editCourseStartDate}
-                          onChange={(e) => setEditCourseStartDate(e.target.value)}
-                          placeholder="۱۴۰۵/۰۵/۱۵"
-                          className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none "
+                          onChange={(date) => setEditCourseStartDate(date)}
                         />
                       </div>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">تاریخ پایان دوره</label>
+                        <JalaliDatepicker
+                          value={editCourseEndDate}
+                          onChange={(date) => setEditCourseEndDate(date)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <label className="block text-xs font-bold text-gray-700 dark:text-gray-300">وضعیت دوره:</label>
+                      <button
+                        type="button"
+                        dir="ltr"
+                        onClick={() => setEditCourseActive(!editCourseActive)}
+                        className={`relative inline-flex items-center h-6 w-11 rounded-full transition-colors ${editCourseActive ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+                      >
+                        <span className={`inline-block w-4 h-4 rounded-full bg-white shadow-sm transform transition-transform ${editCourseActive ? 'translate-x-6' : 'translate-x-1'}`} />
+                      </button>
+                      <span className={`text-xs font-bold ${editCourseActive ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400'}`}>
+                        {editCourseActive ? 'فعال' : 'غیرفعال'}
+                      </span>
                     </div>
 
                     <div>
