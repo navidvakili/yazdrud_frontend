@@ -251,6 +251,22 @@ class ApiService {
   }
 
   /**
+   * Mark a registration as refunded.
+   */
+  async refundRegistration(encryptedId: string): Promise<CourseRegistration> {
+    const data = await API<any>(`courses/registrations/${encryptedId}/refund`, {}, 'POST');
+    return data.data;
+  }
+
+  /**
+   * Undo a refund (لغو مستردد).
+   */
+  async undoRefundRegistration(encryptedId: string): Promise<CourseRegistration> {
+    const data = await API<any>(`courses/registrations/${encryptedId}/undo-refund`, {}, 'POST');
+    return data.data;
+  }
+
+  /**
    * Get course statistics (aggregate).
    */
   async getCourseStatistics(): Promise<CourseStats> {

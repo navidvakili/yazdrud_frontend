@@ -2,7 +2,7 @@
 // TutsModule — Reports (Registrants Report List with Filters)
 // ============================================================
 
-import { Search, FileText } from 'lucide-react';
+import { Search, FileText, RotateCcw } from 'lucide-react';
 import type { TutCourse, TutRegistrant } from './tuts-types';
 import { toPersianDigits, formatCurrency } from './tuts-utils';
 import { LoadingSpinner } from './tuts-components';
@@ -18,8 +18,11 @@ interface TutsReportsProps {
     reportPage: number;
     setReportPage: (p: number) => void;
     reportPerPage: number;
+    reportTotal?: number;
     filteredRegistrants: TutRegistrant[];
     handleExportSimulate: () => void;
+    onRefundRequest: (reg: TutRegistrant) => void;
+    onUndoRefund: (reg: TutRegistrant) => void;
 }
 
 export default function TutsReports(props: TutsReportsProps) {
@@ -27,9 +30,9 @@ export default function TutsReports(props: TutsReportsProps) {
         courses, loadingRegistrants,
         reportSearch, setReportSearch,
         reportCourseFilter, setReportCourseFilter,
-        reportPage, setReportPage, reportPerPage,
+        reportPage, setReportPage, reportPerPage, reportTotal = 0,
         filteredRegistrants,
-        handleExportSimulate,
+        handleExportSimulate, onRefundRequest, onUndoRefund,
     } = props;
 
     return (
@@ -77,12 +80,19 @@ export default function TutsReports(props: TutsReportsProps) {
             ) : (
                 <>
                     {(() => {
-                        const totalPages = Math.max(1, Math.ceil(filteredRegistrants.length / reportPerPage));
+                        // Server-side pagination (reportTotal > 0): data is already one page
+                        // Client-side pagination (reportTotal === 0): slice the full array
+                        const isServerPaginated = reportTotal > 0;
+                        const totalPages = isServerPaginated
+                            ? Math.max(1, Math.ceil(reportTotal / reportPerPage))
+                            : Math.max(1, Math.ceil(filteredRegistrants.length / reportPerPage));
                         const safePage = Math.min(reportPage, totalPages);
-                        const paginatedRegistrants = filteredRegistrants.slice(
-                            (safePage - 1) * reportPerPage,
-                            safePage * reportPerPage
-                        );
+                        const displayData = isServerPaginated
+                            ? filteredRegistrants
+                            : filteredRegistrants.slice(
+                                (safePage - 1) * reportPerPage,
+                                safePage * reportPerPage
+                            );
                         return (
                             <div className="overflow-x-auto rounded-3xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-xs">
                                 <table className="w-full text-right text-xs">
@@ -101,17 +111,18 @@ export default function TutsReports(props: TutsReportsProps) {
                                             <th className="p-2">تاریخ ثبت نام</th>
                                             <th className="p-2">تاریخ تایید</th>
                                             <th className="p-2 text-center">وضعیت</th>
+                                            <th className="p-2 text-center w-20">عملیات</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-100 dark:divide-gray-800/40">
-                                        {paginatedRegistrants.length === 0 ? (
+                                        {displayData.length === 0 ? (
                                             <tr>
-                                                <td colSpan={13} className="p-12 text-center text-gray-400">
+                                                <td colSpan={14} className="p-12 text-center text-gray-400">
                                                     هیچ پرونده ثبتی یا آماری مطابق با فیلتر شما ثبت نشده است.
                                                 </td>
                                             </tr>
                                         ) : (
-                                            paginatedRegistrants.map((reg, idx) => {
+                                            displayData.map((reg, idx) => {
                                                 const globalIdx = (safePage - 1) * reportPerPage + idx + 1;
                                                 const isVerified = reg.status === 'verified';
                                                 return (
@@ -130,15 +141,37 @@ export default function TutsReports(props: TutsReportsProps) {
                                                         <td className="p-2 text-gray-500 whitespace-nowrap">{reg.verifiedAt ? toPersianDigits(reg.verifiedAt.split(' ')[0].replace(/-/g, '/')) : '—'}</td>
                                                         <td className="p-2 text-center whitespace-nowrap">
                                                             <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold inline-block ${reg.status === 'verified' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' :
+                                                                reg.status === 'refunded' ? 'bg-gray-500/10 text-gray-500 dark:text-gray-400 line-through' :
                                                                 reg.status === 'rejected' ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400' :
                                                                     'bg-amber-500/10 text-amber-600'}`}>
                                                                 {reg.status === 'verified' ? 'تایید نهایی شده' :
+                                                                    reg.status === 'refunded' ? 'مستردد' :
                                                                     reg.status === 'rejected' ? 'فیش رد شده' : 'در انتظار بررسی'}
                                                             </span>
                                                             {reg.status === 'rejected' && reg.rejectionReason && (
                                                                 <div className="text-[9px] text-rose-500 mt-1 max-w-[150px] mx-auto truncate" title={reg.rejectionReason}>
                                                                     علت: {reg.rejectionReason}
                                                                 </div>
+                                                            )}
+                                                        </td>
+                                                        <td className="p-2 text-center whitespace-nowrap">
+                                                            {reg.status === 'verified' && (
+                                                                <button
+                                                                    onClick={() => onRefundRequest(reg)}
+                                                                    className="px-2 py-1 bg-orange-50 dark:bg-orange-950/30 hover:bg-orange-100/50 dark:hover:bg-orange-900/30 border border-orange-300/30 text-orange-600 dark:text-orange-400 rounded-lg text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer"
+                                                                >
+                                                                    <RotateCcw className="w-3 h-3" />
+                                                                    مستردد
+                                                                </button>
+                                                            )}
+                                                            {reg.status === 'refunded' && (
+                                                                <button
+                                                                    onClick={() => onUndoRefund(reg)}
+                                                                    className="px-2 py-1 bg-teal-50 dark:bg-teal-950/30 hover:bg-teal-100/50 dark:hover:bg-teal-900/30 border border-teal-300/30 text-teal-600 dark:text-teal-400 rounded-lg text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer"
+                                                                >
+                                                                    <RotateCcw className="w-3 h-3" />
+                                                                    لغو مستردد
+                                                                </button>
                                                             )}
                                                         </td>
 
@@ -152,10 +185,10 @@ export default function TutsReports(props: TutsReportsProps) {
                         );
                     })()}
 
-                    {filteredRegistrants.length > reportPerPage && (
+                    {(reportTotal > 0 ? reportTotal : filteredRegistrants.length) > reportPerPage && (
                         <Pagination
                             currentPage={reportPage}
-                            totalItems={filteredRegistrants.length}
+                            totalItems={reportTotal > 0 ? reportTotal : filteredRegistrants.length}
                             perPage={reportPerPage}
                             onPageChange={setReportPage}
                         />

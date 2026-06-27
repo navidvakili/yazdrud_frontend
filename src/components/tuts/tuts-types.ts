@@ -40,7 +40,7 @@ export interface TutRegistrant {
     paymentMethod: string;
     trackingCode: string;
     bankReceipt: string;
-    status: 'pending' | 'verified' | 'rejected';
+    status: 'pending' | 'verified' | 'rejected' | 'refunded';
     rejectionReason?: string;
     // Certificate fields
     certificateApproved?: boolean;

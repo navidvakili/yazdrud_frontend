@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   Calendar, User, CheckCircle, XCircle, AlertTriangle,
   FileText, Sparkles, Info, BookOpen, Search, Filter, Layers, Plus, Clock, Copy, Edit2,
-  BarChart2, Power, Download, Trash2, X, Upload, Check, Eye, Award, LayoutGrid, List,
+  BarChart2, Power, Download, Trash2, X, Upload, Check, Eye, Award, LayoutGrid, List, RotateCcw,
 } from 'lucide-react';
 import { User as UserType } from '@/src/types';
 import api from '@/src/api';
@@ -64,7 +64,7 @@ interface TutRegistrant {
   paymentMethod: string;
   trackingCode: string;
   bankReceipt: string;
-  status: 'pending' | 'verified' | 'rejected';
+  status: 'pending' | 'verified' | 'rejected' | 'refunded';
   rejectionReason?: string;
   // Certificate fields
   certificateApproved?: boolean;
@@ -210,12 +210,14 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     trackingCode: r.tracking_code || r.bank_receipt_filename || '',
     bankReceipt: r.bank_receipt || '',
     // Backend returns: 'paid' (online success), 'approved' (receipt verified),
-    // 'rejected', 'pending'. Map 'paid'/'approved' to 'verified' for frontend.
+    // 'rejected', 'refunded', 'pending'. Map 'paid'/'approved' to 'verified'.
     status: (r.status === 'approved' || r.status === 'paid' || r.status === 'verified')
       ? 'verified'
-      : r.status === 'rejected'
-        ? 'rejected'
-        : 'pending',
+      : r.status === 'refunded'
+        ? 'refunded'
+        : r.status === 'rejected'
+          ? 'rejected'
+          : 'pending',
     rejectionReason: r.rejection_reason || undefined,
     // Certificate fields
     certificateApproved: r.certificate_approved ?? false,
@@ -244,7 +246,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
 
     // Determine which data types are needed based on the active moduleId
     const needsCourses = moduleId === 'tuts-list' || moduleId === 'tuts-reports' || moduleId === 'tuts-stats' || moduleId === 'tuts-surveys';
-    const needsRegistrants = moduleId === 'tuts-reports' || moduleId === 'tuts-receipts' || moduleId === 'tuts-stats';
+    const needsRegistrants = moduleId === 'tuts-receipts' || moduleId === 'tuts-stats';
     const needsSurveys = moduleId === 'tuts-surveys' || moduleId === 'tuts-surveys-stats';
     const needsVouchers = moduleId === 'tuts-vouchers';
 
@@ -464,6 +466,10 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
   const listPerPage = 12;
   const [reportPage, setReportPage] = useState(1);
   const reportPerPage = 15;
+
+  // Server-side paginated report data (optimized: avoids fetching all 10k records)
+  const [reportRegistrants, setReportRegistrants] = useState<TutRegistrant[]>([]);
+  const [reportTotal, setReportTotal] = useState(0);
   const [voucherPage, setVoucherPage] = useState(1);
   const voucherPerPage = 10;
 
@@ -943,6 +949,12 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
   });
   const [selectedCourseForDetail, setSelectedCourseForDetail] = useState<TutCourse | null>(null);
   const [courseToDelete, setCourseToDelete] = useState<TutCourse | null>(null);
+  const [refundTarget, setRefundTarget] = useState<TutRegistrant | null>(null);
+  const [refundConfirmWord, setRefundConfirmWord] = useState('');
+  const [refundConfirmInput, setRefundConfirmInput] = useState('');
+  const [undoRefundTarget, setUndoRefundTarget] = useState<TutRegistrant | null>(null);
+  const [undoRefundConfirmWord, setUndoRefundConfirmWord] = useState('');
+  const [undoRefundConfirmInput, setUndoRefundConfirmInput] = useState('');
 
   const handleCopyCourseUrl = (course: TutCourse) => {
     const url = `https://terms.sau.ac.ir/course/${course.id}`;
@@ -1456,7 +1468,38 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
   const [reportSearch, setReportSearch] = useState('');
   const [reportCourseFilter, setReportCourseFilter] = useState('');
 
-  const filteredRegistrants = registrants.filter(reg => {
+  // ===== Optimized: Server-side paginated fetch for Reports (tuts-reports) =====
+  // Instead of fetching all 10000 records client-side, fetch only the needed page
+  // with server-side search/filter — debounced to avoid excessive API calls.
+  useEffect(() => {
+    if (moduleId !== 'tuts-reports') return;
+
+    const timer = setTimeout(async () => {
+      setLoadingRegistrants(true);
+      try {
+        const params: Record<string, any> = {
+          per_page: reportPerPage,
+          page: reportPage,
+        };
+        if (reportSearch.trim()) params.search = reportSearch.trim();
+        if (reportCourseFilter) params.course_id = reportCourseFilter;
+
+        const res = await api.getAllRegistrations(params);
+        setReportRegistrants((res.data || []).map(mapRegistrant));
+        setReportTotal(res.meta?.total ?? 0);
+      } catch (err) {
+        console.error('Error fetching report registrations:', err);
+      } finally {
+        setLoadingRegistrants(false);
+      }
+    }, 400); // 400ms debounce for search input
+
+    return () => clearTimeout(timer);
+  }, [moduleId, reportSearch, reportCourseFilter, reportPage]);
+
+  const filteredRegistrants = moduleId === 'tuts-reports'
+    ? reportRegistrants
+    : registrants.filter(reg => {
     const searchStr = toEnglishDigits(reportSearch.toLowerCase());
     const matchText = reg.name.toLowerCase().includes(reportSearch.toLowerCase()) ||
       toEnglishDigits(reg.nationalCode).includes(searchStr) ||
@@ -1519,6 +1562,69 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     setRejectionInput('');
     showToast(`فیش واریزی ${regToReject.name} رد صلاحیت شد و علت به کارتابل دانشجو ارسال گردید.`, 'info');
   };
+
+  // ========== Refund Handler (برای گزارش ثبت‌نامی‌ها) ==========
+  const executeRefund = async (id: string) => {
+    const reg = reportRegistrants.find(r => r.id === id);
+    if (!reg) return;
+
+    try {
+      await api.refundRegistration(id);
+      // Update local state: mark as refunded
+      setReportRegistrants(prev => prev.map(r =>
+        r.id === id ? { ...r, status: 'refunded' as const } : r
+      ));
+      showToast(`ثبت‌نام ${reg.name} - ${reg.courseTitle} با موفقیت مستردد شد.`);
+    } catch (err: any) {
+      const msg = err?.errors?.[0] || err?.message || 'خطا در مستردد کردن ثبت‌نام';
+      showToast(msg, 'error');
+    }
+  };
+
+  const confirmRefund = () => {
+    if (refundTarget) {
+      executeRefund(refundTarget.id);
+      setRefundTarget(null);
+    }
+  };
+
+  const executeUndoRefund = async (id: string) => {
+    const reg = reportRegistrants.find(r => r.id === id);
+    if (!reg) return;
+
+    try {
+      await api.undoRefundRegistration(id);
+      setReportRegistrants(prev => prev.map(r =>
+        r.id === id ? { ...r, status: 'verified' as const } : r
+      ));
+      showToast(`وضعیت مستردد ثبت‌نام ${reg.name} - ${reg.courseTitle} با موفقیت لغو شد.`);
+    } catch (err: any) {
+      const msg = err?.errors?.[0] || err?.message || 'خطا در لغو مستردد';
+      showToast(msg, 'error');
+    }
+  };
+
+  const confirmUndoRefund = () => {
+    if (undoRefundTarget) {
+      executeUndoRefund(undoRefundTarget.id);
+      setUndoRefundTarget(null);
+    }
+  };
+
+  // Generate random confirm word when refund / undo-refund modal opens
+  useEffect(() => {
+    if (refundTarget) {
+      setRefundConfirmWord(String(Math.floor(1000 + Math.random() * 9000)));
+      setRefundConfirmInput('');
+    }
+  }, [refundTarget]);
+
+  useEffect(() => {
+    if (undoRefundTarget) {
+      setUndoRefundConfirmWord(String(Math.floor(1000 + Math.random() * 9000)));
+      setUndoRefundConfirmInput('');
+    }
+  }, [undoRefundTarget]);
 
   // ========== Certificate Handlers ==========
   const [certificateNotif, setCertificateNotif] = useState<string | null>(null);
@@ -2980,8 +3086,11 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
           reportPage={reportPage}
           setReportPage={setReportPage}
           reportPerPage={reportPerPage}
+          reportTotal={reportTotal}
           filteredRegistrants={filteredRegistrants}
           handleExportSimulate={handleExportSimulate}
+          onRefundRequest={(reg) => setRefundTarget(reg)}
+          onUndoRefund={(reg) => setUndoRefundTarget(reg)}
         />
       )}
 
@@ -3282,6 +3391,138 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
             </motion.div>
           );
         })()}
+      </AnimatePresence>
+
+      {/* ===== REFUND CONFIRMATION MODAL ===== */}
+      <AnimatePresence>
+        {refundTarget && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+            onClick={() => setRefundTarget(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-850 p-6 rounded-3xl shadow-2xl max-w-sm w-full text-center space-y-5"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="w-14 h-14 rounded-2xl bg-orange-50 dark:bg-orange-950/30 flex items-center justify-center mx-auto">
+                <RotateCcw className="w-7 h-7 text-orange-500" />
+              </div>
+              <div>
+                <h4 className="text-sm font-black text-gray-900 dark:text-white mb-1">مستردد کردن ثبت‌نام</h4>
+                <p className="text-xs text-gray-400 leading-relaxed">
+                  آیا از مستردد کردن ثبت‌نام <span className="font-black text-gray-700 dark:text-gray-300">«{refundTarget.name}»</span><br />
+                  در دوره <span className="font-black text-gray-700 dark:text-gray-300">«{refundTarget.courseTitle}»</span> اطمینان دارید؟<br />
+                  این عملیات غیرقابل بازگشت است.
+                </p>
+              </div>
+              {/* Confirmation word input */}
+              <div className="text-right">
+                <label className="text-[11px] text-gray-500 font-sans block mb-1.5">
+                  برای تأیید، عدد <span className="font-black text-teal-600 dark:text-teal-400 text-sm mx-1 select-all" dir="ltr">{refundConfirmWord}</span> را وارد کنید:
+                </label>
+                <input
+                  type="text"
+                  value={refundConfirmInput}
+                  onChange={e => setRefundConfirmInput(e.target.value)}
+                  placeholder={refundConfirmWord}
+                  className="w-full text-xs p-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500/50 text-center"
+                  autoComplete="off"
+                />
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setRefundTarget(null)}
+                  className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-750 rounded-2xl text-xs font-bold text-gray-500 cursor-pointer transition-all"
+                >
+                  انصراف
+                </button>
+                <button
+                  onClick={() => { confirmRefund(); }}
+                  disabled={refundConfirmInput !== refundConfirmWord}
+                  className={`flex-1 py-2.5 rounded-2xl text-xs font-black cursor-pointer transition-all shadow-xs ${
+                    refundConfirmInput === refundConfirmWord
+                      ? 'bg-orange-600 hover:bg-orange-700 text-white'
+                      : 'bg-orange-300 dark:bg-orange-950/40 text-orange-200 dark:text-orange-800 cursor-not-allowed'
+                  }`}
+                >
+                  مستردد
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ===== UNDO REFUND CONFIRMATION MODAL ===== */}
+      <AnimatePresence>
+        {undoRefundTarget && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+            onClick={() => setUndoRefundTarget(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-850 p-6 rounded-3xl shadow-2xl max-w-sm w-full text-center space-y-5"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="w-14 h-14 rounded-2xl bg-teal-50 dark:bg-teal-950/30 flex items-center justify-center mx-auto">
+                <RotateCcw className="w-7 h-7 text-teal-500" />
+              </div>
+              <div>
+                <h4 className="text-sm font-black text-gray-900 dark:text-white mb-1">لغو مستردد ثبت‌نام</h4>
+                <p className="text-xs text-gray-400 leading-relaxed">
+                  آیا از لغو مستردد ثبت‌نام <span className="font-black text-gray-700 dark:text-gray-300">«{undoRefundTarget.name}»</span><br />
+                  در دوره <span className="font-black text-gray-700 dark:text-gray-300">«{undoRefundTarget.courseTitle}»</span> اطمینان دارید؟<br />
+                  این عملیات غیرقابل بازگشت است.
+                </p>
+              </div>
+              {/* Confirmation word input */}
+              <div className="text-right">
+                <label className="text-[11px] text-gray-500 font-sans block mb-1.5">
+                  برای تأیید، عدد <span className="font-black text-teal-600 dark:text-teal-400 text-sm mx-1 select-all" dir="ltr">{undoRefundConfirmWord}</span> را وارد کنید:
+                </label>
+                <input
+                  type="text"
+                  value={undoRefundConfirmInput}
+                  onChange={e => setUndoRefundConfirmInput(e.target.value)}
+                  placeholder={undoRefundConfirmWord}
+                  className="w-full text-xs p-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500/50 text-center"
+                  autoComplete="off"
+                />
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setUndoRefundTarget(null)}
+                  className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-750 rounded-2xl text-xs font-bold text-gray-500 cursor-pointer transition-all"
+                >
+                  انصراف
+                </button>
+                <button
+                  onClick={() => { confirmUndoRefund(); }}
+                  disabled={undoRefundConfirmInput !== undoRefundConfirmWord}
+                  className={`flex-1 py-2.5 rounded-2xl text-xs font-black cursor-pointer transition-all shadow-xs ${
+                    undoRefundConfirmInput === undoRefundConfirmWord
+                      ? 'bg-teal-600 hover:bg-teal-700 text-white'
+                      : 'bg-teal-300 dark:bg-teal-950/40 text-teal-200 dark:text-teal-800 cursor-not-allowed'
+                  }`}
+                >
+                  لغو مستردد
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
       </AnimatePresence>
     </div >
   );
