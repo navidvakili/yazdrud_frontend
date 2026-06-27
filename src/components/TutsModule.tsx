@@ -3023,23 +3023,50 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
       )}
 
       {moduleId === 'tuts-surveys' && (
-        <TutsSurveys
-          currentUserRole={currentUserRole}
-          individualSurveys={individualSurveys}
-          loadingSurveys={loadingSurveys}
-          surveySearch={surveySearch}
-          setSurveySearch={setSurveySearch}
-          surveyFromDate={surveyFromDate}
-          setSurveyFromDate={setSurveyFromDate}
-          surveyToDate={surveyToDate}
-          setSurveyToDate={setSurveyToDate}
-          surveyPage={surveyPage}
-          setSurveyPage={setSurveyPage}
-          selectedSurveyDetails={selectedSurveyDetails}
-          setSelectedSurveyDetails={setSelectedSurveyDetails}
-          onOpenTab={(id: string) => onOpenTab(id, '', '', false)}
-          courses={courses}
-        />
+        <div className="space-y-6">
+          {/* Statistics section */}
+          <TutsSurveysStats
+            courses={courses}
+            surveys={surveys}
+            surveyFormCourseId={surveyFormCourseId}
+            setSurveyFormCourseId={setSurveyFormCourseId}
+            surveyFormUser={surveyFormUser}
+            setSurveyFormUser={setSurveyFormUser}
+            surveyFormRating={surveyFormRating}
+            setSurveyFormRating={setSurveyFormRating}
+            surveyFormContent={surveyFormContent}
+            setSurveyFormContent={setSurveyFormContent}
+            surveyFormLecturer={surveyFormLecturer}
+            setSurveyFormLecturer={setSurveyFormLecturer}
+            surveyFormOrg={surveyFormOrg}
+            setSurveyFormOrg={setSurveyFormOrg}
+            surveyFormFacilities={surveyFormFacilities}
+            setSurveyFormFacilities={setSurveyFormFacilities}
+            surveyFormComment={surveyFormComment}
+            setSurveyFormComment={setSurveyFormComment}
+            selectedStatCourse={selectedStatCourse}
+            setSelectedStatCourse={setSelectedStatCourse}
+            handleSubmitSurvey={handleSubmitSurvey}
+          />
+          {/* Survey list section */}
+          <TutsSurveys
+            currentUserRole={currentUserRole}
+            individualSurveys={individualSurveys}
+            loadingSurveys={loadingSurveys}
+            surveySearch={surveySearch}
+            setSurveySearch={setSurveySearch}
+            surveyFromDate={surveyFromDate}
+            setSurveyFromDate={setSurveyFromDate}
+            surveyToDate={surveyToDate}
+            setSurveyToDate={setSurveyToDate}
+            surveyPage={surveyPage}
+            setSurveyPage={setSurveyPage}
+            selectedSurveyDetails={selectedSurveyDetails}
+            setSelectedSurveyDetails={setSelectedSurveyDetails}
+            onOpenTab={(id: string) => onOpenTab(id, '', '', false)}
+            courses={courses}
+          />
+        </div>
       )}
 
       {moduleId === 'tuts-surveys-stats' && (
