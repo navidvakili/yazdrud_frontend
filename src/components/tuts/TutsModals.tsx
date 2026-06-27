@@ -2,11 +2,15 @@
 // TutsModule — Shared Modals (Category Manager + Delete Confirm)
 // ============================================================
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Plus, Trash2, Layers } from 'lucide-react';
 import type { TutCategory } from './tuts-types';
-import { toPersianDigits } from './tuts-utils';
+
+// Random 4-digit number for delete confirmation
+function getRandomNumber(): string {
+  return String(Math.floor(1000 + Math.random() * 9000));
+}
 
 interface TutsModalsProps {
     // Category Manager
@@ -30,6 +34,18 @@ export default function TutsModals(props: TutsModalsProps) {
         categories, handleAddCategory, handleDeleteCategory,
         courseToDelete, setCourseToDelete, confirmDeleteCourse,
     } = props;
+
+    // Random confirmation word for delete modal
+    const [deleteConfirmWord, setDeleteConfirmWord] = useState('');
+    const [confirmInput, setConfirmInput] = useState('');
+
+    // Generate a new random word when the modal opens
+    useEffect(() => {
+        if (courseToDelete) {
+            setDeleteConfirmWord(getRandomNumber());
+            setConfirmInput('');
+        }
+    }, [courseToDelete]);
 
     return (
         <>
@@ -128,6 +144,20 @@ export default function TutsModals(props: TutsModalsProps) {
                                     این عملیات غیرقابل بازگشت است.
                                 </p>
                             </div>
+                            {/* Confirmation word input */}
+                            <div className="text-right">
+                                <label className="text-[11px] text-gray-500 font-sans block mb-1.5">
+                                    برای تأیید، عدد <span className="font-black text-teal-600 dark:text-teal-400 text-sm mx-1 select-all" dir="ltr">{deleteConfirmWord}</span> را وارد کنید:
+                                </label>
+                                <input
+                                    type="text"
+                                    value={confirmInput}
+                                    onChange={e => setConfirmInput(e.target.value)}
+                                    placeholder={deleteConfirmWord}
+                                    className="w-full text-xs p-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500/50 text-center"
+                                    autoComplete="off"
+                                />
+                            </div>
                             <div className="flex gap-3">
                                 <button
                                     onClick={() => setCourseToDelete(null)}
@@ -137,7 +167,12 @@ export default function TutsModals(props: TutsModalsProps) {
                                 </button>
                                 <button
                                     onClick={() => { confirmDeleteCourse(); setCourseToDelete(null); }}
-                                    className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-2xl text-xs font-black cursor-pointer transition-all shadow-xs"
+                                    disabled={confirmInput !== deleteConfirmWord}
+                                    className={`flex-1 py-2.5 rounded-2xl text-xs font-black cursor-pointer transition-all shadow-xs ${
+                                        confirmInput === deleteConfirmWord
+                                            ? 'bg-rose-600 hover:bg-rose-700 text-white'
+                                            : 'bg-rose-300 dark:bg-rose-950/40 text-rose-200 dark:text-rose-800 cursor-not-allowed'
+                                    }`}
                                 >
                                     حذف دوره
                                 </button>

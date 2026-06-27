@@ -167,7 +167,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     id: String(c.id),
     title: c.title,
     lecturer: c.instructor || 'مربی دوره',
-    duration: c.duration_text || '۱۲ ساعت',
+    duration: c.duration ? String(c.duration) : '12',
     cost: parseInt(String(c.amount)) || 0,
     enrolled: (c.confirmed_count ?? c.registered_count) || 0,
     capacity: c.capacity || 30,
@@ -980,7 +980,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
   const [newCourseDuration, setNewCourseDuration] = useState('');
   const [newCourseCost, setNewCourseCost] = useState('');
   const [newCourseCapacity, setNewCourseCapacity] = useState('30');
-  const [newCourseStartDate, setNewCourseStartDate] = useState('۱۴۰۵/۰۵/۱۵');
+  const [newCourseStartDate, setNewCourseStartDate] = useState('');
   const [newCourseCategory, setNewCourseCategory] = useState(() => categories[0] || 'علوم تربیتی و روانشناسی');
   const [newCourseDescription, setNewCourseDescription] = useState('');
   const [newCourseEndDate, setNewCourseEndDate] = useState('');
@@ -1013,11 +1013,11 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
         instructor: newCourseLecturer,
         amount: price,
         capacity: parseInt(newCourseCapacity) || 30,
-        duration: newCourseDuration || '12 ساعت',
+        duration: parseInt(newCourseDuration) || 12,
         start_date: startDateEng,
         end_date: endDateEng || null,
         description: newCourseDescription || '',
-        active: newCourseActive,
+        active: newCourseActive ? '1' : '0',
         group_id: groupId,
       });
 
@@ -1031,13 +1031,24 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
       setNewCourseCost('');
       setNewCourseDuration('');
       setNewCourseCapacity('30');
-      setNewCourseStartDate('۱۴۰۵/۰۵/۱۵');
+      setNewCourseStartDate('');
       setNewCourseEndDate('');
       setNewCourseActive(true);
       setNewCourseCategory(categories[0] || '');
       setNewCourseDescription('');
     } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.message || 'خطا در ارتباط با سرور';
+      let msg = err?.message || 'خطا در ارتباط با سرور';
+      // Include validation errors if available
+      const errors = err?.errors || err?.response?.data?.errors;
+      if (errors) {
+        const errorList = Object.values(errors).flat().join(' | ');
+        msg += `: ${errorList}`;
+      }
+      // Include full response data for debugging
+      const responseData = err?.response?.data;
+      if (responseData && !errors) {
+        msg += ` | ${JSON.stringify(responseData)}`;
+      }
       showToast(`خطا در تعریف دوره: ${msg}`, 'error');
     }
   };
@@ -1798,10 +1809,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                                       </span>
                                       <span className="flex items-center gap-1">
                                         <Clock className="w-3 h-3" />
-                                        {toPersianDigits(course.duration)}
-                                      </span>
-                                      <span className="flex items-center gap-1">
-                                        <Calendar className="w-3 h-3" />
+                                        {toPersianDigits(course.duration)} ساعت
                                         {toPersianDigits(course.startDate)}
                                       </span>
                                     </div>
@@ -1939,7 +1947,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                                         <Clock className="w-3.5 h-3.5 text-gray-400" />
                                         طول دوره:
                                       </span>
-                                      <span>{toPersianDigits(course.duration)}</span>
+                                      <span>{toPersianDigits(course.duration)} ساعت</span>
                                     </div>
                                     <div className="flex items-center justify-between  text-xs">
                                       <span className="flex items-center gap-1.5 font-sans">
@@ -2118,10 +2126,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                     </div>
                     <div className="p-3 bg-gray-50 dark:bg-gray-950 rounded-xl border border-gray-100 dark:border-gray-850">
                       <span className="text-[10px] text-gray-400 dark:text-gray-500 font-sans block mb-1">مدت زمان آموزش:</span>
-                      <span className="font-bold text-gray-800 dark:text-gray-200">{toPersianDigits(selectedCourseForDetail.duration)}</span>
-                    </div>
-                    <div className="p-3 bg-gray-50 dark:bg-gray-950 rounded-xl border border-gray-100 dark:border-gray-850">
-                      <span className="text-[10px] text-gray-400 dark:text-gray-500 font-sans block mb-1">تاریخ شروع کلاسی:</span>
+                      <span className="font-bold text-gray-800 dark:text-gray-200">{toPersianDigits(selectedCourseForDetail.duration)} ساعت</span>
                       <span className="font-bold text-gray-800 dark:text-gray-200">{toPersianDigits(selectedCourseForDetail.startDate)}</span>
                     </div>
                     <div className="p-3 bg-gray-50 dark:bg-gray-950 rounded-xl border border-gray-100 dark:border-gray-850">
