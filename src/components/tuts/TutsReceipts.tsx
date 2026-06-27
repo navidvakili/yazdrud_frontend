@@ -110,9 +110,11 @@ export default function TutsReceipts(props: TutsReceiptsProps) {
                             const filtered = registrants.filter(r => {
                                 const matchesStatus = receiptWorkspaceStatusFilter === 'all' || r.status === receiptWorkspaceStatusFilter;
                                 const matchesCourse = receiptWorkspaceCourseFilter === 'all' || r.courseId === receiptWorkspaceCourseFilter;
-                                const matchesCode = !receiptWorkspaceSearchCode.trim() ||
-                                    r.studentCode.toString().includes(receiptWorkspaceSearchCode.trim()) ||
-                                    r.name.includes(receiptWorkspaceSearchCode.trim());
+                                const trimmedSearch = receiptWorkspaceSearchCode.trim();
+                                const matchesCode = !trimmedSearch ||
+                                    r.studentCode.toString().includes(trimmedSearch) ||
+                                    r.nationalCode.toString().includes(trimmedSearch) ||
+                                    r.name.includes(trimmedSearch);
                                 return matchesStatus && matchesCourse && matchesCode;
                             });
 
