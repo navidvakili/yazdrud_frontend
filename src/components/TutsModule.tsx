@@ -151,6 +151,28 @@ function toEnglishDigits(str: string): string {
   });
 }
 
+/**
+ * Normalize Persian/Arabic search string:
+ * - Convert Arabic ي (ye) to Persian ی
+ * - Convert Arabic ك (kaf) to Persian ک
+ * - Convert Arabic/Persian digits to Latin digits
+ * This ensures searches work regardless of which character form the user types.
+ */
+function normalizePersianSearch(str: string): string {
+  if (!str) return '';
+  return str
+    // Arabic ي → Persian ی
+    .replace(/ي/g, 'ی')
+    // Arabic ك → Persian ک
+    .replace(/ك/g, 'ک')
+    // Arabic/Persian digits → Latin digits
+    .replace(/[٠-۹]/g, function (d) {
+      const allDigits = '٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹';
+      const idx = allDigits.indexOf(d);
+      return idx >= 0 ? String(idx % 10) : d;
+    });
+}
+
 function formatCurrency(amount: number): string {
   return toPersianDigits(amount.toLocaleString('fa-IR')) + ' ریال';
 }
@@ -1481,7 +1503,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
           per_page: reportPerPage,
           page: reportPage,
         };
-        if (reportSearch.trim()) params.search = reportSearch.trim();
+        if (reportSearch.trim()) params.search = normalizePersianSearch(reportSearch.trim());
         if (reportCourseFilter) params.course_id = reportCourseFilter;
 
         const res = await api.getAllRegistrations(params);
@@ -1500,12 +1522,12 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
   const filteredRegistrants = moduleId === 'tuts-reports'
     ? reportRegistrants
     : registrants.filter(reg => {
-    const searchStr = toEnglishDigits(reportSearch.toLowerCase());
-    const matchText = reg.name.toLowerCase().includes(reportSearch.toLowerCase()) ||
-      toEnglishDigits(reg.nationalCode).includes(searchStr) ||
-      toEnglishDigits(reg.studentCode).includes(searchStr) ||
-      toEnglishDigits(reg.mobile).includes(searchStr) ||
-      toEnglishDigits(reg.trackingCode).includes(searchStr);
+    const searchStr = normalizePersianSearch(reportSearch.toLowerCase());
+    const matchText = normalizePersianSearch(reg.name.toLowerCase()).includes(searchStr) ||
+      normalizePersianSearch(reg.nationalCode).includes(searchStr) ||
+      normalizePersianSearch(reg.studentCode).includes(searchStr) ||
+      normalizePersianSearch(reg.mobile).includes(searchStr) ||
+      normalizePersianSearch(reg.trackingCode).includes(searchStr);
     const matchCourse = reportCourseFilter === '' || reg.courseId === reportCourseFilter;
     return matchText && matchCourse;
   });

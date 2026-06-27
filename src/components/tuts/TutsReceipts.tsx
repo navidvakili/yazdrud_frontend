@@ -8,7 +8,7 @@ import {
     Filter, Info, X, Check, AlertTriangle, Search,
 } from 'lucide-react';
 import type { TutCourse, TutRegistrant } from './tuts-types';
-import { toPersianDigits, toEnglishDigits, formatCurrency } from './tuts-utils';
+import { toPersianDigits, normalizePersian, formatCurrency } from './tuts-utils';
 
 interface TutsReceiptsProps {
     registrants: TutRegistrant[];
@@ -110,11 +110,11 @@ export default function TutsReceipts(props: TutsReceiptsProps) {
                             const filtered = registrants.filter(r => {
                                 const matchesStatus = receiptWorkspaceStatusFilter === 'all' || r.status === receiptWorkspaceStatusFilter;
                                 const matchesCourse = receiptWorkspaceCourseFilter === 'all' || r.courseId === receiptWorkspaceCourseFilter;
-                                const trimmedSearch = toEnglishDigits(receiptWorkspaceSearchCode.trim());
+                                const trimmedSearch = normalizePersian(receiptWorkspaceSearchCode.trim());
                                 const matchesCode = !trimmedSearch ||
-                                    r.studentCode.toString().includes(trimmedSearch) ||
-                                    r.nationalCode.toString().includes(trimmedSearch) ||
-                                    r.name.includes(trimmedSearch);
+                                    normalizePersian(r.studentCode).includes(trimmedSearch) ||
+                                    normalizePersian(r.nationalCode).includes(trimmedSearch) ||
+                                    normalizePersian(r.name).includes(trimmedSearch);
                                 return matchesStatus && matchesCourse && matchesCode;
                             });
 

@@ -13,12 +13,31 @@ export function toPersianDigits(str: string | number): string {
     });
 }
 
-/** Convert Persian digits to Western digits */
+/** Convert Persian digits (۰-۹) to Western digits (0-9) */
 export function toEnglishDigits(str: string): string {
     if (!str) return '';
     return str.toString().replace(/[۰-۹]/g, function (d) {
         return String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d));
     });
+}
+
+/**
+ * Normalize a Persian/Arabic string for search/comparison:
+ * - Arabic ي → Persian ی
+ * - Arabic ك → Persian ک
+ * - Arabic/Persian digits → Latin digits (0-9)
+ * - Lowercase
+ */
+export function normalizePersian(str: string): string {
+    if (!str) return '';
+    let s = str.toLowerCase();
+    s = s.replace(/ي/g, 'ی').replace(/ك/g, 'ک');
+    s = s.replace(/[٠-۹]/g, function (d) {
+        const allDigits = '٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹';
+        const idx = allDigits.indexOf(d);
+        return idx >= 0 ? String(idx % 10) : d;
+    });
+    return s;
 }
 
 /** Format a number as currency in Rials with Persian digits */
