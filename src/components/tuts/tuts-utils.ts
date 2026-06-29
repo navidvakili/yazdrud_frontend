@@ -75,15 +75,30 @@ export function mapCourse(c: any): TutCourse {
 
 /** Map API voucher object to TutVoucher */
 export function mapVoucher(c: any): TutVoucher {
+    const cap = c.capacity || 0;
+    const used = c.used_count || 0;
+    const remaining = Math.max(0, cap - used);
+    let status: 'active' | 'used' | 'expired' = 'active';
+    if (used >= cap && cap > 0) {
+        status = 'used';
+    } else if (c.is_active === false) {
+        status = 'expired';
+    }
+
     return {
         id: String(c.id),
         code: c.code || '',
         title: c.title || '',
+        discountType: c.type_discount === 'percent' ? 'percentage' : 'fixed',
+        discountValue: Number(c.value) || 0,
         validFrom: c.start_date || '1405/01/01',
         validTo: c.finish_date || '1405/12/29',
         courseId: c.course_id ? String(c.course_id) : 'all',
-        globalCap: c.capacity || 0,
-        totalUsed: c.used_count || 0,
+        globalCap: cap,
+        totalUsed: used,
+        maxUses: cap,
+        remainingUses: remaining,
+        status,
         budgetUsed: 0,
         budgetLimit: 0,
         discountPercent: c.type_discount === 'percent' ? Number(c.value) : undefined,

@@ -6,7 +6,7 @@ import DatePicker, { DateObject } from "react-multi-date-picker";
 import "react-multi-date-picker/styles/colors/teal.css";
 import persian from "react-date-object/calendars/persian"
 import persian_fa from "react-date-object/locales/persian_fa"
-import { Calendar } from 'lucide-react';
+import { Calendar, X } from 'lucide-react';
 import { toPersianDigits, toEnglishDigits } from './tuts-utils';
 
 interface JalaliDatepickerProps {
@@ -25,6 +25,10 @@ export function JalaliDatepicker({ value, onChange }: JalaliDatepickerProps) {
           })
         : undefined;
 
+    const handleClear = () => {
+        onChange('');
+    };
+
     return (
         <DatePicker
             calendar={persian}
@@ -34,6 +38,9 @@ export function JalaliDatepicker({ value, onChange }: JalaliDatepickerProps) {
                 if (date) {
                     // برگرداندن تاریخ با ارقام فارسی (مشابه قبل)
                     onChange(toPersianDigits(date.format("YYYY/MM/DD")));
+                } else {
+                    // پاک کردن مقدار تاریخ
+                    onChange('');
                 }
             }}
             format="YYYY/MM/DD"
@@ -42,7 +49,7 @@ export function JalaliDatepicker({ value, onChange }: JalaliDatepickerProps) {
             containerClassName="w-full"
             calendarPosition="bottom-right"
             animations={[]}
-            render={<CustomInput />}
+            render={<CustomInput onClear={handleClear} />}
             mapDays={({ date }) => {
                 const isFriday = date.weekDay.index === 6;
                 if (isFriday) {
@@ -60,7 +67,7 @@ export function JalaliDatepicker({ value, onChange }: JalaliDatepickerProps) {
 /**
  * رندر دکمه سفارشی به جای input پیش‌فرض
  */
-function CustomInput({ openCalendar, value }: any) {
+function CustomInput({ openCalendar, value, onClear }: any) {
     return (
         <div
             className="flex items-center gap-1.5 w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 cursor-pointer text-right"
@@ -70,6 +77,19 @@ function CustomInput({ openCalendar, value }: any) {
             <span className="font-sans text-gray-950 dark:text-white flex-1 text-right">
                 {value ? toPersianDigits(value) : 'انتخاب تاریخ'}
             </span>
+            {value && (
+                <button
+                    type="button"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onClear?.();
+                    }}
+                    className="p-0.5 rounded-full text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+                    title="پاک کردن تاریخ"
+                >
+                    <X className="w-3.5 h-3.5" />
+                </button>
+            )}
         </div>
     );
 }
