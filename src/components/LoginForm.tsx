@@ -378,7 +378,7 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
             {/* Badge */}
             <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-teal-500/30 text-teal-100 text-xs font-bold mb-5 backdrop-blur-md">
               <GraduationCap className="w-4 h-4 shrink-0 text-teal-300" />
-              <span>نرم‌افزار یکپارچهٔ مدیریت دانشگاهی یکتا</span>
+              <span>نرم‌افزار یکپارچهٔ مدیریت دانشگاهی نیکا</span>
             </div>
 
             {/* Headline */}

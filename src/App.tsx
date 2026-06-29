@@ -482,6 +482,7 @@ export default function App() {
       case 'tuts-surveys':
       case 'tuts-surveys-stats':
       case 'tuts-vouchers':
+      case 'tuts/vouchers':
       // Map actual DB menu URLs to TutsModule sub-views
       case 'tuts/reports':
       case 'tuts/bank-receipts':
@@ -498,7 +499,8 @@ export default function App() {
                   : moduleType === 'tuts/statistics' ? 'tuts-stats'
                     : moduleType === 'course-surveys' ? 'tuts-surveys'
                       : moduleType === 'course-surveys/statistics' ? 'tuts-surveys-stats'
-                        : moduleType}
+                        : moduleType === 'tuts/vouchers' ? 'tuts-vouchers'
+                          : moduleType}
             onOpenTab={handleOpenTab}
           />
         ) : null;
