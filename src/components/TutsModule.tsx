@@ -131,6 +131,11 @@ interface TutVoucher {
   // 6. Effect Combination
   discountPercent?: number; // percent discount, e.g. 20
   discountAmount?: number; // absolute discount in Rials, e.g. 500000
+  discountValue?: number; // discount value used for display
+  discountType?: 'percentage' | 'fixed'; // how the discount is applied
+  maxUses?: number; // usage capacity
+  remainingUses?: number; // remaining uses
+  status?: 'active' | 'used' | 'expired'; // voucher status
   allowInstallments?: boolean; // whether this voucher enables installment plans
   installmentCount?: number; // number of installments allowed
 }
@@ -200,21 +205,37 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     description: c.description || 'توضیحات دوره به زودی منتشر خواهد شد.'
   });
 
-  const mapVoucher = (c: any): TutVoucher => ({
-    id: String(c.id),
-    code: c.code || '',
-    title: c.title || '',
-    validFrom: c.start_date || '1405/01/01',
-    validTo: c.finish_date || '1405/12/29',
-    courseId: c.course_id ? String(c.course_id) : 'all',
-    globalCap: c.capacity || 0,
-    totalUsed: c.used_count || 0,
-    budgetUsed: 0,
-    budgetLimit: 0,
-    discountPercent: c.type_discount === 'percent' ? Number(c.value) : undefined,
-    discountAmount: c.type_discount === 'money' ? Number(c.value) : undefined,
-    allowInstallments: c.type === 'installment'
-  });
+  const mapVoucher = (c: any): TutVoucher => {
+    const cap = c.capacity || 0;
+    const used = c.used_count || 0;
+    const remaining = Math.max(0, cap - used);
+    let status: 'active' | 'used' | 'expired' = 'active';
+    if (used >= cap && cap > 0) {
+      status = 'used';
+    } else if (c.is_active === false) {
+      status = 'expired';
+    }
+    return {
+      id: String(c.id),
+      code: c.code || '',
+      title: c.title || '',
+      validFrom: c.start_date || '1405/01/01',
+      validTo: c.finish_date || '1405/12/29',
+      courseId: c.course_id ? String(c.course_id) : 'all',
+      globalCap: cap,
+      totalUsed: used,
+      maxUses: cap,
+      remainingUses: remaining,
+      status,
+      discountType: c.type_discount === 'percent' ? 'percentage' : 'fixed',
+      discountValue: Number(c.value) || 0,
+      budgetUsed: 0,
+      budgetLimit: 0,
+      discountPercent: c.type_discount === 'percent' ? Number(c.value) : undefined,
+      discountAmount: c.type_discount === 'money' ? Number(c.value) : undefined,
+      allowInstallments: c.type === 'installment'
+    };
+  };
 
   const mapRegistrant = (r: any): TutRegistrant => ({
     id: String(r.id),
@@ -267,7 +288,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     lastFetchModuleRef.current = moduleId;
 
     // Determine which data types are needed based on the active moduleId
-    const needsCourses = moduleId === 'tuts-list' || moduleId === 'tuts-reports' || moduleId === 'tuts-stats' || moduleId === 'tuts-surveys';
+    const needsCourses = moduleId === 'tuts-list' || moduleId === 'tuts-reports' || moduleId === 'tuts-stats' || moduleId === 'tuts-surveys' || moduleId === 'tuts-vouchers';
     const needsRegistrants = moduleId === 'tuts-receipts' || moduleId === 'tuts-stats';
     const needsSurveys = moduleId === 'tuts-surveys' || moduleId === 'tuts-surveys-stats';
     const needsVouchers = moduleId === 'tuts-vouchers';
@@ -495,6 +516,16 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
   const [voucherPage, setVoucherPage] = useState(1);
   const voucherPerPage = 10;
 
+  // Edit voucher state
+  const [editingVoucher, setEditingVoucher] = useState<TutVoucher | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+
+  // Delete voucher state
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletingVoucher, setDeletingVoucher] = useState<TutVoucher | null>(null);
+  const [deleteConfirmWord, setDeleteConfirmWord] = useState('');
+  const [deleteInput, setDeleteInput] = useState('');
+
   // ===== Loading Spinner Component =====
   const LoadingSpinner = ({ text }: { text?: string }) => (
     <div className="flex flex-col items-center justify-center py-16 text-gray-400">
@@ -536,8 +567,8 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
 
   const handleCreateVoucher = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    const code = newVoucherCode.trim().toUpperCase();
-    const title = newVoucherTitle.trim();
+    const code = newVoucher.code.trim().toUpperCase();
+    const title = newVoucher.title?.trim() || '';
     if (!code || !title) {
       showToast('لطفاً کد بن و عنوان آن را وارد کنید.', 'error');
       return;
@@ -552,38 +583,107 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
       id: `vouch-${Date.now()}`,
       code,
       title,
-      validFrom: newVoucherValidFrom || undefined,
-      validTo: newVoucherValidTo || undefined,
-      allowedHours: newVoucherAllowedHours !== 'all' ? newVoucherAllowedHours : undefined,
-      occasion: newVoucherOccasion || undefined,
-      courseId: newVoucherCourseId !== 'all' ? newVoucherCourseId : undefined,
-      category: newVoucherCategory !== 'all' ? newVoucherCategory : undefined,
-      courseLevel: newVoucherCourseLevel !== 'all' ? (newVoucherCourseLevel as 'elementary' | 'advanced') : undefined,
-      deliveryType: newVoucherDeliveryType !== 'all' ? (newVoucherDeliveryType as 'online' | 'in-person') : undefined,
-      minCoursePrice: Number(newVoucherMinCoursePrice) > 0 ? Number(newVoucherMinCoursePrice) : undefined,
-      globalCap: Number(newVoucherGlobalCap) > 0 ? Number(newVoucherGlobalCap) : undefined,
+      validFrom: newVoucher.validFrom || undefined,
+      validTo: newVoucher.validUntil || undefined,
+      allowedHours: undefined,
+      occasion: undefined,
+      courseId: newVoucher.applicableProductIds?.[0] || undefined,
+      category: newVoucher.applicableCategoryIds?.[0] || undefined,
+      courseLevel: undefined,
+      deliveryType: undefined,
+      minCoursePrice: undefined,
+      globalCap: newVoucher.maxUses > 0 ? newVoucher.maxUses : undefined,
+      maxUses: newVoucher.maxUses > 0 ? newVoucher.maxUses : undefined,
+      remainingUses: newVoucher.maxUses > 0 ? newVoucher.maxUses : 0,
+      status: 'active',
       totalUsed: 0,
-      budgetLimit: Number(newVoucherBudgetLimit) > 0 ? Number(newVoucherBudgetLimit) : undefined,
+      budgetLimit: newVoucher.budgetCap > 0 ? newVoucher.budgetCap : undefined,
       budgetUsed: 0,
-      perEmailLimit: Number(newVoucherPerEmailLimit) > 0 ? Number(newVoucherPerEmailLimit) : undefined,
-      allowedProvince: newVoucherAllowedProvince !== 'all' ? newVoucherAllowedProvince : undefined,
-      allowedDevice: newVoucherAllowedDevice !== 'all' ? (newVoucherAllowedDevice as 'mobile' | 'desktop') : undefined,
-      allowedReferrer: newVoucherAllowedReferrer !== 'all' ? newVoucherAllowedReferrer : undefined,
-      firstPurchaseOnly: newVoucherFirstPurchaseOnly,
-      discountPercent: newVoucherDiscountType === 'percent' ? Number(newVoucherDiscountValue) : undefined,
-      discountAmount: newVoucherDiscountType === 'amount' ? Number(newVoucherDiscountValue) : undefined,
-      allowInstallments: newVoucherAllowInstallments,
-      installmentCount: newVoucherAllowInstallments ? Number(newVoucherInstallmentCount) : undefined
+      perEmailLimit: undefined,
+      allowedProvince: newVoucher.geoLimit || undefined,
+      allowedDevice: newVoucher.deviceLimit ? (newVoucher.deviceLimit as 'mobile' | 'desktop') : undefined,
+      allowedReferrer: undefined,
+      firstPurchaseOnly: newVoucher.firstPurchaseOnly,
+      discountType: newVoucher.discountType,
+      discountValue: newVoucher.discountValue,
+      discountPercent: newVoucher.discountType === 'percentage' ? newVoucher.discountValue : undefined,
+      discountAmount: newVoucher.discountType === 'fixed' ? newVoucher.discountValue : undefined,
+      allowInstallments: newVoucher.installmentsAllowed,
+      installmentCount: newVoucher.installmentsAllowed ? newVoucher.minInstallment : undefined
     };
 
     setVouchers([created, ...vouchers]);
     showToast(`بن خرید جدید "${title}" با کد "${code}" با موفقیت ایجاد گردید.`);
 
     // reset form fields
-    setNewVoucherCode('');
-    setNewVoucherTitle('');
-    setNewVoucherOccasion('');
-    setNewVoucherDiscountValue('20');
+    setNewVoucher({
+      code: '',
+      title: '',
+      discountType: 'percentage',
+      discountValue: 0,
+      maxUses: 100,
+      validFrom: '',
+      validUntil: '',
+      applicableProductIds: [],
+      applicableCategoryIds: [],
+      budgetCap: 0,
+      minInstallment: 0,
+      installmentsAllowed: false,
+      geoLimit: '',
+      deviceLimit: '',
+      firstPurchaseOnly: false,
+    });
+  };
+
+  const handleUpdateVoucher = async (id: string, data: Partial<TutVoucher>) => {
+    try {
+      const payload: any = {};
+      if (data.title !== undefined) payload.title = data.title;
+      if (data.code !== undefined) payload.code = data.code;
+      if (data.discountValue !== undefined) {
+        payload.value = data.discountValue;
+        payload.type_discount = data.discountType === 'percentage' ? 'percent' : 'money';
+      }
+      if (data.maxUses !== undefined) payload.capacity = data.maxUses;
+      if (data.validFrom !== undefined) payload.start_date = data.validFrom;
+      if (data.validTo !== undefined) payload.finish_date = data.validTo;
+      if (data.discountType !== undefined) {
+        payload.type_discount = data.discountType === 'percentage' ? 'percent' : 'money';
+      }
+
+      await api.updateCoupon(Number(id), payload);
+
+      // Refresh local state
+      setVouchers(prev => prev.map(v => v.id === id ? { ...v, ...data } : v));
+      setShowEditModal(false);
+      setEditingVoucher(null);
+      showToast(`بن تخفیف "${data.title || ''}" با موفقیت به‌روزرسانی شد.`);
+    } catch (err: any) {
+      const msg = err?.errors?.code?.[0] || err?.message || 'خطا در به‌روزرسانی بن تخفیف';
+      showToast(msg, 'error');
+    }
+  };
+
+  const handleDeleteVoucher = async (id: string) => {
+    try {
+      await api.deleteCoupon(Number(id));
+      setVouchers(prev => prev.filter(v => v.id !== id));
+      setShowDeleteModal(false);
+      setDeletingVoucher(null);
+      setDeleteInput('');
+      showToast('بن تخفیف با موفقیت حذف شد.');
+    } catch (err: any) {
+      const msg = err?.message || 'خطا در حذف بن تخفیف';
+      showToast(msg, 'error');
+      setShowDeleteModal(false);
+    }
+  };
+
+  const openDeleteConfirm = (v: TutVoucher) => {
+    setDeletingVoucher(v);
+    setDeleteConfirmWord(String(Math.floor(1000 + Math.random() * 9000)));
+    setDeleteInput('');
+    setShowDeleteModal(true);
   };
 
   const handleRunSandboxTest = () => {
@@ -3251,6 +3351,20 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
           voucherPerPage={voucherPerPage}
           handleCreateVoucher={handleCreateVoucher}
           handleRunSandboxTest={handleRunSandboxTest}
+          editingVoucher={editingVoucher}
+          setEditingVoucher={setEditingVoucher}
+          showEditModal={showEditModal}
+          setShowEditModal={setShowEditModal}
+          showDeleteModal={showDeleteModal}
+          setShowDeleteModal={setShowDeleteModal}
+          deletingVoucher={deletingVoucher}
+          setDeletingVoucher={setDeletingVoucher}
+          deleteConfirmWord={deleteConfirmWord}
+          deleteInput={deleteInput}
+          setDeleteInput={setDeleteInput}
+          handleUpdateVoucher={handleUpdateVoucher}
+          handleDeleteVoucher={handleDeleteVoucher}
+          openDeleteConfirm={openDeleteConfirm}
         />
       )}
 

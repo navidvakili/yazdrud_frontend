@@ -2,18 +2,19 @@
 // TutsModule — Vouchers (Discount Code Manager + Sandbox)
 // ============================================================
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
     Tag, Plus, List, Copy, Check, Trash2, Zap, Clock,
     MapPin, Smartphone, Gift, CreditCard, DollarSign,
-    Beaker, AlertTriangle, Info, X, Flame,
+    Beaker, AlertTriangle, Info, X, Flame, Search, Sparkles,
 } from 'lucide-react';
 import type {
     TutCourse, TutCategory, TutVoucher,
     VoucherFormData, SandboxResult,
 } from './tuts-types';
-import { toPersianDigits, formatCurrency } from './tuts-utils';
+import { toPersianDigits, formatCurrency, toEnglishDigits } from './tuts-utils';
+import { JalaliDatepicker } from './JalaliDatepicker';
 
 interface TutsVouchersProps {
     vouchers: TutVoucher[];
@@ -39,6 +40,21 @@ interface TutsVouchersProps {
     voucherPerPage: number;
     handleCreateVoucher: () => void;
     handleRunSandboxTest: () => void;
+    // Edit/Delete
+    editingVoucher: TutVoucher | null;
+    setEditingVoucher: (v: TutVoucher | null) => void;
+    showEditModal: boolean;
+    setShowEditModal: (v: boolean) => void;
+    showDeleteModal: boolean;
+    setShowDeleteModal: (v: boolean) => void;
+    deletingVoucher: TutVoucher | null;
+    setDeletingVoucher: (v: TutVoucher | null) => void;
+    deleteConfirmWord: string;
+    deleteInput: string;
+    setDeleteInput: (v: string) => void;
+    handleUpdateVoucher: (id: string, data: Partial<TutVoucher>) => Promise<void>;
+    handleDeleteVoucher: (id: string) => Promise<void>;
+    openDeleteConfirm: (v: TutVoucher) => void;
 }
 
 const VOUCHER_CONDITIONS = [
@@ -60,6 +76,12 @@ export default function TutsVouchers(props: TutsVouchersProps) {
         sandboxResult, setSandboxResult,
         voucherPage, setVoucherPage, voucherPerPage,
         handleCreateVoucher, handleRunSandboxTest,
+        editingVoucher, setEditingVoucher,
+        showEditModal, setShowEditModal,
+        showDeleteModal, setShowDeleteModal,
+        deletingVoucher, setDeletingVoucher,
+        deleteConfirmWord, deleteInput, setDeleteInput,
+        handleUpdateVoucher, handleDeleteVoucher, openDeleteConfirm,
     } = props;
 
     const totalVoucherPages = Math.max(1, Math.ceil(vouchers.length / voucherPerPage));
@@ -68,6 +90,35 @@ export default function TutsVouchers(props: TutsVouchersProps) {
     const handleCopyCode = async (code: string) => {
         try { await navigator.clipboard.writeText(code); } catch { /* ignore */ }
     };
+
+    // --- Auto-generate code (frontend) ---
+    const handleGenerateCode = () => {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let code = '';
+        for (let i = 0; i < 8; i++) {
+            code += chars[Math.floor(Math.random() * chars.length)];
+        }
+        setNewVoucher(f => ({ ...f, code }));
+    };
+
+    // --- Course autocomplete ---
+    const [courseSearch, setCourseSearch] = useState('');
+    const [courseDropdownOpen, setCourseDropdownOpen] = useState(false);
+    const courseRef = useRef<HTMLDivElement>(null);
+
+    const filteredCourses = courses.filter(c =>
+        c.title.toLowerCase().includes(courseSearch.toLowerCase())
+    );
+
+    useEffect(() => {
+        function handleClick(e: MouseEvent) {
+            if (courseRef.current && !courseRef.current.contains(e.target as Node)) {
+                setCourseDropdownOpen(false);
+            }
+        }
+        document.addEventListener('mousedown', handleClick);
+        return () => document.removeEventListener('mousedown', handleClick);
+    }, []);
 
     return (
         <div className="space-y-6">
@@ -147,6 +198,32 @@ export default function TutsVouchers(props: TutsVouchersProps) {
                                                         'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'}`}>
                                                     {v.status === 'active' ? 'فعال' : v.status === 'used' ? 'مصرف شده' : 'منقضی'}
                                                 </span>
+                                                {/* Edit button */}
+                                                <button
+                                                    onClick={() => { setEditingVoucher(v); setShowEditModal(true); }}
+                                                    className="p-1.5 rounded-lg text-gray-300 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/20 transition-colors cursor-pointer"
+                                                    title="ویرایش بن">
+                                                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                        <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+                                                        <path d="m15 5 4 4"/>
+                                                    </svg>
+                                                </button>
+                                                {/* Delete button */}
+                                                <button
+                                                    onClick={() => openDeleteConfirm(v)}
+                                                    className={`p-1.5 rounded-lg transition-colors cursor-pointer ${v.totalUsed > 0
+                                                        ? 'text-gray-200 dark:text-gray-700 cursor-not-allowed'
+                                                        : 'text-gray-300 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20'}`}
+                                                    title={v.totalUsed > 0 ? 'این بن قبلاً استفاده شده است و قابل حذف نمی‌باشد' : 'حذف بن'}
+                                                    disabled={v.totalUsed > 0}>
+                                                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                        <path d="M3 6h18"/>
+                                                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                                                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                                                        <line x1="10" x2="10" y1="11" y2="17"/>
+                                                        <line x1="14" x2="14" y1="11" y2="17"/>
+                                                    </svg>
+                                                </button>
                                             </div>
                                         </div>
                                         {/* Condition Tags */}
@@ -203,11 +280,25 @@ export default function TutsVouchers(props: TutsVouchersProps) {
                                 <div className="p-4 bg-gray-55/50 dark:bg-gray-950/30 rounded-2xl border border-gray-100/50 dark:border-gray-850 space-y-3">
                                     <h6 className="text-[10px] font-black text-gray-400 flex items-center gap-1.5">اطلاعات پایه بن</h6>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <div className="space-y-1 sm:col-span-2">
+                                            <label className="text-[10px] font-bold text-gray-500 block">عنوان بن</label>
+                                            <input type="text" value={newVoucher.title || ''} onChange={(e) => setNewVoucher(f => ({ ...f, title: e.target.value }))}
+                                                placeholder="مثال: بن تخفیف نوروزی"
+                                                className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none" />
+                                        </div>
                                         <div className="space-y-1">
                                             <label className="text-[10px] font-bold text-gray-500 block">کد بن تخفیف</label>
-                                            <input type="text" value={newVoucher.code} onChange={(e) => setNewVoucher(f => ({ ...f, code: e.target.value }))}
-                                                placeholder="مثال: WELCOME10"
-                                                className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none font-mono" />
+                                            <div className="flex gap-2">
+                                                <input type="text" value={newVoucher.code} onChange={(e) => setNewVoucher(f => ({ ...f, code: e.target.value }))}
+                                                    placeholder="مثال: WELCOME10"
+                                                    className="flex-1 text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none font-mono" />
+                                                <button type="button" onClick={handleGenerateCode}
+                                                    className="px-3 py-2.5 bg-indigo-50 dark:bg-indigo-950/30 hover:bg-indigo-100 dark:hover:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap border border-indigo-200/50 dark:border-indigo-800/50"
+                                                    title="کد اتوماتیک">
+                                                    <Sparkles className="w-4 h-4" />
+                                                    تولید کد
+                                                </button>
+                                            </div>
                                         </div>
                                         <div className="space-y-1">
                                             <label className="text-[10px] font-bold text-gray-500 block">نوع تخفیف</label>
@@ -236,13 +327,17 @@ export default function TutsVouchers(props: TutsVouchersProps) {
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                         <div className="space-y-1">
                                             <label className="text-[10px] font-bold text-gray-500 block">فعال از تاریخ</label>
-                                            <input type="date" value={newVoucher.validFrom || ''} onChange={(e) => setNewVoucher(f => ({ ...f, validFrom: e.target.value }))}
-                                                className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 dark:text-white focus:outline-none" />
+                                            <JalaliDatepicker
+                                                value={newVoucher.validFrom}
+                                                onChange={(v) => setNewVoucher(f => ({ ...f, validFrom: v }))}
+                                            />
                                         </div>
                                         <div className="space-y-1">
                                             <label className="text-[10px] font-bold text-gray-500 block">فعال تا تاریخ</label>
-                                            <input type="date" value={newVoucher.validUntil || ''} onChange={(e) => setNewVoucher(f => ({ ...f, validUntil: e.target.value }))}
-                                                className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 dark:text-white focus:outline-none" />
+                                            <JalaliDatepicker
+                                                value={newVoucher.validUntil}
+                                                onChange={(v) => setNewVoucher(f => ({ ...f, validUntil: v }))}
+                                            />
                                         </div>
                                     </div>
                                 </div>
@@ -251,13 +346,33 @@ export default function TutsVouchers(props: TutsVouchersProps) {
                                 <div className="p-4 bg-gray-55/50 dark:bg-gray-950/30 rounded-2xl border border-gray-100/50 dark:border-gray-850 space-y-3">
                                     <h6 className="text-[10px] font-black text-gray-400 flex items-center gap-1.5"><Tag className="w-3 h-3" />محصول و دسته‌بندی</h6>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                        <div className="space-y-1">
+                                        <div className="space-y-1 relative" ref={courseRef}>
                                             <label className="text-[10px] font-bold text-gray-500 block">دوره‌های مجاز</label>
-                                            <select value={newVoucher.applicableProductIds?.[0] || ''} onChange={(e) => setNewVoucher(f => ({ ...f, applicableProductIds: e.target.value ? [e.target.value] : [] }))}
-                                                className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none cursor-pointer">
-                                                <option value="">همه دوره‌ها</option>
-                                                {courses.map(c => (<option key={c.id} value={c.id}>{c.title}</option>))}
-                                            </select>
+                                            <div className="relative">
+                                                <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                                                <input type="text" value={courseSearch}
+                                                    onFocus={() => { setCourseSearch(''); setCourseDropdownOpen(true); }}
+                                                    onChange={(e) => { setCourseSearch(e.target.value); setCourseDropdownOpen(true); }}
+                                                    placeholder="جستجوی دوره..."
+                                                    className="w-full text-xs px-3.5 py-2.5 pr-9 rounded-xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none" />
+                                            </div>
+                                            {courseDropdownOpen && (
+                                                <div className="absolute z-50 top-full mt-1 left-0 right-0 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-850 rounded-xl shadow-xl max-h-48 overflow-y-auto">
+                                                    <button onClick={() => { setNewVoucher(f => ({ ...f, applicableProductIds: [] })); setCourseSearch(''); setCourseDropdownOpen(false); }}
+                                                        className={`w-full text-right px-3.5 py-2 text-[11px] font-bold transition-colors cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${!newVoucher.applicableProductIds?.length ? 'text-teal-600 bg-teal-50/50 dark:bg-teal-950/20' : 'text-gray-600 dark:text-gray-400'}`}>
+                                                        همه دوره‌ها
+                                                    </button>
+                                                    {filteredCourses.map(c => (
+                                                        <button key={c.id} onClick={() => { setNewVoucher(f => ({ ...f, applicableProductIds: [c.id] })); setCourseSearch(c.title); setCourseDropdownOpen(false); }}
+                                                            className={`w-full text-right px-3.5 py-2 text-[11px] font-bold transition-colors cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${newVoucher.applicableProductIds?.[0] === c.id ? 'text-teal-600 bg-teal-50/50 dark:bg-teal-950/20' : 'text-gray-600 dark:text-gray-400'}`}>
+                                                            {c.title}
+                                                        </button>
+                                                    ))}
+                                                    {filteredCourses.length === 0 && (
+                                                        <div className="px-3.5 py-3 text-[10px] text-gray-400 text-center">دوره‌ای یافت نشد</div>
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
                                         <div className="space-y-1">
                                             <label className="text-[10px] font-bold text-gray-500 block">دسته‌بندی مجاز</label>
@@ -270,8 +385,11 @@ export default function TutsVouchers(props: TutsVouchersProps) {
                                     </div>
                                 </div>
 
-                                {/* Section 4: Budget / Installments */}
-                                <div className="p-4 bg-gray-55/50 dark:bg-gray-950/30 rounded-2xl border border-gray-100/50 dark:border-gray-850 space-y-3">
+                                {/* Section 4: Budget / Installments (disabled) */}
+                                <div className="p-4 bg-gray-55/50 dark:bg-gray-950/30 rounded-2xl border border-gray-100/50 dark:border-gray-850 space-y-3 pointer-events-none opacity-30 select-none relative">
+                                    <div className="absolute -top-2 -left-2 z-10">
+                                        <span className="px-2 py-0.5 bg-amber-500 text-white text-[8px] font-black rounded-full shadow-sm">به زودی</span>
+                                    </div>
                                     <h6 className="text-[10px] font-black text-gray-400 flex items-center gap-1.5"><CreditCard className="w-3 h-3" />بودجه و اقساط</h6>
                                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                         <div className="space-y-1">
@@ -289,32 +407,6 @@ export default function TutsVouchers(props: TutsVouchersProps) {
                                                 <input type="checkbox" checked={newVoucher.installmentsAllowed || false} onChange={(e) => setNewVoucher(f => ({ ...f, installmentsAllowed: e.target.checked }))}
                                                     className="rounded accent-teal-600" />
                                                 قسط‌بندی مجاز باشد
-                                            </label>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Section 5: Contextual */}
-                                <div className="p-4 bg-gray-55/50 dark:bg-gray-950/30 rounded-2xl border border-gray-100/50 dark:border-gray-850 space-y-3">
-                                    <h6 className="text-[10px] font-black text-gray-400 flex items-center gap-1.5"><Smartphone className="w-3 h-3" />محدودیت‌های متنی</h6>
-                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                        <div className="space-y-1">
-                                            <label className="text-[10px] font-bold text-gray-500 block">محدودیت جغرافیایی</label>
-                                            <input type="text" value={newVoucher.geoLimit || ''} onChange={(e) => setNewVoucher(f => ({ ...f, geoLimit: e.target.value }))}
-                                                placeholder="مثال: تهران، اصفهان"
-                                                className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none" />
-                                        </div>
-                                        <div className="space-y-1">
-                                            <label className="text-[10px] font-bold text-gray-500 block">محدودیت دستگاه</label>
-                                            <input type="text" value={newVoucher.deviceLimit || ''} onChange={(e) => setNewVoucher(f => ({ ...f, deviceLimit: e.target.value }))}
-                                                placeholder="مثال: mobile, desktop"
-                                                className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none" />
-                                        </div>
-                                        <div className="space-y-1 flex items-end pb-1">
-                                            <label className="flex items-center gap-2 text-[11px] text-gray-600 dark:text-gray-400 cursor-pointer">
-                                                <input type="checkbox" checked={newVoucher.firstPurchaseOnly || false} onChange={(e) => setNewVoucher(f => ({ ...f, firstPurchaseOnly: e.target.checked }))}
-                                                    className="rounded accent-teal-600" />
-                                                فقط اولین خرید
                                             </label>
                                         </div>
                                     </div>
@@ -444,6 +536,232 @@ export default function TutsVouchers(props: TutsVouchersProps) {
                     </div>
                 </div>
             )}
+
+            {/* ===== EDIT MODAL ===== */}
+            <AnimatePresence>
+                {showEditModal && editingVoucher && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+                        onClick={() => { setShowEditModal(false); setEditingVoucher(null); }}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.95, opacity: 0 }}
+                            onClick={e => e.stopPropagation()}
+                            className="bg-white dark:bg-gray-900 rounded-3xl shadow-2xl border border-gray-100 dark:border-gray-850 w-full max-w-xl max-h-[90vh] overflow-y-auto p-6"
+                        >
+                            <div className="flex items-center justify-between mb-5">
+                                <h3 className="text-sm font-black text-gray-900 dark:text-white flex items-center gap-2">
+                                    <svg className="w-5 h-5 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+                                        <path d="m15 5 4 4"/>
+                                    </svg>
+                                    ویرایش بن تخفیف
+                                </h3>
+                                <button onClick={() => { setShowEditModal(false); setEditingVoucher(null); }}
+                                    className="p-2 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer">
+                                    <X className="w-4 h-4" />
+                                </button>
+                            </div>
+
+                            <EditForm
+                                voucher={editingVoucher}
+                                onSave={(data) => handleUpdateVoucher(editingVoucher.id, data)}
+                                onCancel={() => { setShowEditModal(false); setEditingVoucher(null); }}
+                            />
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* ===== DELETE CONFIRM MODAL ===== */}
+            <AnimatePresence>
+                {showDeleteModal && deletingVoucher && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+                        onClick={() => { setShowDeleteModal(false); setDeletingVoucher(null); setDeleteInput(''); }}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.95, opacity: 0 }}
+                            onClick={e => e.stopPropagation()}
+                            className="bg-white dark:bg-gray-900 rounded-3xl shadow-2xl border border-gray-100 dark:border-gray-850 w-full max-w-md p-6"
+                        >
+                            <div className="text-center mb-5">
+                                <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-rose-50 dark:bg-rose-950/30 flex items-center justify-center">
+                                    <svg className="w-7 h-7 text-rose-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M3 6h18"/>
+                                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                                    </svg>
+                                </div>
+                                <h3 className="text-sm font-black text-gray-900 dark:text-white">حذف بن تخفیف</h3>
+                                <p className="text-xs text-gray-500 mt-2 leading-relaxed">
+                                    آیا از حذف بن <span className="font-bold text-gray-700 dark:text-gray-300">{deletingVoucher.code}</span> اطمینان دارید؟<br />
+                                    این عملیات قابل بازگشت نیست.
+                                </p>
+                            </div>
+
+                            <div className="bg-gray-50 dark:bg-gray-950/50 rounded-2xl p-4 mb-4">
+                                <p className="text-[10px] text-gray-500 font-bold mb-2 text-center">
+                                    برای تأیید، کد زیر را وارد کنید:
+                                </p>
+                                <p className="text-lg font-black text-center text-gray-900 dark:text-white mb-3 tracking-widest">
+                                    {deleteConfirmWord}
+                                </p>
+                                <input
+                                    type="text"
+                                    value={deleteInput}
+                                    onChange={(e) => setDeleteInput(e.target.value)}
+                                    placeholder="کد تأیید را وارد کنید..."
+                                    className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none text-center font-mono tracking-wider"
+                                    autoFocus
+                                />
+                            </div>
+
+                            <div className="flex gap-2">
+                                <button onClick={() => { setShowDeleteModal(false); setDeletingVoucher(null); setDeleteInput(''); }}
+                                    className="flex-1 py-2.5 rounded-xl text-xs font-bold text-gray-500 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-750 transition-colors cursor-pointer">
+                                    انصراف
+                                </button>
+                                <button onClick={() => handleDeleteVoucher(deletingVoucher.id)}
+                                    disabled={deleteInput !== deleteConfirmWord}
+                                    className="flex-1 py-2.5 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer flex items-center justify-center gap-1.5">
+                                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M3 6h18"/>
+                                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                                    </svg>
+                                    تأیید و حذف
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
+    );
+}
+
+// ===== Edit Form Sub-Component =====
+function EditForm({ voucher, onSave, onCancel }: {
+    voucher: TutVoucher;
+    onSave: (data: Partial<TutVoucher>) => Promise<void>;
+    onCancel: () => void;
+}) {
+    const [title, setTitle] = useState(voucher.title || '');
+    const [code, setCode] = useState(voucher.code || '');
+    const [discountType, setDiscountType] = useState(voucher.discountType || 'percentage');
+    const [discountValue, setDiscountValue] = useState(voucher.discountValue || 0);
+    const [maxUses, setMaxUses] = useState(voucher.maxUses || 100);
+    const [validFrom, setValidFrom] = useState(voucher.validFrom || '');
+    const [validTo, setValidTo] = useState(voucher.validTo || '');
+    const [saving, setSaving] = useState(false);
+
+    const isUsed = voucher.totalUsed > 0;
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setSaving(true);
+        try {
+            await onSave({
+                title: title.trim(),
+                code: code.trim().toUpperCase(),
+                discountType,
+                discountValue,
+                maxUses,
+                validFrom,
+                validTo,
+            });
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    return (
+        <form onSubmit={handleSubmit} className="space-y-4 text-right">
+            <div className="space-y-1">
+                <label className="text-[10px] font-bold text-gray-500 block">عنوان بن</label>
+                <input type="text" value={title} onChange={(e) => setTitle(e.target.value)}
+                    placeholder="مثال: بن تخفیف نوروزی"
+                    className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none"
+                    required />
+            </div>
+            <div className="space-y-1">
+                <label className="text-[10px] font-bold text-gray-500 block">کد بن تخفیف</label>
+                <input type="text" value={code} onChange={(e) => setCode(e.target.value)}
+                    placeholder="مثال: WELCOME10"
+                    className={`w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none font-mono ${isUsed ? 'opacity-60 cursor-not-allowed' : ''}`}
+                    readOnly={isUsed}
+                    required
+                    dir="ltr" />
+                {isUsed && (
+                    <p className="text-[9px] text-amber-500 font-bold mt-1 flex items-center gap-1">
+                        <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                        این بن قبلاً استفاده شده است و کد آن قابل تغییر نیست
+                    </p>
+                )}
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-500 block">نوع تخفیف</label>
+                    <select value={discountType} onChange={(e) => setDiscountType(e.target.value as any)}
+                        className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none cursor-pointer">
+                        <option value="percentage">درصدی (٪)</option>
+                        <option value="fixed">مبلغ ثابت (ریال)</option>
+                    </select>
+                </div>
+                <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-500 block">مقدار تخفیف</label>
+                    <input type="number" value={discountValue} onChange={(e) => setDiscountValue(Number(e.target.value))}
+                        className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none"
+                        required />
+                </div>
+                <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-500 block">ظرفیت استفاده</label>
+                    <input type="number" value={maxUses} onChange={(e) => setMaxUses(Number(e.target.value))}
+                        className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none"
+                        required />
+                </div>
+                <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-500 block">فعال از تاریخ</label>
+                    <JalaliDatepicker value={validFrom} onChange={setValidFrom} />
+                </div>
+                <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-500 block">فعال تا تاریخ</label>
+                    <JalaliDatepicker value={validTo} onChange={setValidTo} />
+                </div>
+            </div>
+
+            <div className="flex gap-2 pt-2">
+                <button type="button" onClick={onCancel}
+                    className="flex-1 py-2.5 rounded-xl text-xs font-bold text-gray-500 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-750 transition-colors cursor-pointer">
+                    انصراف
+                </button>
+                <button type="submit" disabled={saving || !title.trim() || !code.trim()}
+                    className="flex-1 py-2.5 rounded-xl text-xs font-bold text-white bg-amber-500 hover:bg-amber-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer flex items-center justify-center gap-1.5">
+                    {saving ? (
+                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                        </svg>
+                    ) : (
+                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+                            <path d="m15 5 4 4"/>
+                        </svg>
+                    )}
+                    {saving ? 'در حال ذخیره...' : 'ذخیره تغییرات'}
+                </button>
+            </div>
+        </form>
     );
 }
