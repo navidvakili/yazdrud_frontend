@@ -332,7 +332,7 @@ class ApiService {
     if (params?.per_page) query.set('per_page', String(params.per_page));
     if (params?.is_active !== undefined) query.set('is_active', String(params.is_active));
     const qs = query.toString();
-    const url = qs ? `courses/coupons?${qs}` : 'courses/coupons';
+    const url = qs ? `coupons?${qs}` : 'coupons';
     return API<any>(url);
   }
 
@@ -340,7 +340,7 @@ class ApiService {
    * Get a single coupon by ID.
    */
   async getCoupon(id: number): Promise<CourseCoupon> {
-    const data = await API<any>(`courses/coupons/${id}`);
+    const data = await API<any>(`coupons/${id}`);
     return data.data;
   }
 
@@ -348,7 +348,7 @@ class ApiService {
    * Create a new coupon.
    */
   async createCoupon(couponData: any): Promise<CourseCoupon> {
-    const data = await API<any>('courses/coupons', couponData, 'POST');
+    const data = await API<any>('coupons', couponData, 'POST');
     return data.data;
   }
 
@@ -356,7 +356,7 @@ class ApiService {
    * Update an existing coupon.
    */
   async updateCoupon(id: number, couponData: any): Promise<CourseCoupon> {
-    const data = await API<any>(`courses/coupons/${id}`, couponData, 'PUT');
+    const data = await API<any>(`coupons/${id}`, couponData, 'PUT');
     return data.data;
   }
 
@@ -364,14 +364,48 @@ class ApiService {
    * Delete a coupon.
    */
   async deleteCoupon(id: number): Promise<void> {
-    await API(`courses/coupons/${id}`, {}, 'DELETE');
+    await API(`coupons/${id}`, {}, 'DELETE');
+  }
+
+  /**
+   * Generate a unique random coupon code.
+   */
+  async generateCouponCode(params?: { length?: number; prefix?: string }): Promise<{ code: string }> {
+    const query = new URLSearchParams();
+    if (params?.length) query.set('length', String(params.length));
+    if (params?.prefix) query.set('prefix', params.prefix);
+    const qs = query.toString();
+    const url = qs ? `coupons/generate-code?${qs}` : 'coupons/generate-code';
+    const data = await API<any>(url);
+    return data.data;
   }
 
   /**
    * Validate a coupon code for a given course.
    */
   async validateCoupon(code: string, courseId: number): Promise<{ valid: boolean; discount?: number; message?: string }> {
-    const data = await API<any>('courses/coupons/validate', { code, course_id: courseId }, 'POST');
+    const data = await API<any>('coupons/validate', { code, course_id: courseId }, 'POST');
+    return data.data;
+  }
+
+  /**
+   * Generate and create a coupon with auto-generated code.
+   */
+  async generateCoupon(couponData: any): Promise<CourseCoupon> {
+    const data = await API<any>('coupons/generate', couponData, 'POST');
+    return data.data;
+  }
+
+  /**
+   * Get courses list for autocomplete (lightweight, for coupon form).
+   */
+  async getCouponCourses(params?: { search?: string; limit?: number }): Promise<{ id: number; title: string }[]> {
+    const query = new URLSearchParams();
+    if (params?.search) query.set('search', params.search);
+    if (params?.limit) query.set('limit', String(params.limit));
+    const qs = query.toString();
+    const url = qs ? `coupons/courses?${qs}` : 'coupons/courses';
+    const data = await API<any>(url);
     return data.data;
   }
 
