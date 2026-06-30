@@ -2849,65 +2849,6 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                         </select>
                       </div>
                       <div>
-                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">محل نمایش در صفحه اصلی</label>
-                        <div className="flex items-end gap-2">
-                          <div className="flex-1">
-                            <div className="flex flex-wrap gap-3 mt-1">
-                                {[
-                                  { value: 'normal', label: 'عادی' },
-                                  { value: 'featured', label: 'پیشنهاد ویژه' },
-                                  { value: 'pre_register', label: 'پیش ثبت نام' },
-                                  { value: 'free', label: 'رایگان' },
-                                ].map(({ value, label }) => (
-                                  <label key={value} className="flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300 cursor-pointer">
-                                    <input
-                                      type="checkbox"
-                                      value={value}
-                                      checked={newCourseSection.includes(value)}
-                                      onChange={(e) => {
-                                        if (e.target.checked) {
-                                          setNewCourseSection([...newCourseSection, value]);
-                                        } else {
-                                          setNewCourseSection(newCourseSection.filter(v => v !== value));
-                                        }
-                                      }}
-                                      className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
-                                    />
-                                    {label}
-                                  </label>
-                                ))}
-                              </div>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => setIsInstructorManagementOpen(true)}
-                            className="p-3 mb-0.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-950 transition-all cursor-pointer"
-                            title="مدیریت اساتید"
-                          >
-                            <User className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">وضعیت دوره</label>
-                        <div className="flex items-center gap-2 pr-1 pt-1.5">
-                          <button
-                            type="button"
-                            dir="ltr"
-                            onClick={() => setNewCourseActive(!newCourseActive)}
-                            className={`relative inline-flex items-center h-6 w-11 rounded-full transition-colors ${newCourseActive ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'}`}
-                          >
-                            <span className={`inline-block w-4 h-4 rounded-full bg-white shadow-sm transform transition-transform ${newCourseActive ? 'translate-x-6' : 'translate-x-1'}`} />
-                          </button>
-                          <span className={`text-xs font-bold ${newCourseActive ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400'}`}>
-                            {newCourseActive ? 'فعال' : 'غیرفعال'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                      <div>
                         <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">مدرس منتسب (از لیست اساتید)</label>
                         <div className="relative">
                           <input
@@ -2962,6 +2903,53 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                             </button>
                           </div>
                         )}
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">محل نمایش در صفحه اصلی</label>
+                        <div className="flex flex-wrap gap-3 mt-1">
+                          {[
+                            { value: 'normal', label: 'عادی' },
+                            { value: 'featured', label: 'پیشنهاد ویژه' },
+                            { value: 'pre_register', label: 'پیش ثبت نام' },
+                            { value: 'free', label: 'رایگان' },
+                          ].map(({ value, label }) => (
+                            <label key={value} className="flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                value={value}
+                                checked={newCourseSection.includes(value)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setNewCourseSection([...newCourseSection, value]);
+                                  } else {
+                                    setNewCourseSection(newCourseSection.filter(v => v !== value));
+                                  }
+                                }}
+                                className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
+                              />
+                              {label}
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">وضعیت دوره</label>
+                        <div className="flex items-center gap-2 pr-1 pt-1.5">
+                          <button
+                            type="button"
+                            dir="ltr"
+                            onClick={() => setNewCourseActive(!newCourseActive)}
+                            className={`relative inline-flex items-center h-6 w-11 rounded-full transition-colors ${newCourseActive ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+                          >
+                            <span className={`inline-block w-4 h-4 rounded-full bg-white shadow-sm transform transition-transform ${newCourseActive ? 'translate-x-6' : 'translate-x-1'}`} />
+                          </button>
+                          <span className={`text-xs font-bold ${newCourseActive ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400'}`}>
+                            {newCourseActive ? 'فعال' : 'غیرفعال'}
+                          </span>
+                        </div>
                       </div>
                       <div>
                         <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">طول دوره (ساعت)</label>
@@ -3136,6 +3124,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                       />
                     </div>
 
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div>
                         <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">دپارتمان یا حوزه علمی</label>
                         <select
@@ -3148,8 +3137,6 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                           ))}
                         </select>
                       </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">مدرس منتسب (از لیست اساتید)</label>
                         <div className="relative">
@@ -3207,43 +3194,31 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                         )}
                       </div>
                       <div>
-                        <div className="flex items-end gap-2">
-                          <div className="flex-1">
-                            <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">محل نمایش در صفحه اصلی</label>
-                              <div className="flex flex-wrap gap-3 mt-1">
-                                {[
-                                  { value: 'normal', label: 'عادی' },
-                                  { value: 'featured', label: 'پیشنهاد ویژه' },
-                                  { value: 'pre_register', label: 'پیش ثبت نام' },
-                                  { value: 'free', label: 'رایگان' },
-                                ].map(({ value, label }) => (
-                                  <label key={value} className="flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300 cursor-pointer">
-                                    <input
-                                      type="checkbox"
-                                      value={value}
-                                      checked={editCourseSection.includes(value)}
-                                      onChange={(e) => {
-                                        if (e.target.checked) {
-                                          setEditCourseSection([...editCourseSection, value]);
-                                        } else {
-                                          setEditCourseSection(editCourseSection.filter(v => v !== value));
-                                        }
-                                      }}
-                                      className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
-                                    />
-                                    {label}
-                                  </label>
-                                ))}
-                              </div>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => setIsInstructorManagementOpen(true)}
-                            className="p-3 mb-0.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-950 transition-all cursor-pointer"
-                            title="مدیریت اساتید"
-                          >
-                            <User className="w-4 h-4" />
-                          </button>
+                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">محل نمایش در صفحه اصلی</label>
+                        <div className="flex flex-wrap gap-3 mt-1">
+                          {[
+                            { value: 'normal', label: 'عادی' },
+                            { value: 'featured', label: 'پیشنهاد ویژه' },
+                            { value: 'pre_register', label: 'پیش ثبت نام' },
+                            { value: 'free', label: 'رایگان' },
+                          ].map(({ value, label }) => (
+                            <label key={value} className="flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                value={value}
+                                checked={editCourseSection.includes(value)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setEditCourseSection([...editCourseSection, value]);
+                                  } else {
+                                    setEditCourseSection(editCourseSection.filter(v => v !== value));
+                                  }
+                                }}
+                                className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
+                              />
+                              {label}
+                            </label>
+                          ))}
                         </div>
                       </div>
                     </div>
