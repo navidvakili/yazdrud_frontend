@@ -193,7 +193,7 @@ export default function FinancialManagement() {
     }
   };
 
-  // ===== Generate & Save (ایجاد خودکار) =====
+  // ===== Generate & Save (ایجاد خودکار / تولید کد جدید) =====
   const handleGenerateAndSave = async () => {
     if (!formTitle.trim() || !formValue) {
       showNotify('error', 'لطفاً عنوان و مقدار تخفیف را وارد کنید');
@@ -201,8 +201,17 @@ export default function FinancialManagement() {
     }
     setSaving(true);
     try {
+      // Generate a random code
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+      let newCode = '';
+      for (let i = 0; i < 8; i++) {
+        newCode += chars[Math.floor(Math.random() * chars.length)];
+      }
+      setFormCode(newCode);
+
       const payload = {
         title: formTitle.trim(),
+        code: newCode,
         type: 'discount',
         type_discount: formTypeDiscount,
         value: parseInt(toEnglishDigits(formValue)) || 0,
@@ -213,12 +222,17 @@ export default function FinancialManagement() {
         is_active: formIsActive,
       };
 
-      await api.generateCoupon(payload);
-      showNotify('success', 'بن تخفیف با کد خودکار ایجاد شد');
+      if (editId) {
+        await api.updateCoupon(editId, payload);
+        showNotify('success', 'بن تخفیف با کد جدید به‌روزرسانی شد');
+      } else {
+        await api.generateCoupon(payload);
+        showNotify('success', 'بن تخفیف با کد خودکار ایجاد شد');
+      }
       closeModal();
       fetchCoupons(page, search);
     } catch (err: any) {
-      const msg = err?.message || 'خطا در ایجاد خودکار بن تخفیف';
+      const msg = err?.message || 'خطا در ذخیره بن تخفیف';
       showNotify('error', msg);
     } finally {
       setSaving(false);
@@ -601,13 +615,11 @@ export default function FinancialManagement() {
                     className="flex-1 py-3 bg-teal-600 hover:bg-teal-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-2xl text-xs font-black transition-all cursor-pointer shadow-xs flex items-center justify-center gap-1.5">
                     {saving ? 'در حال ذخیره...' : <><Check className="w-4 h-4" />{editId ? 'به‌روزرسانی بن' : 'ذخیره بن'}</>}
                   </button>
-                  {!editId && (
-                    <button onClick={handleGenerateAndSave} disabled={saving || !formTitle.trim() || !formValue}
-                      className="px-5 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-2xl text-xs font-black transition-all cursor-pointer shadow-xs flex items-center justify-center gap-1.5 whitespace-nowrap">
-                      <Sparkles className="w-4 h-4" />
-                      ایجاد خودکار
-                    </button>
-                  )}
+                  <button onClick={handleGenerateAndSave} disabled={saving || !formTitle.trim() || !formValue}
+                    className="px-5 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-2xl text-xs font-black transition-all cursor-pointer shadow-xs flex items-center justify-center gap-1.5 whitespace-nowrap">
+                    <Sparkles className="w-4 h-4" />
+                    {editId ? 'تولید کد جدید' : 'ایجاد خودکار'}
+                  </button>
                 </div>
               </div>
             </motion.div>
