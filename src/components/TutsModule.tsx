@@ -2800,7 +2800,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                   initial={{ opacity: 0, scale: 0.95, y: 15 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95, y: 15 }}
-                  className="w-full max-w-lg p-6 rounded-3xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-2xl relative my-8"
+                  className="w-full max-w-4xl p-6 rounded-3xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-2xl relative my-8"
                 >
                   <button
                     onClick={() => setIsNewCourseModalOpen(false)}
@@ -2827,7 +2827,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                       />
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div>
                         <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">دپارتمان یا حوزه علمی</label>
                         <select
@@ -2841,9 +2841,9 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                         </select>
                       </div>
                       <div>
+                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">محل نمایش در صفحه اصلی</label>
                         <div className="flex items-end gap-2">
                           <div className="flex-1">
-                            <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">محل نمایش در صفحه اصلی</label>
                             <select
                               value={newCourseSection}
                               onChange={(e) => setNewCourseSection(e.target.value)}
@@ -2865,106 +2865,81 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                           </button>
                         </div>
                       </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">مدرس منتسب (از لیست اساتید)</label>
-                      <div className="relative">
-                        <input
-                          type="text"
-                          value={newCourseInstructorSearch}
-                          onChange={(e) => setNewCourseInstructorSearch(e.target.value)}
-                          onFocus={() => setNewCourseInstructorOpen(true)}
-                          onBlur={() => setTimeout(() => setNewCourseInstructorOpen(false), 200)}
-                          placeholder="جستجوی نام استاد..."
-                          className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none"
-                        />
-                        {newCourseInstructorOpen && (
-                          <div className="absolute z-10 top-full left-0 right-0 mt-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-lg max-h-48 overflow-y-auto">
-                            {filteredNewCourseInstructors.length === 0 ? (
-                              <div className="p-3 text-xs text-gray-400 text-center">موردی یافت نشد</div>
-                            ) : (
-                              filteredNewCourseInstructors.map((inst) => (
-                                <button
-                                  key={inst.id}
-                                  type="button"
-                                  onMouseDown={() => {
-                                    setNewCourseInstructorSearch(inst.name);
-                                    setNewCourseInstructorId(String(inst.id));
-                                    setNewCourseInstructorOpen(false);
-                                  }}
-                                  className={`w-full text-right px-3 py-2 text-xs hover:bg-gray-50 dark:hover:bg-gray-800 transition-all flex items-center gap-2 ${
-                                    String(inst.id) === newCourseInstructorId ? 'bg-teal-50 dark:bg-teal-950 text-teal-700 dark:text-teal-300' : 'text-gray-700 dark:text-gray-300'
-                                  }`}
-                                >
-                                  <span className="w-6 h-6 rounded-full bg-teal-100 dark:bg-teal-900 flex items-center justify-center text-teal-700 dark:text-teal-300 font-bold text-[10px] shrink-0">
-                                    {inst.name.charAt(0)}
-                                  </span>
-                                  <span>{inst.name}</span>
-                                  {inst.specialty && <span className="text-[10px] text-gray-400">({inst.specialty})</span>}
-                                </button>
-                              ))
-                            )}
-                          </div>
-                        )}
-                      </div>
-                      {newCourseInstructorId && (
-                        <div className="mt-1.5 flex items-center gap-1.5">
-                          <span className="text-[10px] text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-950 px-2 py-0.5 rounded-lg">
-                            {instructors.find(i => String(i.id) === newCourseInstructorId)?.name || 'مدرس انتخاب شد'}
-                          </span>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">وضعیت دوره</label>
+                        <div className="flex items-center gap-2 pr-1 pt-1.5">
                           <button
                             type="button"
-                            onClick={() => { setNewCourseInstructorSearch(''); setNewCourseInstructorId(''); }}
-                            className="text-gray-400 hover:text-red-500 transition-all"
+                            dir="ltr"
+                            onClick={() => setNewCourseActive(!newCourseActive)}
+                            className={`relative inline-flex items-center h-6 w-11 rounded-full transition-colors ${newCourseActive ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'}`}
                           >
-                            <X className="w-3 h-3" />
+                            <span className={`inline-block w-4 h-4 rounded-full bg-white shadow-sm transform transition-transform ${newCourseActive ? 'translate-x-6' : 'translate-x-1'}`} />
                           </button>
+                          <span className={`text-xs font-bold ${newCourseActive ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400'}`}>
+                            {newCourseActive ? 'فعال' : 'غیرفعال'}
+                          </span>
                         </div>
-                      )}
+                      </div>
                     </div>
 
-                    <div>
-                      <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">تصویر دوره (اختیاری - ابعاد پیشنهادی: 403x226 پیکسل)</label>
-                      <div className="flex items-center gap-3">
-                        <label className="flex-1 flex items-center justify-center p-4 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-950 hover:border-teal-400 dark:hover:border-teal-600 transition-all cursor-pointer">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">مدرس منتسب (از لیست اساتید)</label>
+                        <div className="relative">
                           <input
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) {
-                                setNewCourseImage(file);
-                                setNewCourseImagePreview(URL.createObjectURL(file));
-                              }
-                            }}
+                            type="text"
+                            value={newCourseInstructorSearch}
+                            onChange={(e) => setNewCourseInstructorSearch(e.target.value)}
+                            onFocus={() => setNewCourseInstructorOpen(true)}
+                            onBlur={() => setTimeout(() => setNewCourseInstructorOpen(false), 200)}
+                            placeholder="جستجوی نام استاد..."
+                            className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none"
                           />
-                          <div className="text-center">
-                            <Upload className="w-6 h-6 mx-auto text-gray-400 mb-1" />
-                            <span className="text-xs text-gray-400">برای آپلود کلیک کنید</span>
-                          </div>
-                        </label>
-                        {newCourseImagePreview && (
-                          <div className="relative w-24 h-16 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 shrink-0">
-                            <img
-                              src={newCourseImagePreview}
-                              alt="پیش نمایش"
-                              className="w-full h-full object-cover"
-                            />
+                          {newCourseInstructorOpen && (
+                            <div className="absolute z-10 top-full left-0 right-0 mt-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+                              {filteredNewCourseInstructors.length === 0 ? (
+                                <div className="p-3 text-xs text-gray-400 text-center">موردی یافت نشد</div>
+                              ) : (
+                                filteredNewCourseInstructors.map((inst) => (
+                                  <button
+                                    key={inst.id}
+                                    type="button"
+                                    onMouseDown={() => {
+                                      setNewCourseInstructorSearch(inst.name);
+                                      setNewCourseInstructorId(String(inst.id));
+                                      setNewCourseInstructorOpen(false);
+                                    }}
+                                    className={`w-full text-right px-3 py-2 text-xs hover:bg-gray-50 dark:hover:bg-gray-800 transition-all flex items-center gap-2 ${
+                                      String(inst.id) === newCourseInstructorId ? 'bg-teal-50 dark:bg-teal-950 text-teal-700 dark:text-teal-300' : 'text-gray-700 dark:text-gray-300'
+                                    }`}
+                                  >
+                                    <span className="w-6 h-6 rounded-full bg-teal-100 dark:bg-teal-900 flex items-center justify-center text-teal-700 dark:text-teal-300 font-bold text-[10px] shrink-0">
+                                      {inst.name.charAt(0)}
+                                    </span>
+                                    <span>{inst.name}</span>
+                                    {inst.specialty && <span className="text-[10px] text-gray-400">({inst.specialty})</span>}
+                                  </button>
+                                ))
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        {newCourseInstructorId && (
+                          <div className="mt-1.5 flex items-center gap-1.5">
+                            <span className="text-[10px] text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-950 px-2 py-0.5 rounded-lg">
+                              {instructors.find(i => String(i.id) === newCourseInstructorId)?.name || 'مدرس انتخاب شد'}
+                            </span>
                             <button
                               type="button"
-                              onClick={() => { setNewCourseImage(null); setNewCourseImagePreview(null); }}
-                              className="absolute top-0.5 right-0.5 p-0.5 bg-red-500 text-white rounded-full"
+                              onClick={() => { setNewCourseInstructorSearch(''); setNewCourseInstructorId(''); }}
+                              className="text-gray-400 hover:text-red-500 transition-all"
                             >
                               <X className="w-3 h-3" />
                             </button>
                           </div>
                         )}
                       </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div>
                         <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">طول دوره (ساعت)</label>
                         <input
@@ -2972,17 +2947,6 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                           value={newCourseDuration}
                           onChange={(e) => setNewCourseDuration(e.target.value)}
                           placeholder="مثال: ۲۴ ساعت"
-                          className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none "
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">شهریه ثبت‌نام (ریال) *</label>
-                        <input
-                          type="text"
-                          required
-                          value={newCourseCost}
-                          onChange={(e) => setNewCourseCost(formatCostInput(e.target.value))}
-                          placeholder="مثال: ۴,۵۰۰,۰۰۰"
                           className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none "
                         />
                       </div>
@@ -2998,7 +2962,18 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">شهریه ثبت‌نام (ریال) *</label>
+                        <input
+                          type="text"
+                          required
+                          value={newCourseCost}
+                          onChange={(e) => setNewCourseCost(formatCostInput(e.target.value))}
+                          placeholder="مثال: ۴,۵۰۰,۰۰۰"
+                          className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none "
+                        />
+                      </div>
                       <div>
                         <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">تاریخ شروع دوره *</label>
                         <JalaliDatepicker
@@ -3015,7 +2990,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div>
                         <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">مهلت شروع ثبت‌نام</label>
                         <JalaliDatepicker
@@ -3030,21 +3005,45 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                           onChange={(date) => setNewCourseRegEndDate(date)}
                         />
                       </div>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                      <label className="block text-xs font-bold text-gray-700 dark:text-gray-300">وضعیت دوره:</label>
-                      <button
-                        type="button"
-                        dir="ltr"
-                        onClick={() => setNewCourseActive(!newCourseActive)}
-                        className={`relative inline-flex items-center h-6 w-11 rounded-full transition-colors ${newCourseActive ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'}`}
-                      >
-                        <span className={`inline-block w-4 h-4 rounded-full bg-white shadow-sm transform transition-transform ${newCourseActive ? 'translate-x-6' : 'translate-x-1'}`} />
-                      </button>
-                      <span className={`text-xs font-bold ${newCourseActive ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400'}`}>
-                        {newCourseActive ? 'فعال' : 'غیرفعال'}
-                      </span>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">تصویر دوره</label>
+                        <div className="flex items-center gap-2">
+                          <label className="flex-1 flex items-center justify-center p-2.5 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-950 hover:border-teal-400 dark:hover:border-teal-600 transition-all cursor-pointer">
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  setNewCourseImage(file);
+                                  setNewCourseImagePreview(URL.createObjectURL(file));
+                                }
+                              }}
+                            />
+                            <div className="flex items-center gap-1">
+                              <Upload className="w-4 h-4 text-gray-400" />
+                              <span className="text-[10px] text-gray-400">آپلود</span>
+                            </div>
+                          </label>
+                          {newCourseImagePreview && (
+                            <div className="relative w-12 h-8 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 shrink-0">
+                              <img
+                                src={newCourseImagePreview}
+                                alt="پیش نمایش"
+                                className="w-full h-full object-cover"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => { setNewCourseImage(null); setNewCourseImagePreview(null); }}
+                                className="absolute top-0 right-0 p-0.5 bg-red-500 text-white rounded-full"
+                              >
+                                <X className="w-2.5 h-2.5" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
 
                     <div>
