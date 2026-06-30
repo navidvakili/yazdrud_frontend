@@ -16,8 +16,10 @@ export function toPersianDigits(str: string | number): string {
 /** Convert Persian digits (۰-۹) to Western digits (0-9) */
 export function toEnglishDigits(str: string): string {
     if (!str) return '';
-    return str.toString().replace(/[۰-۹]/g, function (d) {
-        return String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d));
+    return str.toString().replace(/[٠-۹]/g, function (d) {
+        const allDigits = '٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹';
+        const idx = allDigits.indexOf(d);
+        return idx >= 0 ? String(idx % 10) : d;
     });
 }
 
