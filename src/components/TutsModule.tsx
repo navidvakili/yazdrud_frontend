@@ -2795,12 +2795,12 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
           {/* New Course Creation Modal (Admin/Staff only) */}
           <AnimatePresence>
             {isNewCourseModalOpen && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-950/60 backdrop-blur-xs overflow-y-auto">
+              <div className="fixed inset-0 z-50 flex items-start justify-center p-4 bg-gray-950/60 backdrop-blur-xs overflow-y-auto pt-8 pb-8">
                 <motion.div
                   initial={{ opacity: 0, scale: 0.95, y: 15 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95, y: 15 }}
-                  className="w-full max-w-4xl p-6 rounded-3xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-2xl relative my-8"
+                  className="w-full max-w-6xl p-6 rounded-3xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-2xl relative"
                 >
                   <button
                     onClick={() => setIsNewCourseModalOpen(false)}
@@ -3081,12 +3081,12 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
           {/* Edit Course Modal (Admin/Staff only) */}
           <AnimatePresence>
             {editingCourse && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-950/60 backdrop-blur-xs overflow-y-auto">
+              <div className="fixed inset-0 z-50 flex items-start justify-center p-4 bg-gray-950/60 backdrop-blur-xs overflow-y-auto pt-8 pb-8">
                 <motion.div
                   initial={{ opacity: 0, scale: 0.95, y: 15 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95, y: 15 }}
-                  className="w-full max-w-lg p-6 rounded-3xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-2xl relative my-8"
+                  className="w-full max-w-6xl p-6 rounded-3xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-2xl relative"
                 >
                   <button
                     onClick={() => setEditingCourse(null)}

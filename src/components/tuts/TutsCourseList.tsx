@@ -693,7 +693,7 @@ export default function TutsCourseList(props: TutsCourseListProps) {
                             initial={{ opacity: 0, scale: 0.95, y: 15 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: 15 }}
-                            className="w-full max-w-lg p-6 rounded-3xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-2xl relative my-8"
+                            className="w-full max-w-4xl p-6 rounded-3xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-2xl relative my-8 max-h-[calc(100vh-5rem)] overflow-y-auto"
                         >
                             <button onClick={() => setIsNewCourseModalOpen(false)}
                                 className="absolute top-4 left-4 p-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-gray-600 transition-all cursor-pointer">
@@ -710,7 +710,7 @@ export default function TutsCourseList(props: TutsCourseListProps) {
                                         placeholder="مثال: کارگاه تخصصی پایتون در پردازش تصویر"
                                         className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none" />
                                 </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                     <div>
                                         <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">استاد / مدرس دوره *</label>
                                         <input type="text" required value={newCourseLecturer} onChange={(e) => setNewCourseLecturer(e.target.value)}
@@ -725,6 +725,10 @@ export default function TutsCourseList(props: TutsCourseListProps) {
                                                 <option key={cat} value={cat}>{cat}</option>
                                             ))}
                                         </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">تاریخ شروع دوره</label>
+                                        <JalaliDatepicker value={newCourseStartDate} onChange={setNewCourseStartDate} />
                                     </div>
                                 </div>
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -745,12 +749,6 @@ export default function TutsCourseList(props: TutsCourseListProps) {
                                         <input type="number" value={newCourseCapacity} onChange={(e) => setNewCourseCapacity(e.target.value)}
                                             placeholder="مثال: ۳۰"
                                             className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none" />
-                                    </div>
-                                </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">تاریخ شروع دوره</label>
-                                        <JalaliDatepicker value={newCourseStartDate} onChange={setNewCourseStartDate} />
                                     </div>
                                 </div>
                                 <div>
@@ -783,7 +781,7 @@ export default function TutsCourseList(props: TutsCourseListProps) {
                             initial={{ opacity: 0, scale: 0.95, y: 15 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: 15 }}
-                            className="w-full max-w-lg p-6 rounded-3xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-2xl relative my-8"
+                            className="w-full max-w-4xl p-6 rounded-3xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-2xl relative my-8 max-h-[calc(100vh-5rem)] overflow-y-auto"
                         >
                             <button onClick={() => setEditingCourse(null)}
                                 className="absolute top-4 left-4 p-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-gray-600 transition-all cursor-pointer">
@@ -800,7 +798,7 @@ export default function TutsCourseList(props: TutsCourseListProps) {
                                         placeholder="مثال: کارگاه تخصصی پایتون در پردازش تصویر"
                                         className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none" />
                                 </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                     <div>
                                         <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">استاد / مدرس دوره *</label>
                                         <input type="text" required value={editCourseLecturer} onChange={(e) => setEditCourseLecturer(e.target.value)}
@@ -815,6 +813,10 @@ export default function TutsCourseList(props: TutsCourseListProps) {
                                                 <option key={cat} value={cat}>{cat}</option>
                                             ))}
                                         </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">تاریخ شروع دوره</label>
+                                        <JalaliDatepicker value={editCourseStartDate} onChange={setEditCourseStartDate} />
                                     </div>
                                 </div>
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -835,12 +837,6 @@ export default function TutsCourseList(props: TutsCourseListProps) {
                                         <input type="number" value={editCourseCapacity} onChange={(e) => setEditCourseCapacity(e.target.value)}
                                             placeholder="مثال: ۳۰"
                                             className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none" />
-                                    </div>
-                                </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">تاریخ شروع دوره</label>
-                                        <JalaliDatepicker value={editCourseStartDate} onChange={setEditCourseStartDate} />
                                     </div>
                                 </div>
                                 <div>
