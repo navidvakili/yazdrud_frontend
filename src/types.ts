@@ -151,6 +151,9 @@ export interface Course {
   amount_formatted: string;
   active: boolean;
   image: string | null;
+  section: string;
+  instructor_id: number | null;
+  instructor_name: string | null;
   description: string | null;
   syllabus: string | null;
   duration: number | null;
@@ -162,6 +165,18 @@ export interface Course {
   registered_count: number;
   remaining: number | string;
   is_available: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Instructor {
+  id: number;
+  name: string;
+  specialty: string | null;
+  bio: string | null;
+  photo: string | null;
+  photo_url: string | null;
+  active: boolean;
   created_at: string;
   updated_at: string;
 }
