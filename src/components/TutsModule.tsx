@@ -47,6 +47,10 @@ interface TutCourse {
   status: 'active' | 'completed' | 'ended';
   description: string;
   category: string;
+  section: string; // 'normal' | 'featured' | 'pre_register' | 'free'
+  image: string | null;
+  instructor_id: number | null;
+  instructor_name: string | null;
 }
 
 interface TutRegistrant {
@@ -202,7 +206,11 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     endDate: c.end_date ? (c.end_date.includes('/') ? c.end_date : c.end_date.replace(/-/g, '/')) : '',
     status: c.active ? 'active' : 'ended',
     category: c.group_title || c.category || 'عمومی',
-    description: c.description || 'توضیحات دوره به زودی منتشر خواهد شد.'
+    description: c.description || 'توضیحات دوره به زودی منتشر خواهد شد.',
+    section: c.section || 'normal',
+    image: c.image || null,
+    instructor_id: c.instructor_id || null,
+    instructor_name: c.instructor_name || null,
   });
 
   const mapVoucher = (c: any): TutVoucher => {
@@ -273,6 +281,22 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
   const [courses, setCourses] = useState<TutCourse[]>([]);
   const [registrants, setRegistrants] = useState<TutRegistrant[]>([]);
   const [surveys, setSurveys] = useState<TutSurvey[]>([]);
+
+  // ===== Instructors for dropdown selection =====
+  const [instructors, setInstructors] = useState<{ id: number; name: string; specialty: string | null }[]>([]);
+
+  // ===== Instructor Management Modal =====
+  const [isInstructorManagementOpen, setIsInstructorManagementOpen] = useState(false);
+  const [instructorFormMode, setInstructorFormMode] = useState<'create' | 'edit'>('create');
+  const [editingInstructorId, setEditingInstructorId] = useState<number | null>(null);
+  const [instructorFormName, setInstructorFormName] = useState('');
+  const [instructorFormSpecialty, setInstructorFormSpecialty] = useState('');
+  const [instructorFormBio, setInstructorFormBio] = useState('');
+  const [instructorFormPhoto, setInstructorFormPhoto] = useState<File | null>(null);
+  const [instructorFormPhotoPreview, setInstructorFormPhotoPreview] = useState<string | null>(null);
+  const [instructorFormActive, setInstructorFormActive] = useState(true);
+  const [instructorsLoading, setInstructorsLoading] = useState(false);
+  const [instructorSubmitting, setInstructorSubmitting] = useState(false);
 
   // ===== Lazy Data Fetching: each section fetches only its own data when activated =====
   const fetchedRef = useRef({ courses: false, registrants: false, surveys: false, vouchers: false });
@@ -420,6 +444,20 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
         }
       })
       .finally(() => setCategoriesLoading(false));
+  }, []);
+
+  // Fetch instructors for course form dropdowns
+  useEffect(() => {
+    api.getInstructors({ per_page: 1000 })
+      .then(res => {
+        const mapped = (res.data || []).map((inst: any) => ({
+          id: inst.id,
+          name: inst.name,
+          specialty: inst.specialty || null,
+        }));
+        setInstructors(mapped);
+      })
+      .catch(err => console.error('Error fetching instructors:', err));
   }, []);
 
   const [vouchers, setVouchers] = useState<TutVoucher[]>([]);
@@ -1119,6 +1157,10 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
   const [newCourseDescription, setNewCourseDescription] = useState('');
   const [newCourseEndDate, setNewCourseEndDate] = useState('');
   const [newCourseActive, setNewCourseActive] = useState(true);
+  const [newCourseSection, setNewCourseSection] = useState('normal');
+  const [newCourseImage, setNewCourseImage] = useState<File | null>(null);
+  const [newCourseImagePreview, setNewCourseImagePreview] = useState<string | null>(null);
+  const [newCourseInstructorId, setNewCourseInstructorId] = useState('');
 
   const handleCreateNewCourse = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1142,18 +1184,28 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     const endDateEng = newCourseEndDate ? toEnglishDigits(newCourseEndDate) : '';
 
     try {
-      const created = await api.createCourse({
-        title: newCourseTitle,
-        instructor: newCourseLecturer,
-        amount: price,
-        capacity: parseInt(newCourseCapacity) || 30,
-        duration: parseInt(newCourseDuration) || 12,
-        start_date: startDateEng,
-        end_date: endDateEng || null,
-        description: newCourseDescription || '',
-        active: newCourseActive ? '1' : '0',
-        group_id: groupId,
-      });
+      const formData = new FormData();
+      formData.append('title', newCourseTitle);
+      formData.append('instructor', newCourseLecturer);
+      formData.append('amount', String(price));
+      formData.append('capacity', String(parseInt(newCourseCapacity) || 30));
+      formData.append('duration', String(parseInt(newCourseDuration) || 12));
+      formData.append('start_date', startDateEng);
+      formData.append('end_date', endDateEng || '');
+      formData.append('description', newCourseDescription || '');
+      formData.append('active', newCourseActive ? '1' : '0');
+      if (groupId !== null) {
+        formData.append('group_id', String(groupId));
+      }
+      formData.append('section', newCourseSection);
+      if (newCourseInstructorId) {
+        formData.append('instructor_id', newCourseInstructorId);
+      }
+      if (newCourseImage) {
+        formData.append('image', newCourseImage);
+      }
+
+      const created = await api.createCourse(formData);
 
       const mappedCourse = mapCourse(created);
       setCourses([mappedCourse, ...courses]);
@@ -1170,6 +1222,10 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
       setNewCourseActive(true);
       setNewCourseCategory(categories[0] || '');
       setNewCourseDescription('');
+      setNewCourseSection('normal');
+      setNewCourseImage(null);
+      setNewCourseImagePreview(null);
+      setNewCourseInstructorId('');
     } catch (err: any) {
       let msg = err?.message || 'خطا در ارتباط با سرور';
       // Include validation errors if available
@@ -1199,6 +1255,10 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
   const [editCourseDescription, setEditCourseDescription] = useState('');
   const [editCourseEndDate, setEditCourseEndDate] = useState('');
   const [editCourseActive, setEditCourseActive] = useState(true);
+  const [editCourseSection, setEditCourseSection] = useState('normal');
+  const [editCourseImage, setEditCourseImage] = useState<File | null>(null);
+  const [editCourseImagePreview, setEditCourseImagePreview] = useState<string | null>(null);
+  const [editCourseInstructorId, setEditCourseInstructorId] = useState('');
 
   // Course Report selection
   const [selectedCourseReport, setSelectedCourseReport] = useState<TutCourse | null>(null);
@@ -1251,18 +1311,30 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
 
     try {
       const courseId = parseInt(editingCourse.id);
-      const updated = await api.updateCourse(courseId, {
-        title: editCourseTitle,
-        instructor: editCourseLecturer,
-        amount: price,
-        capacity: parseInt(editCourseCapacity) || 30,
-        duration: editCourseDuration || '12 ساعت',
-        start_date: startDateEng,
-        end_date: endDateEng || null,
-        description: editCourseDescription || '',
-        active: editCourseActive,
-        group_id: groupId,
-      });
+      const formData = new FormData();
+      formData.append('title', editCourseTitle);
+      formData.append('instructor', editCourseLecturer);
+      formData.append('amount', String(price));
+      formData.append('capacity', String(parseInt(editCourseCapacity) || 30));
+      formData.append('duration', editCourseDuration || '12');
+      formData.append('start_date', startDateEng);
+      formData.append('end_date', endDateEng || '');
+      formData.append('description', editCourseDescription || '');
+      formData.append('active', editCourseActive ? '1' : '0');
+      if (groupId !== null) {
+        formData.append('group_id', String(groupId));
+      }
+      formData.append('section', editCourseSection);
+      if (editCourseInstructorId) {
+        formData.append('instructor_id', editCourseInstructorId);
+      }
+      if (editCourseImage) {
+        formData.append('image', editCourseImage);
+      }
+      // Use POST with _method=PUT for form data with file upload
+      formData.append('_method', 'PUT');
+
+      const updated = await api.updateCourse(courseId, formData);
 
       const mappedCourse = mapCourse(updated);
       setCourses(prev => prev.map(c => c.id === editingCourse.id ? mappedCourse : c));
@@ -1967,6 +2039,15 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                 </button>
 
                 <button
+                  onClick={() => setIsInstructorManagementOpen(true)}
+                  className="px-5 py-3.5 border border-gray-150 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 font-bold text-xs rounded-2xl transition-all cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
+                  title="مدیریت اساتید"
+                >
+                  <User className="w-4 h-4 text-teal-600" />
+                  مدیریت اساتید
+                </button>
+
+                <button
                   onClick={() => setIsNewCourseModalOpen(true)}
                   className="px-5 py-3.5 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-2xl transition-all cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
                 >
@@ -2093,6 +2174,10 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                                           setEditCourseDescription(course.description);
                                           setEditCourseEndDate(course.endDate);
                                           setEditCourseActive(course.status === 'active');
+                                          setEditCourseSection(course.section || 'normal');
+                                          setEditCourseImagePreview(course.image || null);
+                                          setEditCourseImage(null);
+                                          setEditCourseInstructorId(course.instructor_id ? String(course.instructor_id) : '');
                                         }}
                                         className="p-1.5 bg-white dark:bg-gray-900 border border-gray-150 dark:border-gray-800 rounded-lg text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950 transition-all cursor-pointer"
                                         title="ویرایش دوره"
@@ -2245,6 +2330,10 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                                           setEditCourseDescription(course.description);
                                           setEditCourseEndDate(course.endDate);
                                           setEditCourseActive(course.status === 'active');
+                                          setEditCourseSection(course.section || 'normal');
+                                          setEditCourseImagePreview(course.image || null);
+                                          setEditCourseImage(null);
+                                          setEditCourseInstructorId(course.instructor_id ? String(course.instructor_id) : '');
                                         }}
                                         className="p-1.5 bg-white dark:bg-gray-900 border border-gray-150 dark:border-gray-800 rounded-lg text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950 transition-all cursor-pointer"
                                         title="ویرایش دوره"
@@ -2378,6 +2467,10 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                       setEditCourseDescription(course.description);
                       setEditCourseEndDate(course.endDate);
                       setEditCourseActive(course.status === 'active');
+                      setEditCourseSection(course.section || 'normal');
+                      setEditCourseImagePreview(course.image || null);
+                      setEditCourseImage(null);
+                      setEditCourseInstructorId(course.instructor_id ? String(course.instructor_id) : '');
                     }}
                     className="w-full py-3 bg-teal-600 hover:bg-teal-700 text-white font-extrabold text-xs rounded-2xl transition-all cursor-pointer shadow-sm shadow-teal-600/15 flex items-center justify-center gap-1.5"
                   >
@@ -2720,6 +2813,77 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                       </div>
                     </div>
 
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">مدرس منتسب (از لیست اساتید)</label>
+                        <select
+                          value={newCourseInstructorId}
+                          onChange={(e) => setNewCourseInstructorId(e.target.value)}
+                          className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none appearance-none font-sans"
+                        >
+                          <option value="">بدون مدرس منتسب</option>
+                          {instructors.map((inst) => (
+                            <option key={inst.id} value={String(inst.id)}>
+                              {inst.name}{inst.specialty ? ` (${inst.specialty})` : ''}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">محل نمایش در صفحه اصلی</label>
+                        <select
+                          value={newCourseSection}
+                          onChange={(e) => setNewCourseSection(e.target.value)}
+                          className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none appearance-none font-sans"
+                        >
+                          <option value="normal">عادی</option>
+                          <option value="featured">پیشنهاد ویژه</option>
+                          <option value="pre_register">پیش ثبت نام</option>
+                          <option value="free">رایگان</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">تصویر دوره (اختیاری - ابعاد پیشنهادی: 403x226 پیکسل)</label>
+                      <div className="flex items-center gap-3">
+                        <label className="flex-1 flex items-center justify-center p-4 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-950 hover:border-teal-400 dark:hover:border-teal-600 transition-all cursor-pointer">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                setNewCourseImage(file);
+                                setNewCourseImagePreview(URL.createObjectURL(file));
+                              }
+                            }}
+                          />
+                          <div className="text-center">
+                            <Upload className="w-6 h-6 mx-auto text-gray-400 mb-1" />
+                            <span className="text-xs text-gray-400">برای آپلود کلیک کنید</span>
+                          </div>
+                        </label>
+                        {newCourseImagePreview && (
+                          <div className="relative w-24 h-16 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 shrink-0">
+                            <img
+                              src={newCourseImagePreview}
+                              alt="پیش نمایش"
+                              className="w-full h-full object-cover"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => { setNewCourseImage(null); setNewCourseImagePreview(null); }}
+                              className="absolute top-0.5 right-0.5 p-0.5 bg-red-500 text-white rounded-full"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div>
                         <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">طول دوره (ساعت)</label>
@@ -2879,6 +3043,77 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                       </div>
                     </div>
 
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">مدرس منتسب (از لیست اساتید)</label>
+                        <select
+                          value={editCourseInstructorId}
+                          onChange={(e) => setEditCourseInstructorId(e.target.value)}
+                          className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none appearance-none font-sans"
+                        >
+                          <option value="">بدون مدرس منتسب</option>
+                          {instructors.map((inst) => (
+                            <option key={inst.id} value={String(inst.id)}>
+                              {inst.name}{inst.specialty ? ` (${inst.specialty})` : ''}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">محل نمایش در صفحه اصلی</label>
+                        <select
+                          value={editCourseSection}
+                          onChange={(e) => setEditCourseSection(e.target.value)}
+                          className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none appearance-none font-sans"
+                        >
+                          <option value="normal">عادی</option>
+                          <option value="featured">پیشنهاد ویژه</option>
+                          <option value="pre_register">پیش ثبت نام</option>
+                          <option value="free">رایگان</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">تصویر دوره (اختیاری - ابعاد پیشنهادی: 403x226 پیکسل)</label>
+                      <div className="flex items-center gap-3">
+                        <label className="flex-1 flex items-center justify-center p-4 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-950 hover:border-teal-400 dark:hover:border-teal-600 transition-all cursor-pointer">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                setEditCourseImage(file);
+                                setEditCourseImagePreview(URL.createObjectURL(file));
+                              }
+                            }}
+                          />
+                          <div className="text-center">
+                            <Upload className="w-6 h-6 mx-auto text-gray-400 mb-1" />
+                            <span className="text-xs text-gray-400">برای آپلود کلیک کنید</span>
+                          </div>
+                        </label>
+                        {editCourseImagePreview && (
+                          <div className="relative w-24 h-16 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 shrink-0">
+                            <img
+                              src={editCourseImagePreview}
+                              alt="پیش نمایش"
+                              className="w-full h-full object-cover"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => { setEditCourseImage(null); setEditCourseImagePreview(null); }}
+                              className="absolute top-0.5 right-0.5 p-0.5 bg-red-500 text-white rounded-full"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div>
                         <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">طول دوره (ساعت)</label>
@@ -2972,6 +3207,289 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                       </button>
                     </div>
                   </form>
+                </motion.div>
+              </div>
+            )}
+          </AnimatePresence>
+
+          {/* Instructor Management Modal */}
+          <AnimatePresence>
+            {isInstructorManagementOpen && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-950/60 backdrop-blur-xs overflow-y-auto">
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: 15 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: 15 }}
+                  className="w-full max-w-2xl p-6 rounded-3xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-2xl relative my-8"
+                >
+                  <button
+                    onClick={() => { setIsInstructorManagementOpen(false); setInstructorFormMode('create'); }}
+                    className="absolute top-4 left-4 p-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-gray-600 transition-all cursor-pointer"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+
+                  <h3 className="text-sm font-black text-gray-900 dark:text-white leading-snug mb-4 flex items-center gap-1.5">
+                    <User className="w-5 h-5 text-teal-600" />
+                    مدیریت اساتید
+                  </h3>
+
+                  {/* Instructors List */}
+                  {instructorFormMode === 'create' && (
+                    <div className="space-y-4">
+                      <div className="flex justify-end">
+                        <button
+                          onClick={() => {
+                            setInstructorFormMode('edit');
+                            setEditingInstructorId(null);
+                            setInstructorFormName('');
+                            setInstructorFormSpecialty('');
+                            setInstructorFormBio('');
+                            setInstructorFormPhoto(null);
+                            setInstructorFormPhotoPreview(null);
+                            setInstructorFormActive(true);
+                          }}
+                          className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-xl transition-all cursor-pointer flex items-center gap-1.5"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          ثبت استاد جدید
+                        </button>
+                      </div>
+
+                      {instructors.length === 0 ? (
+                        <div className="text-center py-8 text-gray-400 text-xs">
+                          هیچ استادی ثبت نشده است. برای ثبت اولین استاد کلیک کنید.
+                        </div>
+                      ) : (
+                        <div className="space-y-2 max-h-96 overflow-y-auto">
+                          {instructors.map((inst) => (
+                            <div
+                              key={inst.id}
+                              className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-gray-950 border border-gray-100 dark:border-gray-800"
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-teal-100 dark:bg-teal-900 flex items-center justify-center text-teal-700 dark:text-teal-300 font-bold text-sm">
+                                  {inst.name.charAt(0)}
+                                </div>
+                                <div>
+                                  <div className="text-xs font-bold text-gray-800 dark:text-gray-200">{inst.name}</div>
+                                  {inst.specialty && (
+                                    <div className="text-[10px] text-gray-400">{inst.specialty}</div>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <button
+                                  onClick={async () => {
+                                    try {
+                                      const instructor = await api.getInstructor(inst.id);
+                                      setEditingInstructorId(inst.id);
+                                      setInstructorFormName(instructor.name);
+                                      setInstructorFormSpecialty(instructor.specialty || '');
+                                      setInstructorFormBio(instructor.bio || '');
+                                      setInstructorFormPhoto(null);
+                                      setInstructorFormPhotoPreview(instructor.photo_url || null);
+                                      setInstructorFormActive(instructor.active);
+                                      setInstructorFormMode('edit');
+                                    } catch (err) {
+                                      showToast('خطا در دریافت اطلاعات استاد', 'error');
+                                    }
+                                  }}
+                                  className="p-1.5 bg-white dark:bg-gray-900 border border-gray-150 dark:border-gray-800 rounded-lg text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950 transition-all cursor-pointer"
+                                  title="ویرایش"
+                                >
+                                  <Edit2 className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={async () => {
+                                    if (!window.confirm(`آیا از حذف استاد "${inst.name}" اطمینان دارید؟`)) return;
+                                    try {
+                                      await api.deleteInstructor(inst.id);
+                                      setInstructors(prev => prev.filter(i => i.id !== inst.id));
+                                      showToast(`استاد "${inst.name}" حذف شد.`);
+                                    } catch (err: any) {
+                                      showToast(err.message || 'خطا در حذف استاد', 'error');
+                                    }
+                                  }}
+                                  className="p-1.5 bg-white dark:bg-gray-900 border border-gray-150 dark:border-gray-800 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-950 transition-all cursor-pointer"
+                                  title="حذف"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Instructor Add/Edit Form */}
+                  {instructorFormMode === 'edit' && (
+                    <form
+                      onSubmit={async (e) => {
+                        e.preventDefault();
+                        if (!instructorFormName) {
+                          showToast('نام استاد الزامی است.', 'error');
+                          return;
+                        }
+                        setInstructorSubmitting(true);
+                        try {
+                          const formData = new FormData();
+                          formData.append('name', instructorFormName);
+                          formData.append('specialty', instructorFormSpecialty);
+                          formData.append('bio', instructorFormBio);
+                          formData.append('active', instructorFormActive ? '1' : '0');
+                          if (instructorFormPhoto) {
+                            formData.append('photo', instructorFormPhoto);
+                          }
+
+                          if (editingInstructorId) {
+                            formData.append('_method', 'PUT');
+                            const updated = await api.updateInstructor(editingInstructorId, formData);
+                            setInstructors(prev => prev.map(i => i.id === editingInstructorId
+                              ? { id: i.id, name: updated.name, specialty: updated.specialty || null }
+                              : i
+                            ));
+                            showToast(`استاد "${updated.name}" بروزرسانی شد.`);
+                          } else {
+                            const created = await api.createInstructor(formData);
+                            setInstructors(prev => [...prev, { id: created.id, name: created.name, specialty: created.specialty || null }]);
+                            showToast(`استاد "${created.name}" ثبت شد.`);
+                          }
+
+                          setInstructorFormMode('create');
+                          setEditingInstructorId(null);
+                          setInstructorFormName('');
+                          setInstructorFormSpecialty('');
+                          setInstructorFormBio('');
+                          setInstructorFormPhoto(null);
+                          setInstructorFormPhotoPreview(null);
+                          setInstructorFormActive(true);
+                        } catch (err: any) {
+                          showToast(err.message || 'خطا در ذخیره اطلاعات استاد', 'error');
+                        } finally {
+                          setInstructorSubmitting(false);
+                        }
+                      }}
+                      className="space-y-4 text-right"
+                    >
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">نام کامل استاد *</label>
+                        <input
+                          type="text"
+                          required
+                          value={instructorFormName}
+                          onChange={(e) => setInstructorFormName(e.target.value)}
+                          placeholder="مثال: دکتر علیرضا صدقی"
+                          className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">تخصص</label>
+                        <input
+                          type="text"
+                          value={instructorFormSpecialty}
+                          onChange={(e) => setInstructorFormSpecialty(e.target.value)}
+                          placeholder="مثال: هوش مصنوعی و یادگیری ماشین"
+                          className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">بیوگرافی / توضیحات</label>
+                        <textarea
+                          value={instructorFormBio}
+                          onChange={(e) => setInstructorFormBio(e.target.value)}
+                          placeholder="درباره استاد..."
+                          rows={3}
+                          className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none resize-none font-sans"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">عکس استاد</label>
+                        <div className="flex items-center gap-3">
+                          <label className="flex-1 flex items-center justify-center p-4 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-950 hover:border-teal-400 dark:hover:border-teal-600 transition-all cursor-pointer">
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  setInstructorFormPhoto(file);
+                                  setInstructorFormPhotoPreview(URL.createObjectURL(file));
+                                }
+                              }}
+                            />
+                            <div className="text-center">
+                              <Upload className="w-6 h-6 mx-auto text-gray-400 mb-1" />
+                              <span className="text-xs text-gray-400">برای آپلود کلیک کنید</span>
+                            </div>
+                          </label>
+                          {instructorFormPhotoPreview && (
+                            <div className="relative w-16 h-16 rounded-full overflow-hidden border border-gray-200 dark:border-gray-700 shrink-0">
+                              <img
+                                src={instructorFormPhotoPreview}
+                                alt="پیش نمایش"
+                                className="w-full h-full object-cover"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => { setInstructorFormPhoto(null); setInstructorFormPhotoPreview(null); }}
+                                className="absolute top-0 right-0 p-0.5 bg-red-500 text-white rounded-full"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300">وضعیت:</label>
+                        <button
+                          type="button"
+                          dir="ltr"
+                          onClick={() => setInstructorFormActive(!instructorFormActive)}
+                          className={`relative inline-flex items-center h-6 w-11 rounded-full transition-colors ${instructorFormActive ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+                        >
+                          <span className={`inline-block w-4 h-4 rounded-full bg-white shadow-sm transform transition-transform ${instructorFormActive ? 'translate-x-6' : 'translate-x-1'}`} />
+                        </button>
+                        <span className={`text-xs font-bold ${instructorFormActive ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400'}`}>
+                          {instructorFormActive ? 'فعال' : 'غیرفعال'}
+                        </span>
+                      </div>
+
+                      <div className="pt-4 flex justify-end gap-2.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setInstructorFormMode('create');
+                            setEditingInstructorId(null);
+                            setInstructorFormName('');
+                            setInstructorFormSpecialty('');
+                            setInstructorFormBio('');
+                            setInstructorFormPhoto(null);
+                            setInstructorFormPhotoPreview(null);
+                            setInstructorFormActive(true);
+                          }}
+                          className="px-4 py-2.5 border border-gray-150 dark:border-gray-800 bg-white dark:bg-gray-900 text-xs font-bold rounded-xl text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all cursor-pointer"
+                        >
+                          انصراف
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={instructorSubmitting}
+                          className="px-6 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-extrabold text-xs rounded-xl transition-all cursor-pointer shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {instructorSubmitting ? 'در حال ذخیره...' : editingInstructorId ? 'بروزرسانی استاد' : 'ثبت استاد'}
+                        </button>
+                      </div>
+                    </form>
+                  )}
                 </motion.div>
               </div>
             )}
