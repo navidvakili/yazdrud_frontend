@@ -2,9 +2,9 @@
 // API Service — ارتباط با بک‌اند لاراول
 // ============================================================
 
-import { API } from '@/src/lib/functions';
+import { API, APISendFiles } from '@/src/lib/functions';
 import { API_BASE_URL, TOKEN_STRING, USER_STRING } from '@/src/lib/constants';
-import type { AuthResponse, LoginCredentials, User, UserRole, NavItem, NavResponse, UserRolesResponse, PermissionsResponse, RoleInfo, PermissionItem, Course, CourseGroup, CourseRegistration, CourseStats, DetailedCourseStats, CourseSurvey, CourseSurveyStats, CourseCoupon, ActiveSession, AdminSession, UserSessionsResponse, AdminSessionsResponse } from '@/src/types';
+import type { AuthResponse, LoginCredentials, User, UserRole, NavItem, NavResponse, UserRolesResponse, PermissionsResponse, RoleInfo, PermissionItem, Course, CourseGroup, CourseRegistration, CourseStats, DetailedCourseStats, CourseSurvey, CourseSurveyStats, CourseCoupon, Instructor, ActiveSession, AdminSession, UserSessionsResponse, AdminSessionsResponse } from '@/src/types';
 import { getAvatarUrl, getBrowserFingerprint } from '@/src/lib/functions';
 
 class ApiService {
@@ -184,7 +184,10 @@ class ApiService {
    * Create a new course.
    */
   async createCourse(courseData: any): Promise<Course> {
-    const data = await API<any>('courses', courseData, 'POST');
+    // Use APISendFiles for FormData (file upload), API for JSON
+    const data = courseData instanceof FormData
+      ? await APISendFiles<any>('courses', courseData)
+      : await API<any>('courses', courseData, 'POST');
     return data.data;
   }
 
@@ -192,7 +195,10 @@ class ApiService {
    * Update an existing course.
    */
   async updateCourse(id: number, courseData: any): Promise<Course> {
-    const data = await API<any>(`courses/${id}`, courseData, 'PUT');
+    // Use APISendFiles for FormData (file upload), API for JSON
+    const data = courseData instanceof FormData
+      ? await APISendFiles<any>(`courses/${id}`, courseData)
+      : await API<any>(`courses/${id}`, courseData, 'PUT');
     return data.data;
   }
 
@@ -639,6 +645,57 @@ class ApiService {
   async adminRevokeSession(tokenId: string): Promise<{ message: string }> {
     const data = await API<any>(`admin/sessions/${tokenId}/revoke`, {}, 'POST');
     return data;
+  }
+
+  // ========== Instructors (اساتید دوره‌ها) ==========
+
+  /**
+   * Get paginated list of instructors.
+   */
+  async getInstructors(params?: { active?: boolean; search?: string; page?: number; per_page?: number }): Promise<{ data: Instructor[]; meta: any }> {
+    const query = new URLSearchParams();
+    if (params?.active !== undefined) query.set('active', String(params.active));
+    if (params?.search) query.set('search', params.search);
+    if (params?.page) query.set('page', String(params.page));
+    if (params?.per_page) query.set('per_page', String(params.per_page));
+    const qs = query.toString();
+    const url = qs ? `instructors?${qs}` : 'instructors';
+    return API<any>(url);
+  }
+
+  /**
+   * Get a single instructor by ID.
+   */
+  async getInstructor(id: number): Promise<Instructor> {
+    const data = await API<any>(`instructors/${id}`);
+    return data.data;
+  }
+
+  /**
+   * Create a new instructor.
+   */
+  async createInstructor(instructorData: FormData | any): Promise<Instructor> {
+    const data = instructorData instanceof FormData
+      ? await APISendFiles<any>('instructors', instructorData)
+      : await API<any>('instructors', instructorData, 'POST');
+    return data.data;
+  }
+
+  /**
+   * Update an existing instructor.
+   */
+  async updateInstructor(id: number, instructorData: FormData | any): Promise<Instructor> {
+    const data = instructorData instanceof FormData
+      ? await APISendFiles<any>(`instructors/${id}`, instructorData)
+      : await API<any>(`instructors/${id}`, instructorData, 'PUT');
+    return data.data;
+  }
+
+  /**
+   * Delete an instructor.
+   */
+  async deleteInstructor(id: number): Promise<void> {
+    await API(`instructors/${id}`, {}, 'DELETE');
   }
 }
 
