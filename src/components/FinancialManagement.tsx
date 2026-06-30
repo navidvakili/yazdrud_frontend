@@ -34,6 +34,8 @@ export default function FinancialManagement() {
   const [formValue, setFormValue] = useState('');
   const [formCourseId, setFormCourseId] = useState<string>('');
   const [formCourseTitle, setFormCourseTitle] = useState('');
+  const [formGroupId, setFormGroupId] = useState<string>('');
+  const [formGroupTitle, setFormGroupTitle] = useState('');
   const [formCapacity, setFormCapacity] = useState('');
   const [formStartDate, setFormStartDate] = useState('');
   const [formFinishDate, setFormFinishDate] = useState('');
@@ -45,6 +47,13 @@ export default function FinancialManagement() {
   const [courseDropdownOpen, setCourseDropdownOpen] = useState(false);
   const [loadingCourses, setLoadingCourses] = useState(false);
   const courseRef = useRef<HTMLDivElement>(null);
+
+  // ===== State: group autocomplete =====
+  const [groupSearch, setGroupSearch] = useState('');
+  const [groupResults, setGroupResults] = useState<{ id: number; title: string }[]>([]);
+  const [groupDropdownOpen, setGroupDropdownOpen] = useState(false);
+  const [loadingGroups, setLoadingGroups] = useState(false);
+  const groupRef = useRef<HTMLDivElement>(null);
 
   // ===== State: delete confirm =====
   const [deleteId, setDeleteId] = useState<number | null>(null);
@@ -88,11 +97,40 @@ export default function FinancialManagement() {
     return () => clearTimeout(timer);
   }, [courseSearch, fetchCourses]);
 
+  // ===== Fetch groups for autocomplete =====
+  const fetchGroups = useCallback(async (q: string) => {
+    if (!q.trim()) { setGroupResults([]); return; }
+    setLoadingGroups(true);
+    try {
+      const res = await api.getCourseGroups();
+      // Filter by search term client-side (groups are limited so it's fine)
+      const filtered = res.filter(g => g.title.includes(q));
+      setGroupResults(filtered);
+    } catch { /* ignore */ }
+    finally { setLoadingGroups(false); }
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => { if (groupSearch.trim()) fetchGroups(groupSearch); }, 300);
+    return () => clearTimeout(timer);
+  }, [groupSearch, fetchGroups]);
+
   // Close course dropdown on outside click
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (courseRef.current && !courseRef.current.contains(e.target as Node)) {
         setCourseDropdownOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  // Close group dropdown on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (groupRef.current && !groupRef.current.contains(e.target as Node)) {
+        setGroupDropdownOpen(false);
       }
     }
     document.addEventListener('mousedown', handleClick);
@@ -114,12 +152,16 @@ export default function FinancialManagement() {
     setFormValue('');
     setFormCourseId('');
     setFormCourseTitle('');
+    setFormGroupId('');
+    setFormGroupTitle('');
     setFormCapacity('');
     setFormStartDate('');
     setFormFinishDate('');
     setFormIsActive(true);
     setCourseSearch('');
     setCourseResults([]);
+    setGroupSearch('');
+    setGroupResults([]);
     setModalOpen(true);
   };
 
@@ -137,6 +179,10 @@ export default function FinancialManagement() {
     setFormIsActive(c.is_active);
     setCourseSearch(c.course_title || '');
     setCourseResults([]);
+    setFormGroupId(c.group_id ? String(c.group_id) : '');
+    setFormGroupTitle(c.group_title || '');
+    setGroupSearch(c.group_title || '');
+    setGroupResults([]);
     setModalOpen(true);
   };
 
@@ -216,6 +262,7 @@ export default function FinancialManagement() {
         type_discount: formTypeDiscount,
         value: parseInt(toEnglishDigits(formValue)) || 0,
         course_id: formCourseId ? parseInt(formCourseId) : null,
+        group_id: formGroupId ? parseInt(formGroupId) : null,
         capacity: formCapacity ? parseInt(toEnglishDigits(formCapacity)) : 100,
         start_date: formStartDate,
         finish_date: formFinishDate,
@@ -547,6 +594,49 @@ export default function FinancialManagement() {
                           }}
                             className="w-full text-right p-3 text-xs hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 border-b border-gray-50 dark:border-gray-850 last:border-0 cursor-pointer transition-colors">
                             {cr.title}
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* ===== Course Group Autocomplete ===== */}
+                <div ref={groupRef} className="relative">
+                  <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">گروه دوره (اختیاری)</label>
+                  <div className="relative">
+                    <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+                    <input type="text" value={groupSearch} onChange={(e) => { setGroupSearch(e.target.value); setGroupDropdownOpen(true); }}
+                      onFocus={() => { if (groupResults.length > 0) setGroupDropdownOpen(true); }}
+                      placeholder="جستجوی گروه..."
+                      className="w-full text-xs pr-9 pl-3 p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none" />
+                    {formGroupId && !groupSearch && (
+                      <button onClick={() => { setFormGroupId(''); setFormGroupTitle(''); setGroupSearch(''); }}
+                        className="absolute left-3 top-1/2 -translate-y-1/2 p-0.5 rounded text-gray-300 hover:text-rose-500 cursor-pointer">
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Dropdown */}
+                  {groupDropdownOpen && (
+                    <div className="absolute z-10 mt-1 w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-xl max-h-48 overflow-y-auto">
+                      {loadingGroups ? (
+                        <div className="p-3 text-xs text-gray-400 text-center">در حال جستجو...</div>
+                      ) : groupResults.length === 0 ? (
+                        groupSearch.trim() ? (
+                          <div className="p-3 text-xs text-gray-400 text-center">نتیجه‌ای یافت نشد</div>
+                        ) : null
+                      ) : (
+                        groupResults.map((gr) => (
+                          <button key={gr.id} type="button" onClick={() => {
+                            setFormGroupId(String(gr.id));
+                            setFormGroupTitle(gr.title);
+                            setGroupSearch(gr.title);
+                            setGroupDropdownOpen(false);
+                          }}
+                            className="w-full text-right p-3 text-xs hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 border-b border-gray-50 dark:border-gray-850 last:border-0 cursor-pointer transition-colors">
+                            {gr.title}
                           </button>
                         ))
                       )}

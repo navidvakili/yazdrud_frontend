@@ -299,6 +299,8 @@ export interface CourseCoupon {
   value_formatted?: string;
   course_id: number | null;
   course_title?: string;
+  group_id: number | null;
+  group_title?: string;
   capacity: number;
   used_count: number;
   remaining: number;
