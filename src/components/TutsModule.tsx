@@ -236,6 +236,9 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
       validFrom: c.start_date || '1405/01/01',
       validTo: c.finish_date || '1405/12/29',
       courseId: c.course_id ? String(c.course_id) : 'all',
+      courseTitle: c.course_title || '',
+      group_id: c.group_id ? Number(c.group_id) : null,
+      group_title: c.group_title || '',
       globalCap: cap,
       totalUsed: used,
       maxUses: cap,
@@ -713,6 +716,8 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
       if (data.discountType !== undefined) {
         payload.type_discount = data.discountType === 'percentage' ? 'percent' : 'money';
       }
+      if (data.courseId !== undefined) payload.course_id = data.courseId === 'all' ? null : Number(data.courseId);
+      if (data.group_id !== undefined) payload.group_id = data.group_id ? Number(data.group_id) : null;
 
       await api.updateCoupon(Number(id), payload);
 
@@ -4015,6 +4020,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
           vouchers={vouchers}
           courses={courses}
           categories={categories}
+          courseGroups={courseGroups}
           loadingVouchers={loadingVouchers}
           voucherActiveTab={voucherActiveTab}
           setVoucherActiveTab={setVoucherActiveTab}

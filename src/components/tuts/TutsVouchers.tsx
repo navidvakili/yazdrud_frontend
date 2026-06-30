@@ -20,6 +20,7 @@ interface TutsVouchersProps {
     vouchers: TutVoucher[];
     courses: TutCourse[];
     categories: TutCategory[];
+    courseGroups: { id: number; title: string }[];
     loadingVouchers: boolean;
     voucherActiveTab: 'list' | 'create';
     setVoucherActiveTab: (t: 'list' | 'create') => void;
@@ -68,7 +69,7 @@ const VOUCHER_CONDITIONS = [
 
 export default function TutsVouchers(props: TutsVouchersProps) {
     const {
-        vouchers, courses, categories, loadingVouchers,
+        vouchers, courses, categories, courseGroups, loadingVouchers,
         voucherActiveTab, setVoucherActiveTab,
         newVoucher, setNewVoucher,
         sandboxCode, setSandboxCode, sandboxCourseId, setSandboxCourseId,
@@ -570,6 +571,8 @@ export default function TutsVouchers(props: TutsVouchersProps) {
 
                             <EditForm
                                 voucher={editingVoucher}
+                                courses={courses}
+                                courseGroups={courseGroups}
                                 onSave={(data) => handleUpdateVoucher(editingVoucher.id, data)}
                                 onCancel={() => { setShowEditModal(false); setEditingVoucher(null); }}
                             />
@@ -652,8 +655,10 @@ export default function TutsVouchers(props: TutsVouchersProps) {
 }
 
 // ===== Edit Form Sub-Component =====
-function EditForm({ voucher, onSave, onCancel }: {
+function EditForm({ voucher, courses, courseGroups, onSave, onCancel }: {
     voucher: TutVoucher;
+    courses: TutCourse[];
+    courseGroups: { id: number; title: string }[];
     onSave: (data: Partial<TutVoucher>) => Promise<void>;
     onCancel: () => void;
 }) {
@@ -666,7 +671,42 @@ function EditForm({ voucher, onSave, onCancel }: {
     const [validTo, setValidTo] = useState(voucher.validTo || '');
     const [saving, setSaving] = useState(false);
 
+    // --- Course autocomplete ---
+    const [courseId, setCourseId] = useState(voucher.courseId && voucher.courseId !== 'all' ? voucher.courseId : '');
+    const [courseTitle, setCourseTitle] = useState(voucher.courseTitle || '');
+    const [courseSearch, setCourseSearch] = useState('');
+    const [courseDropdownOpen, setCourseDropdownOpen] = useState(false);
+    const courseRef = useRef<HTMLDivElement>(null);
+
+    // --- Group autocomplete ---
+    const [groupId, setGroupId] = useState<number | string | null>(voucher.group_id || null);
+    const [groupTitle, setGroupTitle] = useState(voucher.group_title || '');
+    const [groupSearch, setGroupSearch] = useState('');
+    const [groupDropdownOpen, setGroupDropdownOpen] = useState(false);
+    const groupRef = useRef<HTMLDivElement>(null);
+
+    const filteredCourses = courses.filter(c =>
+        c.title.toLowerCase().includes(courseSearch.toLowerCase())
+    );
+
+    const filteredGroups = courseGroups.filter(g =>
+        g.title.toLowerCase().includes(groupSearch.toLowerCase())
+    );
+
     const isUsed = voucher.totalUsed > 0;
+
+    useEffect(() => {
+        function handleClick(e: MouseEvent) {
+            if (courseRef.current && !courseRef.current.contains(e.target as Node)) {
+                setCourseDropdownOpen(false);
+            }
+            if (groupRef.current && !groupRef.current.contains(e.target as Node)) {
+                setGroupDropdownOpen(false);
+            }
+        }
+        document.addEventListener('mousedown', handleClick);
+        return () => document.removeEventListener('mousedown', handleClick);
+    }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -680,6 +720,8 @@ function EditForm({ voucher, onSave, onCancel }: {
                 maxUses,
                 validFrom,
                 validTo,
+                courseId: courseId || 'all',
+                group_id: groupId || null,
             });
         } finally {
             setSaving(false);
@@ -730,6 +772,64 @@ function EditForm({ voucher, onSave, onCancel }: {
                     <input type="number" value={maxUses} onChange={(e) => setMaxUses(Number(e.target.value))}
                         className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none"
                         required />
+                </div>
+                {/* ===== Course Autocomplete ===== */}
+                <div ref={courseRef} className="space-y-1 relative">
+                    <label className="text-[10px] font-bold text-gray-500 block">دوره مجاز (اختیاری)</label>
+                    <div className="relative">
+                        <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                        <input type="text" value={courseSearch || courseTitle}
+                            onFocus={() => { setCourseSearch(''); setCourseDropdownOpen(true); }}
+                            onChange={(e) => { setCourseSearch(e.target.value); setCourseDropdownOpen(true); }}
+                            placeholder="همه دوره‌ها"
+                            className="w-full text-xs px-3.5 py-2.5 pr-9 rounded-xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none" />
+                    </div>
+                    {courseDropdownOpen && (
+                        <div className="absolute z-50 top-full mt-1 left-0 right-0 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-850 rounded-xl shadow-xl max-h-48 overflow-y-auto">
+                            <button type="button" onClick={() => { setCourseId(''); setCourseTitle(''); setCourseSearch(''); setCourseDropdownOpen(false); }}
+                                className={`w-full text-right px-3.5 py-2 text-[11px] font-bold transition-colors cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${!courseId ? 'text-teal-600 bg-teal-50/50 dark:bg-teal-950/20' : 'text-gray-600 dark:text-gray-400'}`}>
+                                همه دوره‌ها
+                            </button>
+                            {filteredCourses.map(c => (
+                                <button key={c.id} type="button" onClick={() => { setCourseId(c.id); setCourseTitle(c.title); setCourseSearch(c.title); setCourseDropdownOpen(false); }}
+                                    className={`w-full text-right px-3.5 py-2 text-[11px] font-bold transition-colors cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${courseId === c.id ? 'text-teal-600 bg-teal-50/50 dark:bg-teal-950/20' : 'text-gray-600 dark:text-gray-400'}`}>
+                                    {c.title}
+                                </button>
+                            ))}
+                            {filteredCourses.length === 0 && (
+                                <div className="px-3.5 py-3 text-[10px] text-gray-400 text-center">دوره‌ای یافت نشد</div>
+                            )}
+                        </div>
+                    )}
+                </div>
+                {/* ===== Course Group Autocomplete ===== */}
+                <div ref={groupRef} className="space-y-1 relative">
+                    <label className="text-[10px] font-bold text-gray-500 block">گروه دوره (اختیاری)</label>
+                    <div className="relative">
+                        <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                        <input type="text" value={groupSearch || groupTitle}
+                            onFocus={() => { setGroupSearch(''); setGroupDropdownOpen(true); }}
+                            onChange={(e) => { setGroupSearch(e.target.value); setGroupDropdownOpen(true); }}
+                            placeholder="همه گروه‌ها"
+                            className="w-full text-xs px-3.5 py-2.5 pr-9 rounded-xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none" />
+                    </div>
+                    {groupDropdownOpen && (
+                        <div className="absolute z-50 top-full mt-1 left-0 right-0 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-850 rounded-xl shadow-xl max-h-48 overflow-y-auto">
+                            <button type="button" onClick={() => { setGroupId(null); setGroupTitle(''); setGroupSearch(''); setGroupDropdownOpen(false); }}
+                                className={`w-full text-right px-3.5 py-2 text-[11px] font-bold transition-colors cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${!groupId ? 'text-teal-600 bg-teal-50/50 dark:bg-teal-950/20' : 'text-gray-600 dark:text-gray-400'}`}>
+                                همه گروه‌ها
+                            </button>
+                            {filteredGroups.map(g => (
+                                <button key={g.id} type="button" onClick={() => { setGroupId(g.id); setGroupTitle(g.title); setGroupSearch(g.title); setGroupDropdownOpen(false); }}
+                                    className={`w-full text-right px-3.5 py-2 text-[11px] font-bold transition-colors cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${groupId === g.id ? 'text-teal-600 bg-teal-50/50 dark:bg-teal-950/20' : 'text-gray-600 dark:text-gray-400'}`}>
+                                    {g.title}
+                                </button>
+                            ))}
+                            {filteredGroups.length === 0 && (
+                                <div className="px-3.5 py-3 text-[10px] text-gray-400 text-center">گروهی یافت نشد</div>
+                            )}
+                        </div>
+                    )}
                 </div>
                 <div className="space-y-1">
                     <label className="text-[10px] font-bold text-gray-500 block">فعال از تاریخ</label>

@@ -216,6 +216,7 @@ export default function FinancialManagement() {
         type_discount: formTypeDiscount,
         value: parseInt(toEnglishDigits(formValue)) || 0,
         course_id: formCourseId ? parseInt(formCourseId) : null,
+        group_id: formGroupId ? parseInt(formGroupId) : null,
         capacity: formCapacity ? parseInt(toEnglishDigits(formCapacity)) : 100,
         start_date: formStartDate,
         finish_date: formFinishDate,

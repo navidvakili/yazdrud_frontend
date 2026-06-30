@@ -89,6 +89,9 @@ export interface TutVoucher {
     daysSincePublish?: number;
     occasion?: string;
     courseId?: string;
+    courseTitle?: string;
+    group_id?: string | number;
+    group_title?: string;
     category?: string;
     courseLevel?: 'all' | 'elementary' | 'advanced';
     deliveryType?: 'all' | 'online' | 'in-person';
