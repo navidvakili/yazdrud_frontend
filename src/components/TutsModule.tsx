@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Calendar, User, CheckCircle, XCircle, AlertTriangle,
@@ -44,6 +44,8 @@ interface TutCourse {
   capacity: number;
   startDate: string;
   endDate: string;
+  registrationStartDate: string;
+  registrationEndDate: string;
   status: 'active' | 'completed' | 'ended';
   description: string;
   category: string;
@@ -204,6 +206,8 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     capacity: c.capacity || 30,
     startDate: c.start_date ? (c.start_date.includes('/') ? c.start_date : c.start_date.replace(/-/g, '/')) : '۱۴۰۵/۰۱/۰۱',
     endDate: c.end_date ? (c.end_date.includes('/') ? c.end_date : c.end_date.replace(/-/g, '/')) : '',
+    registrationStartDate: c.registration_start_date ? (c.registration_start_date.includes('/') ? c.registration_start_date : c.registration_start_date.replace(/-/g, '/')) : '',
+    registrationEndDate: c.registration_end_date ? (c.registration_end_date.includes('/') ? c.registration_end_date : c.registration_end_date.replace(/-/g, '/')) : '',
     status: c.active ? 'active' : 'ended',
     category: c.group_title || c.category || 'عمومی',
     description: c.description || 'توضیحات دوره به زودی منتشر خواهد شد.',
@@ -284,6 +288,25 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
 
   // ===== Instructors for dropdown selection =====
   const [instructors, setInstructors] = useState<{ id: number; name: string; specialty: string | null }[]>([]);
+  const [newCourseInstructorId, setNewCourseInstructorId] = useState('');
+  const [newCourseInstructorSearch, setNewCourseInstructorSearch] = useState('');
+  const [newCourseInstructorOpen, setNewCourseInstructorOpen] = useState(false);
+  const [editCourseInstructorId, setEditCourseInstructorId] = useState('');
+  const [editCourseInstructorSearch, setEditCourseInstructorSearch] = useState('');
+  const [editCourseInstructorOpen, setEditCourseInstructorOpen] = useState(false);
+
+  // Filtered instructor lists for autocomplete
+  const filteredNewCourseInstructors = useMemo(() => {
+    if (!newCourseInstructorSearch) return instructors;
+    const q = newCourseInstructorSearch.trim().toLowerCase();
+    return instructors.filter(i => i.name.toLowerCase().includes(q) || (i.specialty && i.specialty.toLowerCase().includes(q)));
+  }, [instructors, newCourseInstructorSearch]);
+
+  const filteredEditCourseInstructors = useMemo(() => {
+    if (!editCourseInstructorSearch) return instructors;
+    const q = editCourseInstructorSearch.trim().toLowerCase();
+    return instructors.filter(i => i.name.toLowerCase().includes(q) || (i.specialty && i.specialty.toLowerCase().includes(q)));
+  }, [instructors, editCourseInstructorSearch]);
 
   // ===== Instructor Management Modal =====
   const [isInstructorManagementOpen, setIsInstructorManagementOpen] = useState(false);
@@ -1148,7 +1171,6 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
 
   // New course fields (Admin only)
   const [newCourseTitle, setNewCourseTitle] = useState('');
-  const [newCourseLecturer, setNewCourseLecturer] = useState('');
   const [newCourseDuration, setNewCourseDuration] = useState('');
   const [newCourseCost, setNewCourseCost] = useState('');
   const [newCourseCapacity, setNewCourseCapacity] = useState('30');
@@ -1156,15 +1178,16 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
   const [newCourseCategory, setNewCourseCategory] = useState(() => categories[0] || 'علوم تربیتی و روانشناسی');
   const [newCourseDescription, setNewCourseDescription] = useState('');
   const [newCourseEndDate, setNewCourseEndDate] = useState('');
+  const [newCourseRegStartDate, setNewCourseRegStartDate] = useState('');
+  const [newCourseRegEndDate, setNewCourseRegEndDate] = useState('');
   const [newCourseActive, setNewCourseActive] = useState(true);
   const [newCourseSection, setNewCourseSection] = useState('normal');
   const [newCourseImage, setNewCourseImage] = useState<File | null>(null);
   const [newCourseImagePreview, setNewCourseImagePreview] = useState<string | null>(null);
-  const [newCourseInstructorId, setNewCourseInstructorId] = useState('');
 
   const handleCreateNewCourse = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newCourseTitle || !newCourseLecturer || !newCourseCost) {
+    if (!newCourseTitle || !newCourseCost) {
       showToast('لطفاً فیلدهای ستاره‌دار و الزامی را پر کنید.', 'error');
       return;
     }
@@ -1182,16 +1205,21 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     // Clean dates: convert Persian digits to English
     const startDateEng = toEnglishDigits(newCourseStartDate);
     const endDateEng = newCourseEndDate ? toEnglishDigits(newCourseEndDate) : '';
+    const regStartDateEng = newCourseRegStartDate ? toEnglishDigits(newCourseRegStartDate) : '';
+    const regEndDateEng = newCourseRegEndDate ? toEnglishDigits(newCourseRegEndDate) : '';
 
     try {
       const formData = new FormData();
       formData.append('title', newCourseTitle);
-      formData.append('instructor', newCourseLecturer);
+      const selectedInstructor = instructors.find(i => String(i.id) === newCourseInstructorId);
+      formData.append('instructor', selectedInstructor?.name || '');
       formData.append('amount', String(price));
       formData.append('capacity', String(parseInt(newCourseCapacity) || 30));
       formData.append('duration', String(parseInt(newCourseDuration) || 12));
       formData.append('start_date', startDateEng);
       formData.append('end_date', endDateEng || '');
+      if (regStartDateEng) formData.append('registration_start_date', regStartDateEng);
+      if (regEndDateEng) formData.append('registration_end_date', regEndDateEng);
       formData.append('description', newCourseDescription || '');
       formData.append('active', newCourseActive ? '1' : '0');
       if (groupId !== null) {
@@ -1213,12 +1241,13 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
       showToast(`دوره کارگاهی جدید "${newCourseTitle}" با موفقیت تعریف گردید.`);
       // Reset Form
       setNewCourseTitle('');
-      setNewCourseLecturer('');
       setNewCourseCost('');
       setNewCourseDuration('');
       setNewCourseCapacity('30');
       setNewCourseStartDate('');
       setNewCourseEndDate('');
+      setNewCourseRegStartDate('');
+      setNewCourseRegEndDate('');
       setNewCourseActive(true);
       setNewCourseCategory(categories[0] || '');
       setNewCourseDescription('');
@@ -1246,7 +1275,6 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
   // Editing course states (Admin only)
   const [editingCourse, setEditingCourse] = useState<TutCourse | null>(null);
   const [editCourseTitle, setEditCourseTitle] = useState('');
-  const [editCourseLecturer, setEditCourseLecturer] = useState('');
   const [editCourseDuration, setEditCourseDuration] = useState('');
   const [editCourseCost, setEditCourseCost] = useState('');
   const [editCourseCapacity, setEditCourseCapacity] = useState('');
@@ -1254,11 +1282,12 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
   const [editCourseCategory, setEditCourseCategory] = useState('');
   const [editCourseDescription, setEditCourseDescription] = useState('');
   const [editCourseEndDate, setEditCourseEndDate] = useState('');
+  const [editCourseRegStartDate, setEditCourseRegStartDate] = useState('');
+  const [editCourseRegEndDate, setEditCourseRegEndDate] = useState('');
   const [editCourseActive, setEditCourseActive] = useState(true);
   const [editCourseSection, setEditCourseSection] = useState('normal');
   const [editCourseImage, setEditCourseImage] = useState<File | null>(null);
   const [editCourseImagePreview, setEditCourseImagePreview] = useState<string | null>(null);
-  const [editCourseInstructorId, setEditCourseInstructorId] = useState('');
 
   // Course Report selection
   const [selectedCourseReport, setSelectedCourseReport] = useState<TutCourse | null>(null);
@@ -1290,7 +1319,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
   const handleUpdateCourse = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingCourse) return;
-    if (!editCourseTitle || !editCourseLecturer || !editCourseCost) {
+    if (!editCourseTitle || !editCourseCost) {
       showToast('لطفاً فیلدهای ستاره‌دار و الزامی را پر کنید.', 'error');
       return;
     }
@@ -1308,17 +1337,22 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     // Clean dates
     const startDateEng = toEnglishDigits(editCourseStartDate);
     const endDateEng = editCourseEndDate ? toEnglishDigits(editCourseEndDate) : '';
+    const regStartDateEng = editCourseRegStartDate ? toEnglishDigits(editCourseRegStartDate) : '';
+    const regEndDateEng = editCourseRegEndDate ? toEnglishDigits(editCourseRegEndDate) : '';
 
     try {
       const courseId = parseInt(editingCourse.id);
       const formData = new FormData();
       formData.append('title', editCourseTitle);
-      formData.append('instructor', editCourseLecturer);
+      const selectedInstructor = instructors.find(i => String(i.id) === editCourseInstructorId);
+      formData.append('instructor', selectedInstructor?.name || '');
       formData.append('amount', String(price));
       formData.append('capacity', String(parseInt(editCourseCapacity) || 30));
       formData.append('duration', editCourseDuration || '12');
       formData.append('start_date', startDateEng);
       formData.append('end_date', endDateEng || '');
+      if (regStartDateEng) formData.append('registration_start_date', regStartDateEng);
+      if (regEndDateEng) formData.append('registration_end_date', regEndDateEng);
       formData.append('description', editCourseDescription || '');
       formData.append('active', editCourseActive ? '1' : '0');
       if (groupId !== null) {
@@ -2165,7 +2199,6 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                                         onClick={() => {
                                           setEditingCourse(course);
                                           setEditCourseTitle(course.title);
-                                          setEditCourseLecturer(course.lecturer);
                                           setEditCourseDuration(course.duration);
                                           setEditCourseCost(course.cost.toString());
                                           setEditCourseCapacity(course.capacity.toString());
@@ -2173,11 +2206,14 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                                           setEditCourseCategory(course.category);
                                           setEditCourseDescription(course.description);
                                           setEditCourseEndDate(course.endDate);
+                                          setEditCourseRegStartDate(course.registrationStartDate || '');
+                                          setEditCourseRegEndDate(course.registrationEndDate || '');
                                           setEditCourseActive(course.status === 'active');
                                           setEditCourseSection(course.section || 'normal');
                                           setEditCourseImagePreview(course.image || null);
                                           setEditCourseImage(null);
                                           setEditCourseInstructorId(course.instructor_id ? String(course.instructor_id) : '');
+                                          setEditCourseInstructorSearch(course.instructor_name || '');
                                         }}
                                         className="p-1.5 bg-white dark:bg-gray-900 border border-gray-150 dark:border-gray-800 rounded-lg text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950 transition-all cursor-pointer"
                                         title="ویرایش دوره"
@@ -2321,7 +2357,6 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                                         onClick={() => {
                                           setEditingCourse(course);
                                           setEditCourseTitle(course.title);
-                                          setEditCourseLecturer(course.lecturer);
                                           setEditCourseDuration(course.duration);
                                           setEditCourseCost(course.cost.toString());
                                           setEditCourseCapacity(course.capacity.toString());
@@ -2329,11 +2364,14 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                                           setEditCourseCategory(course.category);
                                           setEditCourseDescription(course.description);
                                           setEditCourseEndDate(course.endDate);
+                                          setEditCourseRegStartDate(course.registrationStartDate || '');
+                                          setEditCourseRegEndDate(course.registrationEndDate || '');
                                           setEditCourseActive(course.status === 'active');
                                           setEditCourseSection(course.section || 'normal');
                                           setEditCourseImagePreview(course.image || null);
                                           setEditCourseImage(null);
                                           setEditCourseInstructorId(course.instructor_id ? String(course.instructor_id) : '');
+                                          setEditCourseInstructorSearch(course.instructor_name || '');
                                         }}
                                         className="p-1.5 bg-white dark:bg-gray-900 border border-gray-150 dark:border-gray-800 rounded-lg text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950 transition-all cursor-pointer"
                                         title="ویرایش دوره"
@@ -2458,7 +2496,6 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                       setSelectedCourseForDetail(null);
                       setEditingCourse(course);
                       setEditCourseTitle(course.title);
-                      setEditCourseLecturer(course.lecturer);
                       setEditCourseDuration(course.duration);
                       setEditCourseCost(course.cost.toString());
                       setEditCourseCapacity(course.capacity.toString());
@@ -2466,11 +2503,14 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                       setEditCourseCategory(course.category);
                       setEditCourseDescription(course.description);
                       setEditCourseEndDate(course.endDate);
+                      setEditCourseRegStartDate(course.registrationStartDate || '');
+                      setEditCourseRegEndDate(course.registrationEndDate || '');
                       setEditCourseActive(course.status === 'active');
                       setEditCourseSection(course.section || 'normal');
                       setEditCourseImagePreview(course.image || null);
                       setEditCourseImage(null);
                       setEditCourseInstructorId(course.instructor_id ? String(course.instructor_id) : '');
+                      setEditCourseInstructorSearch(course.instructor_name || '');
                     }}
                     className="w-full py-3 bg-teal-600 hover:bg-teal-700 text-white font-extrabold text-xs rounded-2xl transition-all cursor-pointer shadow-sm shadow-teal-600/15 flex items-center justify-center gap-1.5"
                   >
@@ -2789,17 +2829,6 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">استاد / مدرس دوره *</label>
-                        <input
-                          type="text"
-                          required
-                          value={newCourseLecturer}
-                          onChange={(e) => setNewCourseLecturer(e.target.value)}
-                          placeholder="مثال: دکتر علیرضا صدقی"
-                          className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none"
-                        />
-                      </div>
-                      <div>
                         <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">دپارتمان یا حوزه علمی</label>
                         <select
                           value={newCourseCategory}
@@ -2811,37 +2840,88 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                           ))}
                         </select>
                       </div>
+                      <div>
+                        <div className="flex items-end gap-2">
+                          <div className="flex-1">
+                            <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">محل نمایش در صفحه اصلی</label>
+                            <select
+                              value={newCourseSection}
+                              onChange={(e) => setNewCourseSection(e.target.value)}
+                              className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none appearance-none font-sans"
+                            >
+                              <option value="normal">عادی</option>
+                              <option value="featured">پیشنهاد ویژه</option>
+                              <option value="pre_register">پیش ثبت نام</option>
+                              <option value="free">رایگان</option>
+                            </select>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setIsInstructorManagementOpen(true)}
+                            className="p-3 mb-0.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-950 transition-all cursor-pointer"
+                            title="مدیریت اساتید"
+                          >
+                            <User className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">مدرس منتسب (از لیست اساتید)</label>
-                        <select
-                          value={newCourseInstructorId}
-                          onChange={(e) => setNewCourseInstructorId(e.target.value)}
-                          className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none appearance-none font-sans"
-                        >
-                          <option value="">بدون مدرس منتسب</option>
-                          {instructors.map((inst) => (
-                            <option key={inst.id} value={String(inst.id)}>
-                              {inst.name}{inst.specialty ? ` (${inst.specialty})` : ''}
-                            </option>
-                          ))}
-                        </select>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">مدرس منتسب (از لیست اساتید)</label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={newCourseInstructorSearch}
+                          onChange={(e) => setNewCourseInstructorSearch(e.target.value)}
+                          onFocus={() => setNewCourseInstructorOpen(true)}
+                          onBlur={() => setTimeout(() => setNewCourseInstructorOpen(false), 200)}
+                          placeholder="جستجوی نام استاد..."
+                          className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none"
+                        />
+                        {newCourseInstructorOpen && (
+                          <div className="absolute z-10 top-full left-0 right-0 mt-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+                            {filteredNewCourseInstructors.length === 0 ? (
+                              <div className="p-3 text-xs text-gray-400 text-center">موردی یافت نشد</div>
+                            ) : (
+                              filteredNewCourseInstructors.map((inst) => (
+                                <button
+                                  key={inst.id}
+                                  type="button"
+                                  onMouseDown={() => {
+                                    setNewCourseInstructorSearch(inst.name);
+                                    setNewCourseInstructorId(String(inst.id));
+                                    setNewCourseInstructorOpen(false);
+                                  }}
+                                  className={`w-full text-right px-3 py-2 text-xs hover:bg-gray-50 dark:hover:bg-gray-800 transition-all flex items-center gap-2 ${
+                                    String(inst.id) === newCourseInstructorId ? 'bg-teal-50 dark:bg-teal-950 text-teal-700 dark:text-teal-300' : 'text-gray-700 dark:text-gray-300'
+                                  }`}
+                                >
+                                  <span className="w-6 h-6 rounded-full bg-teal-100 dark:bg-teal-900 flex items-center justify-center text-teal-700 dark:text-teal-300 font-bold text-[10px] shrink-0">
+                                    {inst.name.charAt(0)}
+                                  </span>
+                                  <span>{inst.name}</span>
+                                  {inst.specialty && <span className="text-[10px] text-gray-400">({inst.specialty})</span>}
+                                </button>
+                              ))
+                            )}
+                          </div>
+                        )}
                       </div>
-                      <div>
-                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">محل نمایش در صفحه اصلی</label>
-                        <select
-                          value={newCourseSection}
-                          onChange={(e) => setNewCourseSection(e.target.value)}
-                          className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none appearance-none font-sans"
-                        >
-                          <option value="normal">عادی</option>
-                          <option value="featured">پیشنهاد ویژه</option>
-                          <option value="pre_register">پیش ثبت نام</option>
-                          <option value="free">رایگان</option>
-                        </select>
-                      </div>
+                      {newCourseInstructorId && (
+                        <div className="mt-1.5 flex items-center gap-1.5">
+                          <span className="text-[10px] text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-950 px-2 py-0.5 rounded-lg">
+                            {instructors.find(i => String(i.id) === newCourseInstructorId)?.name || 'مدرس انتخاب شد'}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => { setNewCourseInstructorSearch(''); setNewCourseInstructorId(''); }}
+                            className="text-gray-400 hover:text-red-500 transition-all"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      )}
                     </div>
 
                     <div>
@@ -2935,6 +3015,23 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                       </div>
                     </div>
 
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">مهلت شروع ثبت‌نام</label>
+                        <JalaliDatepicker
+                          value={newCourseRegStartDate}
+                          onChange={(date) => setNewCourseRegStartDate(date)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">مهلت پایان ثبت‌نام</label>
+                        <JalaliDatepicker
+                          value={newCourseRegEndDate}
+                          onChange={(date) => setNewCourseRegEndDate(date)}
+                        />
+                      </div>
+                    </div>
+
                     <div className="flex items-center gap-3">
                       <label className="block text-xs font-bold text-gray-700 dark:text-gray-300">وضعیت دوره:</label>
                       <button
@@ -3017,18 +3114,6 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                       />
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">استاد / مدرس دوره *</label>
-                        <input
-                          type="text"
-                          required
-                          value={editCourseLecturer}
-                          onChange={(e) => setEditCourseLecturer(e.target.value)}
-                          placeholder="مثال: دکتر علیرضا صدقی"
-                          className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none"
-                        />
-                      </div>
                       <div>
                         <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">دپارتمان یا حوزه علمی</label>
                         <select
@@ -3041,36 +3126,88 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                           ))}
                         </select>
                       </div>
-                    </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">مدرس منتسب (از لیست اساتید)</label>
-                        <select
-                          value={editCourseInstructorId}
-                          onChange={(e) => setEditCourseInstructorId(e.target.value)}
-                          className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none appearance-none font-sans"
-                        >
-                          <option value="">بدون مدرس منتسب</option>
-                          {instructors.map((inst) => (
-                            <option key={inst.id} value={String(inst.id)}>
-                              {inst.name}{inst.specialty ? ` (${inst.specialty})` : ''}
-                            </option>
-                          ))}
-                        </select>
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={editCourseInstructorSearch}
+                            onChange={(e) => setEditCourseInstructorSearch(e.target.value)}
+                            onFocus={() => setEditCourseInstructorOpen(true)}
+                            onBlur={() => setTimeout(() => setEditCourseInstructorOpen(false), 200)}
+                            placeholder="جستجوی نام استاد..."
+                            className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none"
+                          />
+                          {editCourseInstructorOpen && (
+                            <div className="absolute z-10 top-full left-0 right-0 mt-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+                              {filteredEditCourseInstructors.length === 0 ? (
+                                <div className="p-3 text-xs text-gray-400 text-center">موردی یافت نشد</div>
+                              ) : (
+                                filteredEditCourseInstructors.map((inst) => (
+                                  <button
+                                    key={inst.id}
+                                    type="button"
+                                    onMouseDown={() => {
+                                      setEditCourseInstructorSearch(inst.name);
+                                      setEditCourseInstructorId(String(inst.id));
+                                      setEditCourseInstructorOpen(false);
+                                    }}
+                                    className={`w-full text-right px-3 py-2 text-xs hover:bg-gray-50 dark:hover:bg-gray-800 transition-all flex items-center gap-2 ${
+                                      String(inst.id) === editCourseInstructorId ? 'bg-teal-50 dark:bg-teal-950 text-teal-700 dark:text-teal-300' : 'text-gray-700 dark:text-gray-300'
+                                    }`}
+                                  >
+                                    <span className="w-6 h-6 rounded-full bg-teal-100 dark:bg-teal-900 flex items-center justify-center text-teal-700 dark:text-teal-300 font-bold text-[10px] shrink-0">
+                                      {inst.name.charAt(0)}
+                                    </span>
+                                    <span>{inst.name}</span>
+                                    {inst.specialty && <span className="text-[10px] text-gray-400">({inst.specialty})</span>}
+                                  </button>
+                                ))
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        {editCourseInstructorId && (
+                          <div className="mt-1.5 flex items-center gap-1.5">
+                            <span className="text-[10px] text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-950 px-2 py-0.5 rounded-lg">
+                              {instructors.find(i => String(i.id) === editCourseInstructorId)?.name || 'مدرس انتخاب شد'}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => { setEditCourseInstructorSearch(''); setEditCourseInstructorId(''); }}
+                              className="text-gray-400 hover:text-red-500 transition-all"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        )}
                       </div>
                       <div>
-                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">محل نمایش در صفحه اصلی</label>
-                        <select
-                          value={editCourseSection}
-                          onChange={(e) => setEditCourseSection(e.target.value)}
-                          className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none appearance-none font-sans"
-                        >
-                          <option value="normal">عادی</option>
-                          <option value="featured">پیشنهاد ویژه</option>
-                          <option value="pre_register">پیش ثبت نام</option>
-                          <option value="free">رایگان</option>
-                        </select>
+                        <div className="flex items-end gap-2">
+                          <div className="flex-1">
+                            <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">محل نمایش در صفحه اصلی</label>
+                            <select
+                              value={editCourseSection}
+                              onChange={(e) => setEditCourseSection(e.target.value)}
+                              className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none appearance-none font-sans"
+                            >
+                              <option value="normal">عادی</option>
+                              <option value="featured">پیشنهاد ویژه</option>
+                              <option value="pre_register">پیش ثبت نام</option>
+                              <option value="free">رایگان</option>
+                            </select>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setIsInstructorManagementOpen(true)}
+                            className="p-3 mb-0.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-950 transition-all cursor-pointer"
+                            title="مدیریت اساتید"
+                          >
+                            <User className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
                     </div>
 
@@ -3161,6 +3298,23 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                         <JalaliDatepicker
                           value={editCourseEndDate}
                           onChange={(date) => setEditCourseEndDate(date)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">مهلت شروع ثبت‌نام</label>
+                        <JalaliDatepicker
+                          value={editCourseRegStartDate}
+                          onChange={(date) => setEditCourseRegStartDate(date)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">مهلت پایان ثبت‌نام</label>
+                        <JalaliDatepicker
+                          value={editCourseRegEndDate}
+                          onChange={(date) => setEditCourseRegEndDate(date)}
                         />
                       </div>
                     </div>
