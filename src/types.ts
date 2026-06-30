@@ -151,7 +151,7 @@ export interface Course {
   amount_formatted: string;
   active: boolean;
   image: string | null;
-  section: string;
+  section: string[];
   instructor_id: number | null;
   instructor_name: string | null;
   description: string | null;

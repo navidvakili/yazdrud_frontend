@@ -49,7 +49,7 @@ interface TutCourse {
   status: 'active' | 'completed' | 'ended';
   description: string;
   category: string;
-  section: string; // 'normal' | 'featured' | 'pre_register' | 'free'
+  section: string[]; // array of 'normal' | 'featured' | 'pre_register' | 'free'
   image: string | null;
   instructor_id: number | null;
   instructor_name: string | null;
@@ -213,7 +213,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     status: c.active ? 'active' : 'ended',
     category: c.group_title || c.category || 'عمومی',
     description: c.description || 'توضیحات دوره به زودی منتشر خواهد شد.',
-    section: c.section || 'normal',
+    section: Array.isArray(c.section) ? c.section : ['normal'],
     image: c.image || null,
     instructor_id: c.instructor_id || null,
     instructor_name: c.instructor_name || null,
@@ -1183,7 +1183,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
   const [newCourseRegStartDate, setNewCourseRegStartDate] = useState('');
   const [newCourseRegEndDate, setNewCourseRegEndDate] = useState('');
   const [newCourseActive, setNewCourseActive] = useState(true);
-  const [newCourseSection, setNewCourseSection] = useState('normal');
+  const [newCourseSection, setNewCourseSection] = useState<string[]>(['normal']);
   const [newCourseImage, setNewCourseImage] = useState<File | null>(null);
   const [newCourseImagePreview, setNewCourseImagePreview] = useState<string | null>(null);
 
@@ -1227,7 +1227,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
       if (groupId !== null) {
         formData.append('group_id', String(groupId));
       }
-      formData.append('section', newCourseSection);
+      newCourseSection.forEach(s => formData.append('section[]', s));
       if (newCourseInstructorId) {
         formData.append('instructor_id', newCourseInstructorId);
       }
@@ -1253,7 +1253,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
       setNewCourseActive(true);
       setNewCourseCategory(categories[0] || '');
       setNewCourseDescription('');
-      setNewCourseSection('normal');
+      setNewCourseSection(['normal']);
       setNewCourseImage(null);
       setNewCourseImagePreview(null);
       setNewCourseInstructorId('');
@@ -1287,7 +1287,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
   const [editCourseRegStartDate, setEditCourseRegStartDate] = useState('');
   const [editCourseRegEndDate, setEditCourseRegEndDate] = useState('');
   const [editCourseActive, setEditCourseActive] = useState(true);
-  const [editCourseSection, setEditCourseSection] = useState('normal');
+  const [editCourseSection, setEditCourseSection] = useState<string[]>(['normal']);
   const [editCourseImage, setEditCourseImage] = useState<File | null>(null);
   const [editCourseImagePreview, setEditCourseImagePreview] = useState<string | null>(null);
 
@@ -1360,7 +1360,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
       if (groupId !== null) {
         formData.append('group_id', String(groupId));
       }
-      formData.append('section', editCourseSection);
+      editCourseSection.forEach(s => formData.append('section[]', s));
       if (editCourseInstructorId) {
         formData.append('instructor_id', editCourseInstructorId);
       }
@@ -2217,7 +2217,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                                           setEditCourseRegStartDate(course.registrationStartDate || '');
                                           setEditCourseRegEndDate(course.registrationEndDate || '');
                                           setEditCourseActive(course.status === 'active');
-                                          setEditCourseSection(course.section || 'normal');
+                                          setEditCourseSection(Array.isArray(course.section) ? course.section : ['normal']);
                                           setEditCourseImagePreview(course.image || null);
                                           setEditCourseImage(null);
                                           setEditCourseInstructorId(course.instructor_id ? String(course.instructor_id) : '');
@@ -2375,7 +2375,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                                           setEditCourseRegStartDate(course.registrationStartDate || '');
                                           setEditCourseRegEndDate(course.registrationEndDate || '');
                                           setEditCourseActive(course.status === 'active');
-                                          setEditCourseSection(course.section || 'normal');
+                                          setEditCourseSection(Array.isArray(course.section) ? course.section : ['normal']);
                                           setEditCourseImagePreview(course.image || null);
                                           setEditCourseImage(null);
                                           setEditCourseInstructorId(course.instructor_id ? String(course.instructor_id) : '');
@@ -2514,7 +2514,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                       setEditCourseRegStartDate(course.registrationStartDate || '');
                       setEditCourseRegEndDate(course.registrationEndDate || '');
                       setEditCourseActive(course.status === 'active');
-                      setEditCourseSection(course.section || 'normal');
+                      setEditCourseSection(Array.isArray(course.section) ? course.section : ['normal']);
                       setEditCourseImagePreview(course.image || null);
                       setEditCourseImage(null);
                       setEditCourseInstructorId(course.instructor_id ? String(course.instructor_id) : '');
@@ -2852,16 +2852,31 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                         <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">محل نمایش در صفحه اصلی</label>
                         <div className="flex items-end gap-2">
                           <div className="flex-1">
-                            <select
-                              value={newCourseSection}
-                              onChange={(e) => setNewCourseSection(e.target.value)}
-                              className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none appearance-none font-sans"
-                            >
-                              <option value="normal">عادی</option>
-                              <option value="featured">پیشنهاد ویژه</option>
-                              <option value="pre_register">پیش ثبت نام</option>
-                              <option value="free">رایگان</option>
-                            </select>
+                            <div className="flex flex-wrap gap-3 mt-1">
+                                {[
+                                  { value: 'normal', label: 'عادی' },
+                                  { value: 'featured', label: 'پیشنهاد ویژه' },
+                                  { value: 'pre_register', label: 'پیش ثبت نام' },
+                                  { value: 'free', label: 'رایگان' },
+                                ].map(({ value, label }) => (
+                                  <label key={value} className="flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300 cursor-pointer">
+                                    <input
+                                      type="checkbox"
+                                      value={value}
+                                      checked={newCourseSection.includes(value)}
+                                      onChange={(e) => {
+                                        if (e.target.checked) {
+                                          setNewCourseSection([...newCourseSection, value]);
+                                        } else {
+                                          setNewCourseSection(newCourseSection.filter(v => v !== value));
+                                        }
+                                      }}
+                                      className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
+                                    />
+                                    {label}
+                                  </label>
+                                ))}
+                              </div>
                           </div>
                           <button
                             type="button"
@@ -3195,16 +3210,31 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                         <div className="flex items-end gap-2">
                           <div className="flex-1">
                             <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">محل نمایش در صفحه اصلی</label>
-                            <select
-                              value={editCourseSection}
-                              onChange={(e) => setEditCourseSection(e.target.value)}
-                              className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none appearance-none font-sans"
-                            >
-                              <option value="normal">عادی</option>
-                              <option value="featured">پیشنهاد ویژه</option>
-                              <option value="pre_register">پیش ثبت نام</option>
-                              <option value="free">رایگان</option>
-                            </select>
+                              <div className="flex flex-wrap gap-3 mt-1">
+                                {[
+                                  { value: 'normal', label: 'عادی' },
+                                  { value: 'featured', label: 'پیشنهاد ویژه' },
+                                  { value: 'pre_register', label: 'پیش ثبت نام' },
+                                  { value: 'free', label: 'رایگان' },
+                                ].map(({ value, label }) => (
+                                  <label key={value} className="flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300 cursor-pointer">
+                                    <input
+                                      type="checkbox"
+                                      value={value}
+                                      checked={editCourseSection.includes(value)}
+                                      onChange={(e) => {
+                                        if (e.target.checked) {
+                                          setEditCourseSection([...editCourseSection, value]);
+                                        } else {
+                                          setEditCourseSection(editCourseSection.filter(v => v !== value));
+                                        }
+                                      }}
+                                      className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
+                                    />
+                                    {label}
+                                  </label>
+                                ))}
+                              </div>
                           </div>
                           <button
                             type="button"
