@@ -1377,7 +1377,13 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
       setEditingCourse(null);
       showToast(`دوره کارگاهی "${editCourseTitle}" با موفقیت بروزرسانی گردید.`);
     } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.message || 'خطا در ارتباط با سرور';
+      let msg = err?.response?.data?.message || err?.message || 'خطا در ارتباط با سرور';
+      // Include validation errors if available
+      const errors = err?.response?.data?.errors;
+      if (errors) {
+        const errorList = Object.values(errors).flat().join(' | ');
+        msg += `: ${errorList}`;
+      }
       showToast(`خطا در بروزرسانی دوره: ${msg}`, 'error');
     }
   };

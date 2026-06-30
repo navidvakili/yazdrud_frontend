@@ -101,7 +101,15 @@ export const APISendFiles = async <T = any>(URL: string, formData: FormData): Pr
   networkStatus.reportApiSuccess();
 
   if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
+    let errorBody: any;
+    try {
+      errorBody = await response.json();
+    } catch {
+      errorBody = { message: `HTTP error! status: ${response.status}` };
+    }
+    const error = new Error(errorBody?.message || `HTTP error! status: ${response.status}`);
+    (error as any).response = { data: errorBody, status: response.status };
+    throw error;
   }
 
   const contentType = response.headers.get('content-type');
