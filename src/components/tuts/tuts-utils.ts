@@ -135,6 +135,10 @@ export function mapCourse(c: any): TutCourse {
         instructor_id: c.instructor_id || null,
         instructor_name: c.instructor_name || null,
         group_id: c.group_id || null,
+        daysOfWeek: c.days_of_week || [],
+        courseTime: c.course_time || '',
+        location: c.location || '',
+        prerequisites: c.prerequisites || '',
     };
 }
 

@@ -31,6 +31,10 @@ export interface TutCourse {
     image: string | null;
     instructor_id: number | null;
     instructor_name: string | null;
+    daysOfWeek: string[];
+    courseTime: string;
+    location: string;
+    prerequisites: string;
 }
 
 export interface TutRegistrant {
