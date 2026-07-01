@@ -5,7 +5,7 @@
 /** آدرس سرور بک‌اند لاراول (بر اساس محیط) */
 export const BACKEND_API_URL = import.meta.env.DEV
     ? 'http://127.0.0.1:8000'
-    : 'http://172.16.10.10:8080';
+    : 'https://portaldb.sau.ac.ir';
 
 /** پیشوند API (BACKEND_API_URL + /api) */
 export const API_BASE_URL = `${BACKEND_API_URL}/api`;
