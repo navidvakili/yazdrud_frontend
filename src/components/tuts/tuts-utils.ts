@@ -130,7 +130,7 @@ export function mapCourse(c: any): TutCourse {
         status: c.active ? 'active' : 'ended',
         category: c.group_title || c.category || 'عمومی',
         description: c.description || 'توضیحات دوره به زودی منتشر خواهد شد.',
-        section: Array.isArray(c.section) ? c.section : ['normal'],
+        sections: Array.isArray(c.sections) ? c.sections : ['normal'],
         image: c.image || null,
         instructor_id: c.instructor_id || null,
         instructor_name: c.instructor_name || null,

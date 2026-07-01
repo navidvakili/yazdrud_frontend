@@ -825,7 +825,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
       if (groupId !== null) {
         formData.append('group_id', String(groupId));
       }
-      newCourseSection.forEach(s => formData.append('section[]', s));
+      newCourseSection.forEach(s => formData.append('sections[]', s));
       if (newCourseInstructorId) {
         formData.append('instructor_id', newCourseInstructorId);
       }
@@ -972,7 +972,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
       if (groupId !== null) {
         formData.append('group_id', String(groupId));
       }
-      editCourseSection.forEach(s => formData.append('section[]', s));
+      editCourseSection.forEach(s => formData.append('sections[]', s));
       if (editCourseInstructorId) {
         formData.append('instructor_id', editCourseInstructorId);
       }
@@ -1660,7 +1660,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                             setEditCourseRegStartDate(c.registrationStartDate || '');
                             setEditCourseRegEndDate(c.registrationEndDate || '');
                             setEditCourseActive(c.status === 'active');
-                            setEditCourseSection(Array.isArray(c.section) ? c.section : ['normal']);
+                            setEditCourseSection(Array.isArray(c.sections) ? c.sections : ['normal']);
                             setEditCourseImagePreview(c.image || null);
                             setEditCourseImage(null);
                             setEditCourseInstructorId(c.instructor_id ? String(c.instructor_id) : '');
