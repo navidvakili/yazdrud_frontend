@@ -136,12 +136,16 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
           const rows: any[] = res.data || [];
           setIndividualSurveys(rows.map((s: any) => ({
             id: s.id,
-            name: s.full_name || `${s.first_name || ''} ${s.last_name || ''}`.trim(),
-            phone: s.phone_number || '',
-            date: s.created_at ? s.created_at.split(' ')[0].replace(/-/g, '/') : '',
+            firstName: s.first_name || '',
+            lastName: s.last_name || '',
+            userName: s.full_name || `${s.first_name || ''} ${s.last_name || ''}`.trim(),
+            userPhone: s.phone_number || '',
+            ipAddress: s.ip_address || '',
+            date: s.created_at ? s.created_at.replace(/-/g, '/') : '',
             courseTitle: s.course_title || '',
             rating: s.rating || 0,
-            comment: s.comment || s.suggestions || ''
+            comment: s.comment || '',
+            suggestions: s.suggestions || ''
           })));
         })
         .catch(err => { console.error('Error fetching surveys:', err); fetchedRef.current.surveys = false; })
@@ -3165,8 +3169,6 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
             setSurveyPage={setSurveyPage}
             selectedSurveyDetails={selectedSurveyDetails}
             setSelectedSurveyDetails={setSelectedSurveyDetails}
-            onOpenTab={(id: string) => onOpenTab(id, '', '', false)}
-            courses={courses}
           />
         </div>
       )}

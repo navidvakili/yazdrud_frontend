@@ -308,7 +308,7 @@ class ApiService {
     if (params?.page) query.set('page', String(params.page));
     if (params?.per_page) query.set('per_page', String(params.per_page));
     const qs = query.toString();
-    const url = qs ? `courses/surveys?${qs}` : 'courses/surveys';
+    const url = qs ? `surveys?${qs}` : 'surveys';
     return API<any>(url);
   }
 
@@ -316,7 +316,7 @@ class ApiService {
    * Get survey statistics.
    */
   async getSurveyStatistics(): Promise<CourseSurveyStats> {
-    const data = await API<any>('courses/surveys/statistics');
+    const data = await API<any>('surveys/statistics');
     return data.data;
   }
 
@@ -324,7 +324,7 @@ class ApiService {
    * Delete a survey.
    */
   async deleteSurvey(id: number): Promise<void> {
-    await API(`courses/surveys/${id}`, {}, 'DELETE');
+    await API(`surveys/${id}`, {}, 'DELETE');
   }
 
   // ========== Coupons / Vouchers (بن‌های تخفیف) ==========

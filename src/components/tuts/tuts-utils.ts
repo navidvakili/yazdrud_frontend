@@ -3,6 +3,7 @@
 // ============================================================
 
 import type { TutCourse, TutRegistrant, TutVoucher } from './tuts-types';
+import PersianDate from 'persian-date';
 
 /** Convert Western digits (0-9) to Persian (۰-۹) */
 export function toPersianDigits(str: string | number): string {
@@ -47,6 +48,23 @@ export function normalizePersian(str: string): string {
 export function formatNumberWithCommas(num: number | null | undefined): string {
     if (num === null || num === undefined) return '';
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+/**
+ * Convert a Gregorian date string ("Y/m/d H:i") to Shamsi (Jalali) with Western digits.
+ * Example: "2026/07/01 09:21" → "1405/04/10 09:21"
+ */
+export function toPersianDateString(gregorianDate: string): string {
+    if (!gregorianDate) return '';
+    try {
+        const [datePart, timePart] = gregorianDate.split(' ');
+        const [y, m, d] = datePart.split('/').map(Number);
+        const [h, min] = timePart ? timePart.split(':').map(Number) : [0, 0];
+        const jsDate = new Date(y, m - 1, d, h, min);
+        return new PersianDate(jsDate).toLocale('en').format('YYYY/MM/DD HH:mm');
+    } catch {
+        return gregorianDate;
+    }
 }
 
 /** Format a number as currency in Rials with Persian digits */
