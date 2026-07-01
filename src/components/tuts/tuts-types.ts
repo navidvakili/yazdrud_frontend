@@ -14,6 +14,7 @@ export interface TutsModuleProps {
 export interface TutCourse {
     id: string;
     title: string;
+    group_id: number | null;
     lecturer: string;
     duration: string;
     cost: number; // in Rials

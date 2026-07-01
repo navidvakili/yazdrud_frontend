@@ -107,14 +107,33 @@ export default function TutsVouchers(props: TutsVouchersProps) {
     const [courseDropdownOpen, setCourseDropdownOpen] = useState(false);
     const courseRef = useRef<HTMLDivElement>(null);
 
-    const filteredCourses = courses.filter(c =>
-        c.title.toLowerCase().includes(courseSearch.toLowerCase())
+    // --- Group autocomplete (Create form) ---
+    const [newGroupSearch, setNewGroupSearch] = useState('');
+    const [newGroupTitle, setNewGroupTitle] = useState('');
+    const [newGroupId, setNewGroupId] = useState<number | string | null>(null);
+    const [newGroupDropdownOpen, setNewGroupDropdownOpen] = useState(false);
+    const newGroupRef = useRef<HTMLDivElement>(null);
+
+    const filteredCourses = courses.filter(c => {
+        // If a group is selected, only show courses belonging to that group
+        if (newGroupId) {
+            const gId = typeof newGroupId === 'string' ? parseInt(newGroupId) : newGroupId;
+            if (c.group_id !== gId) return false;
+        }
+        return c.title.toLowerCase().includes(courseSearch.toLowerCase());
+    });
+
+    const newFilteredGroups = courseGroups.filter(g =>
+        g.title.toLowerCase().includes(newGroupSearch.toLowerCase())
     );
 
     useEffect(() => {
         function handleClick(e: MouseEvent) {
             if (courseRef.current && !courseRef.current.contains(e.target as Node)) {
                 setCourseDropdownOpen(false);
+            }
+            if (newGroupRef.current && !newGroupRef.current.contains(e.target as Node)) {
+                setNewGroupDropdownOpen(false);
             }
         }
         document.addEventListener('mousedown', handleClick);
@@ -347,6 +366,34 @@ export default function TutsVouchers(props: TutsVouchersProps) {
                                 <div className="p-4 bg-gray-55/50 dark:bg-gray-950/30 rounded-2xl border border-gray-100/50 dark:border-gray-850 space-y-3">
                                     <h6 className="text-[10px] font-black text-gray-400 flex items-center gap-1.5"><Tag className="w-3 h-3" />محصول و دسته‌بندی</h6>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <div ref={newGroupRef} className="space-y-1 relative">
+                                            <label className="text-[10px] font-bold text-gray-500 block">دسته‌بندی مجاز</label>
+                                            <div className="relative">
+                                                <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                                                <input type="text" value={newGroupSearch || newGroupTitle}
+                                                    onFocus={() => { setNewGroupSearch(''); setNewGroupDropdownOpen(true); }}
+                                                    onChange={(e) => { setNewGroupSearch(e.target.value); setNewGroupDropdownOpen(true); }}
+                                                    placeholder="همه گروه‌ها"
+                                                    className="w-full text-xs px-3.5 py-2.5 pr-9 rounded-xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none" />
+                                            </div>
+                                            {newGroupDropdownOpen && (
+                                                <div className="absolute z-50 top-full mt-1 left-0 right-0 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-850 rounded-xl shadow-xl max-h-48 overflow-y-auto">
+                                                    <button type="button" onClick={() => { setNewGroupId(null); setNewGroupTitle(''); setNewGroupSearch(''); setCourseSearch(''); setNewGroupDropdownOpen(false); }}
+                                                        className={`w-full text-right px-3.5 py-2 text-[11px] font-bold transition-colors cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${!newGroupId ? 'text-teal-600 bg-teal-50/50 dark:bg-teal-950/20' : 'text-gray-600 dark:text-gray-400'}`}>
+                                                        همه گروه‌ها
+                                                    </button>
+                                                    {newFilteredGroups.map(g => (
+                                                        <button key={g.id} type="button" onClick={() => { setNewGroupId(g.id); setNewGroupTitle(g.title); setNewGroupSearch(g.title); setCourseSearch(''); setNewGroupDropdownOpen(false); }}
+                                                            className={`w-full text-right px-3.5 py-2 text-[11px] font-bold transition-colors cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${newGroupId === g.id ? 'text-teal-600 bg-teal-50/50 dark:bg-teal-950/20' : 'text-gray-600 dark:text-gray-400'}`}>
+                                                            {g.title}
+                                                        </button>
+                                                    ))}
+                                                    {newFilteredGroups.length === 0 && (
+                                                        <div className="px-3.5 py-3 text-[10px] text-gray-400 text-center">گروهی یافت نشد</div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
                                         <div className="space-y-1 relative" ref={courseRef}>
                                             <label className="text-[10px] font-bold text-gray-500 block">دوره‌های مجاز</label>
                                             <div className="relative">
@@ -374,14 +421,6 @@ export default function TutsVouchers(props: TutsVouchersProps) {
                                                     )}
                                                 </div>
                                             )}
-                                        </div>
-                                        <div className="space-y-1">
-                                            <label className="text-[10px] font-bold text-gray-500 block">دسته‌بندی مجاز</label>
-                                            <select value={newVoucher.applicableCategoryIds?.[0] || ''} onChange={(e) => setNewVoucher(f => ({ ...f, applicableCategoryIds: e.target.value ? [e.target.value] : [] }))}
-                                                className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none cursor-pointer">
-                                                <option value="">همه دسته‌ها</option>
-                                                {categories.map((cat: any) => (<option key={cat.id || cat} value={cat.id || cat}>{cat.name || cat}</option>))}
-                                            </select>
                                         </div>
                                     </div>
                                 </div>
@@ -686,9 +725,14 @@ function EditForm({ voucher, courses, courseGroups, onSave, onCancel }: {
     const [groupDropdownOpen, setGroupDropdownOpen] = useState(false);
     const groupRef = useRef<HTMLDivElement>(null);
 
-    const filteredCourses = courses.filter(c =>
-        c.title.toLowerCase().includes(courseSearch.toLowerCase())
-    );
+    const filteredCourses = courses.filter(c => {
+        // If a group is selected, only show courses belonging to that group
+        if (groupId) {
+            const gId = typeof groupId === 'string' ? parseInt(groupId) : groupId;
+            if (c.group_id !== gId) return false;
+        }
+        return c.title.toLowerCase().includes(courseSearch.toLowerCase());
+    });
 
     const filteredGroups = courseGroups.filter(g =>
         g.title.toLowerCase().includes(groupSearch.toLowerCase())
@@ -762,7 +806,8 @@ function EditForm({ voucher, courses, courseGroups, onSave, onCancel }: {
                     </p>
                 )}
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            {/* ===== Row 1: نوع تخفیف | مقدار تخفیف | ظرفیت استفاده ===== */}
+            <div className="grid grid-cols-3 gap-3">
                 <div className="space-y-1">
                     <label className="text-[10px] font-bold text-gray-500 block">نوع تخفیف</label>
                     <select value={discountType} onChange={(e) => setDiscountType(e.target.value as any)}
@@ -794,7 +839,37 @@ function EditForm({ voucher, courses, courseGroups, onSave, onCancel }: {
                         </p>
                     )}
                 </div>
-                {/* ===== Course Autocomplete ===== */}
+            </div>
+            {/* ===== Row 2: گروه دوره | دوره مجاز ===== */}
+            <div className="grid grid-cols-2 gap-3">
+                <div ref={groupRef} className="space-y-1 relative">
+                    <label className="text-[10px] font-bold text-gray-500 block">گروه دوره (اختیاری)</label>
+                    <div className="relative">
+                        <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                        <input type="text" value={groupSearch || groupTitle}
+                            onFocus={() => { setGroupSearch(''); setGroupDropdownOpen(true); }}
+                            onChange={(e) => { setGroupSearch(e.target.value); setGroupDropdownOpen(true); }}
+                            placeholder="همه گروه‌ها"
+                            className="w-full text-xs px-3.5 py-2.5 pr-9 rounded-xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none" />
+                    </div>
+                    {groupDropdownOpen && (
+                        <div className="absolute z-50 top-full mt-1 left-0 right-0 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-850 rounded-xl shadow-xl max-h-48 overflow-y-auto">
+                            <button type="button" onClick={() => { setGroupId(null); setGroupTitle(''); setGroupSearch(''); setCourseId(''); setCourseTitle(''); setGroupDropdownOpen(false); }}
+                                className={`w-full text-right px-3.5 py-2 text-[11px] font-bold transition-colors cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${!groupId ? 'text-teal-600 bg-teal-50/50 dark:bg-teal-950/20' : 'text-gray-600 dark:text-gray-400'}`}>
+                                همه گروه‌ها
+                            </button>
+                            {filteredGroups.map(g => (
+                                <button key={g.id} type="button" onClick={() => { setGroupId(g.id); setGroupTitle(g.title); setGroupSearch(g.title); setCourseId(''); setCourseTitle(''); setGroupDropdownOpen(false); }}
+                                    className={`w-full text-right px-3.5 py-2 text-[11px] font-bold transition-colors cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${groupId === g.id ? 'text-teal-600 bg-teal-50/50 dark:bg-teal-950/20' : 'text-gray-600 dark:text-gray-400'}`}>
+                                    {g.title}
+                                </button>
+                            ))}
+                            {filteredGroups.length === 0 && (
+                                <div className="px-3.5 py-3 text-[10px] text-gray-400 text-center">گروهی یافت نشد</div>
+                            )}
+                        </div>
+                    )}
+                </div>
                 <div ref={courseRef} className="space-y-1 relative">
                     <label className="text-[10px] font-bold text-gray-500 block">دوره مجاز (اختیاری)</label>
                     <div className="relative">
@@ -823,35 +898,9 @@ function EditForm({ voucher, courses, courseGroups, onSave, onCancel }: {
                         </div>
                     )}
                 </div>
-                {/* ===== Course Group Autocomplete ===== */}
-                <div ref={groupRef} className="space-y-1 relative">
-                    <label className="text-[10px] font-bold text-gray-500 block">گروه دوره (اختیاری)</label>
-                    <div className="relative">
-                        <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-                        <input type="text" value={groupSearch || groupTitle}
-                            onFocus={() => { setGroupSearch(''); setGroupDropdownOpen(true); }}
-                            onChange={(e) => { setGroupSearch(e.target.value); setGroupDropdownOpen(true); }}
-                            placeholder="همه گروه‌ها"
-                            className="w-full text-xs px-3.5 py-2.5 pr-9 rounded-xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none" />
-                    </div>
-                    {groupDropdownOpen && (
-                        <div className="absolute z-50 top-full mt-1 left-0 right-0 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-850 rounded-xl shadow-xl max-h-48 overflow-y-auto">
-                            <button type="button" onClick={() => { setGroupId(null); setGroupTitle(''); setGroupSearch(''); setGroupDropdownOpen(false); }}
-                                className={`w-full text-right px-3.5 py-2 text-[11px] font-bold transition-colors cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${!groupId ? 'text-teal-600 bg-teal-50/50 dark:bg-teal-950/20' : 'text-gray-600 dark:text-gray-400'}`}>
-                                همه گروه‌ها
-                            </button>
-                            {filteredGroups.map(g => (
-                                <button key={g.id} type="button" onClick={() => { setGroupId(g.id); setGroupTitle(g.title); setGroupSearch(g.title); setGroupDropdownOpen(false); }}
-                                    className={`w-full text-right px-3.5 py-2 text-[11px] font-bold transition-colors cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${groupId === g.id ? 'text-teal-600 bg-teal-50/50 dark:bg-teal-950/20' : 'text-gray-600 dark:text-gray-400'}`}>
-                                    {g.title}
-                                </button>
-                            ))}
-                            {filteredGroups.length === 0 && (
-                                <div className="px-3.5 py-3 text-[10px] text-gray-400 text-center">گروهی یافت نشد</div>
-                            )}
-                        </div>
-                    )}
-                </div>
+            </div>
+            {/* ===== Row 3: تاریخ‌ها ===== */}
+            <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                     <label className="text-[10px] font-bold text-gray-500 block">فعال از تاریخ</label>
                     <JalaliDatepicker value={validFrom} onChange={setValidFrom} />

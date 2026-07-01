@@ -91,6 +91,7 @@ export function mapCourse(c: any): TutCourse {
         image: c.image || null,
         instructor_id: c.instructor_id || null,
         instructor_name: c.instructor_name || null,
+        group_id: c.group_id || null,
     };
 }
 
