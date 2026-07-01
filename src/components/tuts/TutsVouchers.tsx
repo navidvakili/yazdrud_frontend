@@ -189,7 +189,7 @@ export default function TutsVouchers(props: TutsVouchersProps) {
                                                     </div>
                                                     <span className="text-[10px] text-gray-400 block mt-0.5">
                                                         {v.discountType === 'percentage' ? `٪${toPersianDigits(v.discountValue)} تخفیف` : `${formatCurrency(v.discountValue)} تخفیف`}
-                                                        {' · '}ظرفیت: {toPersianDigits(v.remainingUses)} از {toPersianDigits(v.maxUses)}
+                                                        {' · '}باقی‌مانده: {toPersianDigits(v.remainingUses)} از {toPersianDigits(v.maxUses)} ({toPersianDigits(v.totalUsed)} مصرف شده)
                                                     </span>
                                                 </div>
                                             </div>
@@ -670,6 +670,7 @@ function EditForm({ voucher, courses, courseGroups, onSave, onCancel }: {
     const [validFrom, setValidFrom] = useState(voucher.validFrom || '');
     const [validTo, setValidTo] = useState(voucher.validTo || '');
     const [saving, setSaving] = useState(false);
+    const [validationError, setValidationError] = useState('');
 
     // --- Course autocomplete ---
     const [courseId, setCourseId] = useState(voucher.courseId && voucher.courseId !== 'all' ? voucher.courseId : '');
@@ -710,6 +711,15 @@ function EditForm({ voucher, courses, courseGroups, onSave, onCancel }: {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setValidationError('');
+
+        // Validate: capacity cannot be less than current used count
+        if (maxUses < (voucher.totalUsed || 0)) {
+            setValidationError(`ظرفیت نمی‌تواند کمتر از ${toPersianDigits(voucher.totalUsed || 0)} (تعداد مصرف شده) باشد.`);
+            setSaving(false);
+            return;
+        }
+
         setSaving(true);
         try {
             await onSave({
@@ -769,9 +779,20 @@ function EditForm({ voucher, courses, courseGroups, onSave, onCancel }: {
                 </div>
                 <div className="space-y-1">
                     <label className="text-[10px] font-bold text-gray-500 block">ظرفیت استفاده</label>
-                    <input type="number" value={maxUses} onChange={(e) => setMaxUses(Number(e.target.value))}
+                    <input type="number" value={maxUses}
+                        onChange={(e) => { setMaxUses(Number(e.target.value)); setValidationError(''); }}
+                        min={voucher.totalUsed || 0}
                         className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none"
                         required />
+                    <span className="text-[9px] text-gray-400 block mt-0.5">
+                        {toPersianDigits(voucher.totalUsed || 0)} عدد مصرف شده — حداقل مقدار مجاز: {toPersianDigits(voucher.totalUsed || 0)}
+                    </span>
+                    {validationError && (
+                        <p className="text-[9px] text-rose-500 font-bold mt-1 flex items-center gap-1">
+                            <svg className="w-3 h-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                            {validationError}
+                        </p>
+                    )}
                 </div>
                 {/* ===== Course Autocomplete ===== */}
                 <div ref={courseRef} className="space-y-1 relative">

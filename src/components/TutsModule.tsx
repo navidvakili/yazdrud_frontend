@@ -474,10 +474,22 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
       if (data.courseId !== undefined) payload.course_id = data.courseId === 'all' ? null : Number(data.courseId);
       if (data.group_id !== undefined) payload.group_id = data.group_id ? Number(data.group_id) : null;
 
-      await api.updateCoupon(Number(id), payload);
+      const res = await api.updateCoupon(Number(id), payload);
 
-      // Refresh local state
-      setVouchers(prev => prev.map(v => v.id === id ? { ...v, ...data } : v));
+      // Refresh local state — recalculate remainingUses and status
+      setVouchers(prev => prev.map(v => {
+        if (v.id !== id) return v;
+        const updated = { ...v, ...data };
+        const cap = updated.maxUses ?? updated.globalCap ?? 0;
+        const used = updated.totalUsed ?? 0;
+        updated.remainingUses = Math.max(0, cap - used);
+        if (used >= cap && cap > 0) {
+          updated.status = 'used' as const;
+        } else if (cap > used) {
+          updated.status = 'active' as const;
+        }
+        return updated;
+      }));
       setShowEditModal(false);
       setEditingVoucher(null);
       showToast(`بن تخفیف "${data.title || ''}" با موفقیت به‌روزرسانی شد.`);
