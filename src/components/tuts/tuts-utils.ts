@@ -43,6 +43,13 @@ export function normalizePersian(str: string): string {
 }
 
 /** Format a number as currency in Rials with Persian digits */
+/** Format a number with commas (e.g., 1500000 → "1,500,000") */
+export function formatNumberWithCommas(num: number | null | undefined): string {
+    if (num === null || num === undefined) return '';
+    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+/** Format a number as currency in Rials with Persian digits */
 export function formatCurrency(amount: number): string {
     return toPersianDigits(amount.toLocaleString('fa-IR')) + ' ریال';
 }
