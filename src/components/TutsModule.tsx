@@ -1686,9 +1686,26 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                     {selectedCourseForDetail.category}
                   </span>
 
-                  <h3 className="text-base font-black text-gray-900 dark:text-white leading-snug mb-4">
+                  <h3 className="text-base font-black text-gray-900 dark:text-white leading-snug mb-3">
                     {selectedCourseForDetail.title}
                   </h3>
+
+                  {/* Course Image in Detail Modal */}
+                  <div className="relative w-full aspect-[403/226] mb-4 rounded-2xl overflow-hidden bg-gray-100 dark:bg-gray-800 border border-gray-100 dark:border-gray-800">
+                    {selectedCourseForDetail.image ? (
+                      <img
+                        src={selectedCourseForDetail.image}
+                        alt={selectedCourseForDetail.title}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <svg className="w-12 h-12 text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
 
                   <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed text-justify mb-5 bg-gray-50 dark:bg-gray-950 p-4 rounded-2xl border border-gray-100 dark:border-gray-850">
                     {selectedCourseForDetail.description}
@@ -2243,6 +2260,19 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                               onChange={(e) => {
                                 const file = e.target.files?.[0];
                                 if (file) {
+                                  // Client-side validation
+                                  const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+                                  const maxSize = 2 * 1024 * 1024; // 2MB
+                                  if (!allowedTypes.includes(file.type)) {
+                                    showToast('فرمت تصویر باید jpeg, png یا gif باشد.', 'error');
+                                    e.target.value = '';
+                                    return;
+                                  }
+                                  if (file.size > maxSize) {
+                                    showToast('حجم تصویر نباید بیشتر از ۲ مگابایت باشد.', 'error');
+                                    e.target.value = '';
+                                    return;
+                                  }
                                   setNewCourseImage(file);
                                   setNewCourseImagePreview(URL.createObjectURL(file));
                                 }
@@ -2450,6 +2480,19 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                             onChange={(e) => {
                               const file = e.target.files?.[0];
                               if (file) {
+                                // Client-side validation
+                                const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+                                const maxSize = 2 * 1024 * 1024; // 2MB
+                                if (!allowedTypes.includes(file.type)) {
+                                  showToast('فرمت تصویر باید jpeg, png یا gif باشد.', 'error');
+                                  e.target.value = '';
+                                  return;
+                                }
+                                if (file.size > maxSize) {
+                                  showToast('حجم تصویر نباید بیشتر از ۲ مگابایت باشد.', 'error');
+                                  e.target.value = '';
+                                  return;
+                                }
                                 setEditCourseImage(file);
                                 setEditCourseImagePreview(URL.createObjectURL(file));
                               }
