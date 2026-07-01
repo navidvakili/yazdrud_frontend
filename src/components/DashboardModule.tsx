@@ -6,16 +6,8 @@ import { motion } from 'motion/react';
 import {
   User,
   FileText,
-  BookOpen,
-  GraduationCap,
   Users,
   DollarSign,
-  Calendar,
-  Award,
-  CheckCircle,
-  AlertTriangle,
-  Clock,
-  TrendingUp,
   BookMarked,
   Pin,
   type LucideIcon,
@@ -56,29 +48,6 @@ export default function DashboardModule({
       return id[+w];
     });
   }
-
-  const stats = {
-    student: [
-      { label: 'واحدهای ثبت‌شده', value: '۱۸ واحد', icon: BookOpen, color: 'text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-950/40' },
-      { label: 'معدل کل', value: '۱۶.۷۵', icon: TrendingUp, color: 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40' },
-      { label: 'پایان‌نامه', value: 'در حال انجام', icon: FileText, color: 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40' },
-      { label: 'شهریه پرداختی', value: '۳,۴۵۰,۰۰۰ تومان', icon: DollarSign, color: 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40' },
-    ],
-    professor: [
-      { label: 'دانشجویان راهنما', value: '۱۲ نفر', icon: Users, color: 'text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-950/40' },
-      { label: 'دروس جاری', value: '۴ درس', icon: BookOpen, color: 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40' },
-      { label: 'پایان‌نامه‌های جاری', value: '۵ پایان‌نامه', icon: FileText, color: 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40' },
-      { label: 'ساعت حضور', value: '۲۴ ساعت/هفته', icon: Clock, color: 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40' },
-    ],
-    admin: [
-      { label: 'کل دانشجویان', value: '۶,۲۴۱ نفر', icon: Users, color: 'text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-950/40' },
-      { label: 'اساتید فعال', value: '۱۸۲ نفر', icon: GraduationCap, color: 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40' },
-      { label: 'درخواست‌های pending', value: '۲۳ مورد', icon: AlertTriangle, color: 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40' },
-      { label: 'شهریه واریزی ماه', value: '۲۳۰,۰۰۰,۰۰۰ تومان', icon: DollarSign, color: 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40' },
-    ],
-  };
-
-  const currentStats = stats[user.role] || stats.student;
 
   // Use dynamic menu items if provided, otherwise fall back to built-in list
   const quickActions: MenuAction[] = allMenuItems || [
@@ -124,25 +93,6 @@ export default function DashboardModule({
         </div>
       </motion.div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {currentStats.map((stat, idx) => (
-          <motion.div
-            key={idx}
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: idx * 0.08 }}
-            className="bg-white dark:bg-gray-900 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-800"
-          >
-            <div className={`inline-flex p-2.5 rounded-xl ${stat.color} mb-3`}>
-              <stat.icon className="w-5 h-5" />
-            </div>
-            <div className="text-lg font-black text-gray-900 dark:text-white">{stat.value}</div>
-            <div className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">{stat.label}</div>
-          </motion.div>
-        ))}
-      </div>
-
       {/* Pinned Quick Access — shown when user has pinned items */}
       {pinnedMenus.length > 0 && (
         <div>
@@ -178,40 +128,6 @@ export default function DashboardModule({
         </div>
       )}
 
-      {/* Role-specific info */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.4 }}
-        className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-100 dark:border-gray-800"
-      >
-        <div className="flex items-center gap-3 mb-4">
-          <CheckCircle className="w-5 h-5 text-teal-500" />
-          <h3 className="text-sm font-black text-gray-900 dark:text-white">اطلاعات حساب کاربری</h3>
-        </div>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
-          <div>
-            <span className="text-[10px] text-gray-400 dark:text-gray-500 block font-bold">نام و نام خانوادگی</span>
-            <span className="text-gray-900 dark:text-gray-100">{user.fname} {user.lname}</span>
-          </div>
-          <div>
-            <span className="text-[10px] text-gray-400 dark:text-gray-500 block font-bold">ایمیل</span>
-            <span className="text-gray-900 dark:text-gray-100" dir="ltr">{user.email}</span>
-          </div>
-          <div>
-            <span className="text-[10px] text-gray-400 dark:text-gray-500 block font-bold">موبایل</span>
-            <span className="text-gray-900 dark:text-gray-100" dir="ltr">{user.mobile}</span>
-          </div>
-          <div>
-            <span className="text-[10px] text-gray-400 dark:text-gray-500 block font-bold">نقش</span>
-            <span className="text-gray-900 dark:text-gray-100">{roleLabel}</span>
-          </div>
-          <div>
-            <span className="text-[10px] text-gray-400 dark:text-gray-500 block font-bold">کد ملی</span>
-            <span className="text-gray-900 dark:text-gray-100" dir="ltr">{user.kodmeli}</span>
-          </div>
-        </div>
-      </motion.div>
     </div>
   );
 }
