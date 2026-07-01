@@ -293,6 +293,9 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     deviceLimit: '',
     firstPurchaseOnly: false,
     groupId: null,
+    isActive: true,
+    maxDiscount: 0,
+    nationalCodes: [],
   });
 
   const [sandboxUserId, setSandboxUserId] = useState('');
@@ -412,7 +415,9 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
         group_id: newVoucher.groupId || null,
         start_date: newVoucher.validFrom || '',
         finish_date: newVoucher.validUntil || '',
-        is_active: true,
+        is_active: newVoucher.isActive,
+        max_discount: newVoucher.maxDiscount > 0 ? newVoucher.maxDiscount : null,
+        national_code: newVoucher.nationalCodes.filter(Boolean).join(',') || null,
       };
 
       const res = await api.createCoupon(payload);
@@ -446,6 +451,9 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
       deviceLimit: '',
       firstPurchaseOnly: false,
       groupId: null,
+      isActive: true,
+      maxDiscount: 0,
+      nationalCodes: [],
     });
     setVoucherActiveTab('list');
   };
@@ -467,6 +475,9 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
       }
       if (data.courseId !== undefined) payload.course_id = data.courseId === 'all' ? null : Number(data.courseId);
       if (data.group_id !== undefined) payload.group_id = data.group_id ? Number(data.group_id) : null;
+      if (data.isActive !== undefined) payload.is_active = data.isActive;
+      if (data.maxDiscount !== undefined) payload.max_discount = data.maxDiscount > 0 ? data.maxDiscount : null;
+      if (data.nationalCodes !== undefined) payload.national_code = data.nationalCodes.filter(Boolean).join(',') || null;
 
       const res = await api.updateCoupon(Number(id), payload);
 

@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
     Tag, Plus, List, Copy, Check, Trash2, Zap, Clock,
     MapPin, Smartphone, Gift, CreditCard, DollarSign,
-    Beaker, AlertTriangle, Info, X, Flame, Search, Sparkles,
+    Beaker, AlertTriangle, Info, X, Flame, Search, Sparkles, Shield,
 } from 'lucide-react';
 import type {
     TutCourse, TutCategory, TutVoucher,
@@ -129,6 +129,28 @@ export default function TutsVouchers(props: TutsVouchersProps) {
     const newFilteredGroups = courseGroups.filter(g =>
         g.title.toLowerCase().includes(newGroupSearch.toLowerCase())
     );
+
+    // --- National code multi-input ---
+    const [newNationalCodeInput, setNewNationalCodeInput] = useState('');
+
+    const handleAddNationalCode = () => {
+        const val = newNationalCodeInput.trim();
+        if (val && !newVoucher.nationalCodes.includes(val)) {
+            setNewVoucher(f => ({ ...f, nationalCodes: [...f.nationalCodes, val] }));
+        }
+        setNewNationalCodeInput('');
+    };
+
+    const handleRemoveNationalCode = (code: string) => {
+        setNewVoucher(f => ({ ...f, nationalCodes: f.nationalCodes.filter(c => c !== code) }));
+    };
+
+    const handleNationalCodeKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            handleAddNationalCode();
+        }
+    };
 
     useEffect(() => {
         function handleClick(e: MouseEvent) {
@@ -298,8 +320,24 @@ export default function TutsVouchers(props: TutsVouchersProps) {
                 </div>
             ) : (
                 /* ===== CREATE TAB ===== */
-                <div className="space-y-6">
-                    {/* Creation Form */}
+                <div className="space-y-4">
+                    {/* Active Toggle — standalone bar outside the main card */}
+                    <div className="px-5 py-3 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-850 rounded-2xl shadow-xs flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                            <Shield className={`w-4 h-4 ${newVoucher.isActive ? 'text-emerald-500' : 'text-gray-400'}`} />
+                            <span className="text-xs font-bold text-gray-700 dark:text-gray-300">وضعیت بن تخفیف</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <button type="button" onClick={() => setNewVoucher(f => ({ ...f, isActive: !f.isActive }))}
+                                className={`relative h-6 w-11 rounded-full transition-colors cursor-pointer ${newVoucher.isActive ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'}`}>
+                                <span className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-white shadow-sm transition-all ${newVoucher.isActive ? 'end-0.5' : 'start-0.5'}`} />
+                            </button>
+                            <span className={`text-xs font-bold ${newVoucher.isActive ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400'}`}>
+                                {newVoucher.isActive ? 'فعال' : 'غیرفعال'}
+                            </span>
+                        </div>
+                    </div>
+                    {/* Creation Form — main card */}
                     <div className="space-y-6">
                         <div className="p-5 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-850 rounded-3xl shadow-xs space-y-5">
                             <h5 className="text-xs font-black text-gray-900 dark:text-white flex items-center gap-1.5">
@@ -460,6 +498,52 @@ export default function TutsVouchers(props: TutsVouchersProps) {
                                                     className="rounded accent-teal-600" />
                                                 قسط‌بندی مجاز باشد
                                             </label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Section 5: Additional Restrictions */}
+                                <div className="p-4 bg-gray-55/50 dark:bg-gray-950/30 rounded-2xl border border-gray-100/50 dark:border-gray-850 space-y-3">
+                                    <h6 className="text-[10px] font-black text-gray-400 flex items-center gap-1.5"><Shield className="w-3 h-3" />محدودیت‌های تکمیلی</h6>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        {/* Max Discount */}
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-bold text-gray-500 block">حداکثر مبلغ تخفیف (ریال)</label>
+                                            <input type="number" value={newVoucher.maxDiscount || ''} onChange={(e) => setNewVoucher(f => ({ ...f, maxDiscount: Number(e.target.value) }))}
+                                                placeholder="مثال: ۱۵۰۰۰۰۰"
+                                                className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none" />
+                                            <p className="text-[8px] text-gray-400 mt-0.5">اگر تخفیف بیشتر از این مقدار شود، همین سقف اعمال می‌گردد</p>
+                                        </div>
+                                        {/* National Codes Multi-Input */}
+                                        <div className="space-y-2 sm:col-span-2">
+                                            <label className="text-[10px] font-bold text-gray-500 block">کدهای ملی مجاز</label>
+                                            <div className="flex gap-2">
+                                                <input type="text" value={newNationalCodeInput}
+                                                    onChange={(e) => setNewNationalCodeInput(e.target.value)}
+                                                    onKeyDown={handleNationalCodeKeyDown}
+                                                    placeholder="مثال: ۰۰۱۲۳۴۵۶۷۸"
+                                                    className="flex-1 text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none font-mono" />
+                                                <button type="button" onClick={handleAddNationalCode}
+                                                    disabled={!newNationalCodeInput.trim()}
+                                                    className="px-3 py-2.5 bg-indigo-50 dark:bg-indigo-950/30 hover:bg-indigo-100 dark:hover:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 rounded-xl text-xs font-bold transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 border border-indigo-200/50 dark:border-indigo-800/50">
+                                                    <Plus className="w-3.5 h-3.5" />
+                                                    افزودن
+                                                </button>
+                                            </div>
+                                            {newVoucher.nationalCodes.length > 0 && (
+                                                <div className="flex flex-wrap gap-1.5 mt-1">
+                                                    {newVoucher.nationalCodes.map((code, i) => (
+                                                        <span key={i} className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-teal-50 dark:bg-teal-950/30 text-teal-700 dark:text-teal-300 rounded-lg text-[10px] font-bold border border-teal-200/50 dark:border-teal-800/50">
+                                                            {code}
+                                                            <button type="button" onClick={() => handleRemoveNationalCode(code)}
+                                                                className="text-teal-400 hover:text-rose-500 transition-colors cursor-pointer">
+                                                                <X className="w-3 h-3" />
+                                                            </button>
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
+                                            <p className="text-[8px] text-gray-400 mt-0.5">در صورت وارد کردن کد ملی، این بن تخفیف فقط برای افراد مجاز قابل استفاده خواهد بود</p>
                                         </div>
                                     </div>
                                 </div>
@@ -751,8 +835,31 @@ function EditForm({ voucher, courses, courseGroups, onSave, onCancel }: {
     const [maxUses, setMaxUses] = useState(voucher.maxUses || 100);
     const [validFrom, setValidFrom] = useState(voucher.validFrom || '');
     const [validTo, setValidTo] = useState(voucher.validTo || '');
+    const [isActive, setIsActive] = useState(voucher.isActive ?? true);
+    const [maxDiscount, setMaxDiscount] = useState(voucher.maxDiscount || 0);
+    const [nationalCodes, setNationalCodes] = useState<string[]>(voucher.nationalCodes || []);
+    const [nationalCodeInput, setNationalCodeInput] = useState('');
     const [saving, setSaving] = useState(false);
     const [validationError, setValidationError] = useState('');
+
+    const handleAddNationalCode = () => {
+        const val = nationalCodeInput.trim();
+        if (val && !nationalCodes.includes(val)) {
+            setNationalCodes(prev => [...prev, val]);
+        }
+        setNationalCodeInput('');
+    };
+
+    const handleRemoveNationalCode = (code: string) => {
+        setNationalCodes(prev => prev.filter(c => c !== code));
+    };
+
+    const handleNationalCodeKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            handleAddNationalCode();
+        }
+    };
 
     // --- Course autocomplete ---
     const [courseId, setCourseId] = useState(voucher.courseId && voucher.courseId !== 'all' ? voucher.courseId : '');
@@ -819,6 +926,9 @@ function EditForm({ voucher, courses, courseGroups, onSave, onCancel }: {
                 validTo,
                 courseId: courseId || 'all',
                 group_id: groupId || null,
+                isActive,
+                maxDiscount,
+                nationalCodes,
             });
         } finally {
             setSaving(false);
@@ -827,6 +937,22 @@ function EditForm({ voucher, courses, courseGroups, onSave, onCancel }: {
 
     return (
         <form onSubmit={handleSubmit} className="space-y-4 text-right">
+            {/* Active Toggle — outside the card sections */}
+            <div className="px-4 py-3 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-850 rounded-2xl shadow-xs flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                    <Shield className={`w-4 h-4 ${isActive ? 'text-emerald-500' : 'text-gray-400'}`} />
+                    <span className="text-xs font-bold text-gray-700 dark:text-gray-300">وضعیت بن تخفیف</span>
+                </div>
+                <div className="flex items-center gap-3">
+                    <button type="button" onClick={() => setIsActive(!isActive)}
+                        className={`relative h-6 w-11 rounded-full transition-colors cursor-pointer ${isActive ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'}`}>
+                        <span className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-white shadow-sm transition-all ${isActive ? 'end-0.5' : 'start-0.5'}`} />
+                    </button>
+                    <span className={`text-xs font-bold ${isActive ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400'}`}>
+                        {isActive ? 'فعال' : 'غیرفعال'}
+                    </span>
+                </div>
+            </div>
             <div className="space-y-1">
                 <label className="text-[10px] font-bold text-gray-500 block">عنوان بن</label>
                 <input type="text" value={title} onChange={(e) => setTitle(e.target.value)}
@@ -951,6 +1077,52 @@ function EditForm({ voucher, courses, courseGroups, onSave, onCancel }: {
                 <div className="space-y-1">
                     <label className="text-[10px] font-bold text-gray-500 block">فعال تا تاریخ</label>
                     <JalaliDatepicker value={validTo} onChange={setValidTo} />
+                </div>
+            </div>
+
+            {/* ===== Additional Restrictions ===== */}
+            <div className="p-4 bg-gray-55/50 dark:bg-gray-950/30 rounded-2xl border border-gray-100/50 dark:border-gray-850 space-y-3">
+                <h6 className="text-[10px] font-black text-gray-400 flex items-center gap-1.5"><Shield className="w-3 h-3" />محدودیت‌های تکمیلی</h6>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {/* Max Discount */}
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-500 block">حداکثر مبلغ تخفیف (ریال)</label>
+                        <input type="number" value={maxDiscount || ''} onChange={(e) => setMaxDiscount(Number(e.target.value))}
+                            placeholder="مثال: ۱۵۰۰۰۰۰"
+                            className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none" />
+                        <p className="text-[8px] text-gray-400 mt-0.5">اگر تخفیف بیشتر از این مقدار شود، همین سقف اعمال می‌گردد</p>
+                    </div>
+                    {/* National Codes Multi-Input */}
+                    <div className="space-y-2 sm:col-span-2">
+                        <label className="text-[10px] font-bold text-gray-500 block">کدهای ملی مجاز</label>
+                        <div className="flex gap-2">
+                            <input type="text" value={nationalCodeInput}
+                                onChange={(e) => setNationalCodeInput(e.target.value)}
+                                onKeyDown={handleNationalCodeKeyDown}
+                                placeholder="مثال: ۰۰۱۲۳۴۵۶۷۸"
+                                className="flex-1 text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none font-mono" />
+                            <button type="button" onClick={handleAddNationalCode}
+                                disabled={!nationalCodeInput.trim()}
+                                className="px-3 py-2.5 bg-indigo-50 dark:bg-indigo-950/30 hover:bg-indigo-100 dark:hover:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 rounded-xl text-xs font-bold transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 border border-indigo-200/50 dark:border-indigo-800/50">
+                                <Plus className="w-3.5 h-3.5" />
+                                افزودن
+                            </button>
+                        </div>
+                        {nationalCodes.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 mt-1">
+                                {nationalCodes.map((code, i) => (
+                                    <span key={i} className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-teal-50 dark:bg-teal-950/30 text-teal-700 dark:text-teal-300 rounded-lg text-[10px] font-bold border border-teal-200/50 dark:border-teal-800/50">
+                                        {code}
+                                        <button type="button" onClick={() => handleRemoveNationalCode(code)}
+                                            className="text-teal-400 hover:text-rose-500 transition-colors cursor-pointer">
+                                            <X className="w-3 h-3" />
+                                        </button>
+                                    </span>
+                                ))}
+                            </div>
+                        )}
+                        <p className="text-[8px] text-gray-400 mt-0.5">در صورت وارد کردن کد ملی، این بن تخفیف فقط برای افراد مجاز قابل استفاده خواهد بود</p>
+                    </div>
                 </div>
             </div>
 

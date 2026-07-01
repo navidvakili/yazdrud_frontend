@@ -125,6 +125,9 @@ export interface TutVoucher {
     discountAmount?: number;
     allowInstallments?: boolean;
     installmentCount?: number;
+    maxDiscount?: number;
+    nationalCodes?: string[];
+    isActive?: boolean;
 }
 
 export interface StatMonthData {
@@ -208,6 +211,9 @@ export interface VoucherFormData {
     deviceLimit: string;
     firstPurchaseOnly: boolean;
     groupId: number | null;
+    isActive: boolean;
+    maxDiscount: number;
+    nationalCodes: string[];
 }
 
 export interface PreRegFormData {

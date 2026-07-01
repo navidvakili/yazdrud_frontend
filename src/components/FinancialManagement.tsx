@@ -40,6 +40,8 @@ export default function FinancialManagement() {
   const [formStartDate, setFormStartDate] = useState('');
   const [formFinishDate, setFormFinishDate] = useState('');
   const [formIsActive, setFormIsActive] = useState(true);
+  const [formMaxDiscount, setFormMaxDiscount] = useState('');
+  const [formNationalCode, setFormNationalCode] = useState('');
 
   // ===== State: course autocomplete =====
   const [courseSearch, setCourseSearch] = useState('');
@@ -199,6 +201,8 @@ export default function FinancialManagement() {
     setFormStartDate('');
     setFormFinishDate('');
     setFormIsActive(true);
+    setFormMaxDiscount('');
+    setFormNationalCode('');
     setCourseSearch('');
     setCourseResults([]);
     setGroupSearch('');
@@ -218,6 +222,8 @@ export default function FinancialManagement() {
     setFormStartDate(c.start_date);
     setFormFinishDate(c.finish_date);
     setFormIsActive(c.is_active);
+    setFormMaxDiscount(c.max_discount ? String(c.max_discount) : '');
+    setFormNationalCode(c.national_code || '');
     setCourseSearch(c.course_title || '');
     setCourseResults([]);
     setFormGroupId(c.group_id ? String(c.group_id) : '');
@@ -262,6 +268,8 @@ export default function FinancialManagement() {
         start_date: formStartDate,
         finish_date: formFinishDate,
         is_active: formIsActive,
+        max_discount: formMaxDiscount ? parseInt(toEnglishDigits(formMaxDiscount)) : null,
+        national_code: formNationalCode.trim() || null,
       };
 
       if (editId) {
@@ -309,6 +317,8 @@ export default function FinancialManagement() {
         start_date: formStartDate,
         finish_date: formFinishDate,
         is_active: formIsActive,
+        max_discount: formMaxDiscount ? parseInt(toEnglishDigits(formMaxDiscount)) : null,
+        national_code: formNationalCode.trim() || null,
       };
 
       if (editId) {
@@ -821,6 +831,24 @@ export default function FinancialManagement() {
                   <input type="number" value={formCapacity} onChange={(e) => setFormCapacity(e.target.value)}
                     placeholder="تعداد دفعات مجاز استفاده"
                     className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none" />
+                </div>
+
+                {/* ===== Max Discount Cap ===== */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">حداکثر مبلغ تخفیف (ریال) — اختیاری</label>
+                  <input type="text" value={formMaxDiscount} onChange={(e) => setFormMaxDiscount(e.target.value)}
+                    placeholder="مثال: ۱,۵۰۰,۰۰۰ — اگر تخفیف محاسبه‌شده بیشتر باشد اعمال نمی‌شود"
+                    className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none" />
+                  <p className="text-[9px] text-gray-400 mt-1">حداکثر سقف تخفیف (مثلاً برای ۳۰٪ تخفیف، اگر مبلغ از این مقدار بیشتر شود، همین مقدار اعمال می‌شود)</p>
+                </div>
+
+                {/* ===== Exclusive National Code ===== */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">کد ملی اختصاصی (اختیاری)</label>
+                  <input type="text" value={formNationalCode} onChange={(e) => setFormNationalCode(e.target.value)}
+                    placeholder="مثال: ۰۰۱۲۳۴۵۶۷۸ — فقط این فرد می‌تواند از بن استفاده کند"
+                    className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none font-mono" />
+                  <p className="text-[9px] text-gray-400 mt-1">در صورت وارد کردن کد ملی، بن تخفیف فقط برای آن فرد قابل استفاده خواهد بود</p>
                 </div>
 
                 {/* ===== Dates (Jalali Datepicker) ===== */}

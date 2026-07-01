@@ -307,6 +307,8 @@ export interface CourseCoupon {
   start_date: string;
   finish_date: string;
   is_active: boolean;
+  max_discount: number | null;
+  national_code: string | null;
   created_at: string;
   updated_at: string;
 }
