@@ -6,12 +6,12 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   DollarSign, Tag, Plus, Search, X, Edit2, Trash2, Copy, Check,
-  Zap, Clock, RefreshCw, Sparkles,
+  Zap, Clock, RefreshCw, Sparkles, Flame, Beaker, AlertTriangle, Info,
 } from 'lucide-react';
 import api from '@/src/api';
 import type { CourseCoupon } from '@/src/types';
 import { JalaliDatepicker } from './tuts/JalaliDatepicker';
-import { toPersianDigits, toEnglishDigits } from './tuts/tuts-utils';
+import { toPersianDigits, toEnglishDigits, getTodayJalali } from './tuts/tuts-utils';
 
 // ========== Main Component ==========
 export default function FinancialManagement() {
@@ -62,6 +62,24 @@ export default function FinancialManagement() {
 
   // ===== State: notification =====
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  // ===== State: sandbox simulator =====
+  const [sandboxOpen, setSandboxOpen] = useState(false);
+  const [sandboxCode, setSandboxCode] = useState('');
+  const [sandboxCourseId, setSandboxCourseId] = useState('');
+  const [sandboxCourseTitle, setSandboxCourseTitle] = useState('');
+  const [sandboxResult, setSandboxResult] = useState<{
+    isValid: boolean;
+    error?: string;
+    discountAmount: number;
+    finalPrice: number;
+    originalPrice: number;
+    checks?: { title: string; passed: boolean; desc: string }[];
+  } | null>(null);
+  const [sandboxCourseResults, setSandboxCourseResults] = useState<{ id: number; title: string }[]>([]);
+  const [sandboxCourseDropdownOpen, setSandboxCourseDropdownOpen] = useState(false);
+  const [sandboxLoadingCourses, setSandboxLoadingCourses] = useState(false);
+  const sandboxCourseRef = useRef<HTMLDivElement>(null);
 
   // ===== Fetch coupons =====
   const fetchCoupons = useCallback(async (p: number = page, s: string = search) => {
@@ -135,6 +153,29 @@ export default function FinancialManagement() {
     }
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  // Close sandbox course dropdown on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (sandboxCourseRef.current && !sandboxCourseRef.current.contains(e.target as Node)) {
+        setSandboxCourseDropdownOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  // ===== Fetch courses for sandbox autocomplete =====
+  const fetchCoursesForSandbox = useCallback(async (q: string) => {
+    if (!q.trim()) { setSandboxCourseResults([]); return; }
+    setSandboxLoadingCourses(true);
+    try {
+      const res = await api.getCouponCourses({ search: q, limit: 10 });
+      setSandboxCourseResults(res);
+      setSandboxCourseDropdownOpen(true);
+    } catch { /* ignore */ }
+    finally { setSandboxLoadingCourses(false); }
   }, []);
 
   // ===== Notify =====
@@ -325,6 +366,128 @@ export default function FinancialManagement() {
     catch { showNotify('error', 'خطا در کپی کد'); }
   };
 
+  // ===== Sandbox: Run validation test =====
+  const handleRunSandboxTest = () => {
+    const code = sandboxCode.trim().toUpperCase();
+    if (!code) {
+      showNotify('error', 'لطفاً کد بن را وارد کنید');
+      return;
+    }
+
+    // Find the coupon in the current list
+    const coupon = coupons.find(c => c.code.toUpperCase() === code);
+    if (!coupon) {
+      setSandboxResult({
+        isValid: false,
+        error: 'کد بن تخفیف در سیستم یافت نشد.',
+        discountAmount: 0,
+        finalPrice: 0,
+        originalPrice: 0,
+        checks: [
+          { title: 'وجود بن در سیستم', passed: false, desc: 'بن تخفیفی با این کد در لیست بن‌ها وجود ندارد.' },
+        ],
+      });
+      return;
+    }
+
+    const checks: { title: string; passed: boolean; desc: string }[] = [];
+    let isValid = true;
+    let failReason = '';
+
+    // Check 1: Active status
+    const activePassed = coupon.is_active;
+    checks.push({
+      title: 'وضعیت فعال بودن بن',
+      passed: activePassed,
+      desc: activePassed ? 'بن فعال است.' : 'بن غیرفعال شده است.',
+    });
+    if (!activePassed) {
+      isValid = false;
+      failReason = 'این بن تخفیف غیرفعال شده است.';
+    }
+
+    // Check 2: Validity dates
+    const todayStr = getTodayJalali();
+    let datePassed = true;
+    let dateDesc = 'بازه زمانی آزاد است.';
+    if (coupon.start_date && todayStr < coupon.start_date) {
+      datePassed = false;
+      dateDesc = `غیرمعتبر (قبل از شروع: ${toPersianDigits(coupon.start_date)})`;
+    } else if (coupon.finish_date && todayStr > coupon.finish_date) {
+      datePassed = false;
+      dateDesc = `غیرمعتبر (منقضی شده در: ${toPersianDigits(coupon.finish_date)})`;
+    } else if (coupon.start_date || coupon.finish_date) {
+      dateDesc = `معتبر (بازه ${toPersianDigits(coupon.start_date || '')} الی ${toPersianDigits(coupon.finish_date || '')})`;
+    }
+    checks.push({ title: 'محدودیت زمانی', passed: datePassed, desc: dateDesc });
+    if (!datePassed) {
+      isValid = false;
+      failReason = failReason || 'تاریخ اعتبار بن به اتمام رسیده یا هنوز شروع نشده است.';
+    }
+
+    // Check 3: Capacity
+    const capPassed = coupon.remaining > 0;
+    checks.push({
+      title: 'ظرفیت باقی‌مانده',
+      passed: capPassed,
+      desc: capPassed
+        ? `مجاز (${toPersianDigits(coupon.remaining)} از ${toPersianDigits(coupon.capacity)} باقی‌مانده)`
+        : `تکمیل ظرفیت (${toPersianDigits(coupon.used_count)} از ${toPersianDigits(coupon.capacity)} استفاده شده)`,
+    });
+    if (!capPassed) {
+      isValid = false;
+      failReason = failReason || 'ظرفیت استفاده از این بن به پایان رسیده است.';
+    }
+
+    // Check 4: Course match
+    let coursePassed = true;
+    let courseDesc = 'برای تمامی دوره‌ها مجاز است.';
+    if (coupon.course_id) {
+      if (sandboxCourseId && Number(sandboxCourseId) !== coupon.course_id) {
+        coursePassed = false;
+        courseDesc = `غیرمجاز (فقط برای دوره "${coupon.course_title}" قابل استفاده است)`;
+      } else if (sandboxCourseId) {
+        courseDesc = '✅ مجاز (مخصوص همین دوره)';
+      } else {
+        courseDesc = `⚠️ محدود به دوره "${coupon.course_title}" (دوره‌ای انتخاب نشده)`;
+      }
+    }
+    checks.push({ title: 'انطباق دوره', passed: coursePassed, desc: courseDesc });
+    if (!coursePassed) {
+      isValid = false;
+      failReason = failReason || 'این بن فقط برای دوره خاصی صادر شده است.';
+    }
+
+    // Calculate discount
+    let discount = 0;
+    let originalPrice = 0;
+    if (isValid) {
+      originalPrice = 0;
+      if (coupon.type_discount === 'percent') {
+        discount = Math.round((originalPrice * coupon.value) / 100);
+      } else {
+        discount = Math.min(originalPrice || Infinity, coupon.value);
+      }
+    }
+
+    const finalPrice = Math.max(0, originalPrice - discount);
+
+    setSandboxResult({
+      isValid,
+      error: isValid ? undefined : failReason,
+      discountAmount: discount,
+      finalPrice,
+      originalPrice,
+      checks,
+    });
+
+    if (isValid) {
+      showNotify('success', '✅ بن تخفیف معتبر است.');
+    } else {
+      showNotify('error', `❌ بن نامعتبر: ${failReason}`);
+    }
+  };
+
   // ===== Render =====
   return (
     <div className="max-w-6xl mx-auto">
@@ -360,11 +523,18 @@ export default function FinancialManagement() {
                 <RefreshCw className="w-4 h-4" />
               </button>
             </div>
-            <button onClick={openCreateModal}
-              className="px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs">
-              <Plus className="w-4 h-4" />
-              بن تخفیف جدید
-            </button>
+            <div className="flex items-center gap-2">
+              <button onClick={() => { setSandboxOpen(true); setSandboxResult(null); setSandboxCode(''); setSandboxCourseId(''); setSandboxCourseTitle(''); setSandboxCourseResults([]); }}
+                className="px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs">
+                <Beaker className="w-4 h-4" />
+                سندباکس
+              </button>
+              <button onClick={openCreateModal}
+                className="px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs">
+                <Plus className="w-4 h-4" />
+                بن تخفیف جدید
+              </button>
+            </div>
           </div>
         </div>
 
@@ -712,6 +882,153 @@ export default function FinancialManagement() {
                     {editId ? 'تولید کد جدید' : 'ایجاد خودکار'}
                   </button>
                 </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ===== Sandbox Modal ===== */}
+      <AnimatePresence>
+        {sandboxOpen && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-gray-950/60 backdrop-blur-xs overflow-y-auto"
+            onClick={() => setSandboxOpen(false)}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              className="w-full max-w-lg p-6 rounded-3xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-2xl relative my-8"
+              onClick={e => e.stopPropagation()}>
+              <button onClick={() => setSandboxOpen(false)}
+                className="absolute top-4 left-4 p-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-gray-600 transition-all cursor-pointer">
+                <X className="w-5 h-5" />
+              </button>
+
+              <h3 className="text-sm font-black text-gray-900 dark:text-white leading-snug mb-5 flex items-center gap-1.5">
+                <Beaker className="w-5 h-5 text-purple-500" />
+                سندباکس شبیه‌ساز بن تخفیف
+              </h3>
+
+              <div className="space-y-4 text-right" dir="rtl">
+                {/* Sandbox Code Input */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">کد بن تخفیف *</label>
+                  <input type="text" value={sandboxCode} onChange={(e) => setSandboxCode(e.target.value)}
+                    placeholder="مثال: WELCOME10"
+                    className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none font-mono" />
+                </div>
+
+                {/* Course Select (Optional) */}
+                <div ref={sandboxCourseRef} className="relative">
+                  <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">انتخاب دوره (اختیاری)</label>
+                  <div className="relative">
+                    <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+                    <input type="text" value={sandboxCourseTitle} onChange={(e) => {
+                      setSandboxCourseTitle(e.target.value);
+                      setSandboxCourseId('');
+                      if (e.target.value.trim()) {
+                        fetchCoursesForSandbox(e.target.value);
+                      }
+                    }}
+                      placeholder="جستجوی دوره برای بررسی انطباق..."
+                      className="w-full text-xs pr-9 pl-3 p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none" />
+                    {sandboxCourseId && (
+                      <button onClick={() => { setSandboxCourseId(''); setSandboxCourseTitle(''); }}
+                        className="absolute left-3 top-1/2 -translate-y-1/2 p-0.5 rounded text-gray-300 hover:text-rose-500 cursor-pointer">
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                  {/* Sandbox course dropdown */}
+                  {sandboxCourseDropdownOpen && (
+                    <div className="absolute z-10 mt-1 w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-xl max-h-48 overflow-y-auto">
+                      {sandboxLoadingCourses ? (
+                        <div className="p-3 text-xs text-gray-400 text-center">در حال جستجو...</div>
+                      ) : sandboxCourseResults.length === 0 ? (
+                        sandboxCourseTitle.trim() ? (
+                          <div className="p-3 text-xs text-gray-400 text-center">نتیجه‌ای یافت نشد</div>
+                        ) : null
+                      ) : (
+                        sandboxCourseResults.map((cr) => (
+                          <button key={cr.id} type="button" onClick={() => {
+                            setSandboxCourseId(String(cr.id));
+                            setSandboxCourseTitle(cr.title);
+                            setSandboxCourseDropdownOpen(false);
+                          }}
+                            className="w-full text-right p-3 text-xs hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 border-b border-gray-50 dark:border-gray-850 last:border-0 cursor-pointer transition-colors">
+                            {cr.title}
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Run button */}
+                <div className="flex gap-2 pt-2">
+                  <button onClick={handleRunSandboxTest}
+                    disabled={!sandboxCode.trim()}
+                    className="flex-1 py-3 bg-purple-600 hover:bg-purple-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-2xl text-xs font-black transition-all cursor-pointer shadow-xs flex items-center justify-center gap-1.5">
+                    <Flame className="w-4 h-4" />
+                    اجرای تست اعتبارسنجی
+                  </button>
+                  {sandboxResult && (
+                    <button onClick={() => setSandboxResult(null)}
+                      className="px-5 py-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 rounded-2xl text-xs text-gray-500 font-bold cursor-pointer">
+                      پاک کردن
+                    </button>
+                  )}
+                </div>
+
+                {/* Sandbox Result */}
+                {sandboxResult && (
+                  <div className="space-y-3 mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+                    <div className="flex items-center justify-between">
+                      <h5 className="text-xs font-black text-gray-900 dark:text-white flex items-center gap-1.5">
+                        <Beaker className="w-4 h-4 text-purple-500" />
+                        نتیجه سندباکس
+                      </h5>
+                      {sandboxResult.isValid ? (
+                        <span className="text-[10px] px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 font-extrabold border border-emerald-500/15">
+                          ✅ معتبر
+                        </span>
+                      ) : (
+                        <span className="text-[10px] px-2.5 py-1 rounded-full bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 font-extrabold border border-rose-500/15">
+                          ❌ نامعتبر
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Error message */}
+                    {sandboxResult.error && (
+                      <div className="p-3 bg-rose-50/50 dark:bg-rose-950/20 rounded-2xl border border-rose-500/10 flex items-start gap-2">
+                        <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
+                        <span className="text-[11px] text-rose-700 dark:text-rose-400">{sandboxResult.error}</span>
+                      </div>
+                    )}
+
+                    {/* Checks trace */}
+                    {sandboxResult.checks && sandboxResult.checks.length > 0 && (
+                      <div className="space-y-1.5">
+                        <span className="text-[10px] font-black text-gray-400 flex items-center gap-1">
+                          <Info className="w-3 h-3" />
+                          گزارش بررسی (Trace Logs)
+                        </span>
+                        {sandboxResult.checks.map((log, i) => (
+                          <div key={i} className={`p-2.5 rounded-xl text-[10px] font-mono border ${log.passed
+                            ? 'bg-emerald-50/30 dark:bg-emerald-950/20 border-emerald-500/10 text-emerald-700 dark:text-emerald-400'
+                            : 'bg-rose-50/30 dark:bg-rose-950/20 border-rose-500/10 text-rose-700 dark:text-rose-400'}`}>
+                            <div className="flex items-center gap-1.5">
+                              <span>{log.passed ? '✅' : '❌'}</span>
+                              <span className="font-bold">{log.title}</span>
+                            </div>
+                            <span className="block mr-5 text-gray-500">{log.desc}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </motion.div>
           </div>

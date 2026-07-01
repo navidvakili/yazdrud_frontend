@@ -47,6 +47,24 @@ export function formatCurrency(amount: number): string {
     return toPersianDigits(amount.toLocaleString('fa-IR')) + ' ریال';
 }
 
+/** Get today's date as a Jalali string (e.g., "1405/04/10") */
+export function getTodayJalali(): string {
+    const d = new Date();
+    // Simple leap-year-aware Jalali conversion using Intl
+    const formatter = new Intl.DateTimeFormat('fa-IR-u-ca-persian', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+    });
+    return formatter.format(d).replace(/\u200f/g, '').replace(/[/\\]/g, '/');
+}
+
+/** Get current hour and minute for sandbox time simulation */
+export function getCurrentTime(): { hour: number; minute: number } {
+    const now = new Date();
+    return { hour: now.getHours(), minute: now.getMinutes() };
+}
+
 /** Format a numeric input value with comma separators (e.g., "4500000" → "4,500,000") */
 export function formatCostInput(value: string): string {
     const cleaned = value.replace(/[^\d]/g, '');

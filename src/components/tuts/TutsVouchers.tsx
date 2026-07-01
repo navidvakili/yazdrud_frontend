@@ -32,8 +32,10 @@ interface TutsVouchersProps {
     setSandboxCourseId: (v: string) => void;
     sandboxUserId: string;
     setSandboxUserId: (v: string) => void;
-    sandboxDevice: 'desktop' | 'mobile';
-    setSandboxDevice: (v: 'desktop' | 'mobile') => void;
+    sandboxEmail: string;
+    setSandboxEmail: (v: string) => void;
+    sandboxPhone: string;
+    setSandboxPhone: (v: string) => void;
     sandboxResult: SandboxResult | null;
     setSandboxResult: (v: SandboxResult | null) => void;
     voucherPage: number;
@@ -73,7 +75,8 @@ export default function TutsVouchers(props: TutsVouchersProps) {
         voucherActiveTab, setVoucherActiveTab,
         newVoucher, setNewVoucher,
         sandboxCode, setSandboxCode, sandboxCourseId, setSandboxCourseId,
-        sandboxUserId, setSandboxUserId, sandboxDevice, setSandboxDevice,
+        sandboxUserId, setSandboxUserId,
+        sandboxEmail, setSandboxEmail, sandboxPhone, setSandboxPhone,
         sandboxResult, setSandboxResult,
         voucherPage, setVoucherPage, voucherPerPage,
         handleCreateVoucher, handleRunSandboxTest,
@@ -110,9 +113,9 @@ export default function TutsVouchers(props: TutsVouchersProps) {
     // --- Group autocomplete (Create form) ---
     const [newGroupSearch, setNewGroupSearch] = useState('');
     const [newGroupTitle, setNewGroupTitle] = useState('');
-    const [newGroupId, setNewGroupId] = useState<number | string | null>(null);
     const [newGroupDropdownOpen, setNewGroupDropdownOpen] = useState(false);
     const newGroupRef = useRef<HTMLDivElement>(null);
+    const newGroupId = newVoucher.groupId;
 
     const filteredCourses = courses.filter(c => {
         // If a group is selected, only show courses belonging to that group
@@ -140,6 +143,9 @@ export default function TutsVouchers(props: TutsVouchersProps) {
         return () => document.removeEventListener('mousedown', handleClick);
     }, []);
 
+    // --- Sandbox modal state ---
+    const [sandboxOpen, setSandboxOpen] = useState(false);
+
     return (
         <div className="space-y-6">
             {/* Tab Switcher */}
@@ -156,6 +162,12 @@ export default function TutsVouchers(props: TutsVouchersProps) {
                         {tab.label}
                     </button>
                 ))}
+                {/* Sandbox Dialog Trigger */}
+                <button onClick={() => setSandboxOpen(true)}
+                    className="px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-950/30 hover:bg-purple-100 dark:hover:bg-purple-950/50 border border-purple-200 dark:border-purple-900/50">
+                    <Beaker className="w-4 h-4" />
+                    سندباکس شبیه‌ساز
+                </button>
             </div>
 
             {voucherActiveTab === 'list' ? (
@@ -286,9 +298,9 @@ export default function TutsVouchers(props: TutsVouchersProps) {
                 </div>
             ) : (
                 /* ===== CREATE TAB ===== */
-                <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+                <div className="space-y-6">
                     {/* Creation Form */}
-                    <div className="lg:col-span-3 space-y-6">
+                    <div className="space-y-6">
                         <div className="p-5 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-850 rounded-3xl shadow-xs space-y-5">
                             <h5 className="text-xs font-black text-gray-900 dark:text-white flex items-center gap-1.5">
                                 <Plus className="w-4 h-4 text-teal-600" />
@@ -378,12 +390,12 @@ export default function TutsVouchers(props: TutsVouchersProps) {
                                             </div>
                                             {newGroupDropdownOpen && (
                                                 <div className="absolute z-50 top-full mt-1 left-0 right-0 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-850 rounded-xl shadow-xl max-h-48 overflow-y-auto">
-                                                    <button type="button" onClick={() => { setNewGroupId(null); setNewGroupTitle(''); setNewGroupSearch(''); setCourseSearch(''); setNewGroupDropdownOpen(false); }}
+                                                    <button type="button" onClick={() => { setNewVoucher(f => ({ ...f, groupId: null })); setNewGroupTitle(''); setNewGroupSearch(''); setCourseSearch(''); setNewGroupDropdownOpen(false); }}
                                                         className={`w-full text-right px-3.5 py-2 text-[11px] font-bold transition-colors cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${!newGroupId ? 'text-teal-600 bg-teal-50/50 dark:bg-teal-950/20' : 'text-gray-600 dark:text-gray-400'}`}>
                                                         همه گروه‌ها
                                                     </button>
                                                     {newFilteredGroups.map(g => (
-                                                        <button key={g.id} type="button" onClick={() => { setNewGroupId(g.id); setNewGroupTitle(g.title); setNewGroupSearch(g.title); setCourseSearch(''); setNewGroupDropdownOpen(false); }}
+                                                        <button key={g.id} type="button" onClick={() => { setNewVoucher(f => ({ ...f, groupId: g.id })); setNewGroupTitle(g.title); setNewGroupSearch(g.title); setCourseSearch(''); setNewGroupDropdownOpen(false); }}
                                                             className={`w-full text-right px-3.5 py-2 text-[11px] font-bold transition-colors cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${newGroupId === g.id ? 'text-teal-600 bg-teal-50/50 dark:bg-teal-950/20' : 'text-gray-600 dark:text-gray-400'}`}>
                                                             {g.title}
                                                         </button>
@@ -461,118 +473,6 @@ export default function TutsVouchers(props: TutsVouchersProps) {
                                 </button>
                             </div>
                         </div>
-                    </div>
-
-                    {/* Sandbox (Right Panel) */}
-                    <div className="lg:col-span-2 space-y-6">
-                        <div className="p-5 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-850 rounded-3xl shadow-xs space-y-5">
-                            <h5 className="text-xs font-black text-gray-900 dark:text-white flex items-center gap-1.5">
-                                <Beaker className="w-4 h-4 text-purple-500" />
-                                سندباکس شبیه‌ساز بن تخفیف (۱۱ تست اعتبارسنجی)
-                            </h5>
-
-                            <div className="space-y-3 text-right">
-                                <div className="space-y-1">
-                                    <label className="text-[10px] font-bold text-gray-500 block">کد بن</label>
-                                    <input type="text" value={sandboxCode} onChange={(e) => setSandboxCode(e.target.value)}
-                                        placeholder="بن تخفیف را وارد کنید..."
-                                        className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none font-mono" />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-[10px] font-bold text-gray-500 block">شناسه دوره</label>
-                                    <select value={sandboxCourseId} onChange={(e) => setSandboxCourseId(e.target.value)}
-                                        className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none cursor-pointer">
-                                        <option value="">انتخاب کنید...</option>
-                                        {courses.map(c => (<option key={c.id} value={c.id}>{c.title}</option>))}
-                                    </select>
-                                </div>
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div className="space-y-1">
-                                        <label className="text-[10px] font-bold text-gray-500 block">شناسه کاربر</label>
-                                        <input type="text" value={sandboxUserId} onChange={(e) => setSandboxUserId(e.target.value)}
-                                            placeholder="کد ملی یا دانشجویی"
-                                            className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none" />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <label className="text-[10px] font-bold text-gray-500 block">نوع دستگاه</label>
-                                        <select value={sandboxDevice} onChange={(e) => setSandboxDevice(e.target.value as 'desktop' | 'mobile')}
-                                            className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none cursor-pointer">
-                                            <option value="web">وب</option>
-                                            <option value="mobile">موبایل</option>
-                                            <option value="tablet">تبلت</option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <button onClick={handleRunSandboxTest}
-                                    disabled={!sandboxCode || !sandboxCourseId}
-                                    className="w-full py-3 bg-purple-600 hover:bg-purple-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-2xl text-xs font-black transition-all cursor-pointer shadow-xs flex items-center justify-center gap-1.5">
-                                    <Flame className="w-4 h-4" />
-                                    اجرای ۱۱ تست اعتبارسنجی
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Sandbox Result */}
-                        {sandboxResult && (
-                            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                                className="p-5 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-850 rounded-3xl shadow-xs space-y-4">
-                                <div className="flex items-center justify-between">
-                                    <h5 className="text-xs font-black text-gray-900 dark:text-white flex items-center gap-1.5">
-                                        <Beaker className="w-4 h-4 text-purple-500" />
-                                        نتیجه سندباکس
-                                    </h5>
-                                    {sandboxResult.isValid ? (
-                                        <span className="text-[10px] px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 font-extrabold border border-emerald-500/15">
-                                            ✅ معتبر
-                                        </span>
-                                    ) : (
-                                        <span className="text-[10px] px-2.5 py-1 rounded-full bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 font-extrabold border border-rose-500/15">
-                                            ❌ نامعتبر
-                                        </span>
-                                    )}
-                                </div>
-
-                                {/* Discount info */}
-                                {sandboxResult.isValid && sandboxResult.discountAmount && (
-                                    <div className="p-3 bg-emerald-50/50 dark:bg-emerald-950/20 rounded-2xl border border-emerald-500/10 text-center">
-                                        <span className="text-xs text-gray-500 font-bold block mb-1">مبلغ تخفیف اعمال شده</span>
-                                        <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
-                                            {formatCurrency(sandboxResult.discountAmount)}
-                                        </span>
-                                    </div>
-                                )}
-
-                                {/* Error message */}
-                                {sandboxResult.error && (
-                                    <div className="p-3 bg-rose-50/50 dark:bg-rose-950/20 rounded-2xl border border-rose-500/10 flex items-start gap-2">
-                                        <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
-                                        <span className="text-[11px] text-rose-700 dark:text-rose-400">{sandboxResult.error}</span>
-                                    </div>
-                                )}
-
-                                {/* Trace logs */}
-                                <div className="space-y-1.5">
-                                    <span className="text-[10px] font-black text-gray-400 flex items-center gap-1"><Info className="w-3 h-3" />گزارش تراکنش (Trace Logs)</span>
-                                    {sandboxResult.checks?.map((log, i) => (
-                                        <div key={i} className={`p-2 rounded-lg text-[10px] font-mono border ${log.passed
-                                            ? 'bg-emerald-50/30 dark:bg-emerald-950/20 border-emerald-500/10 text-emerald-700 dark:text-emerald-400'
-                                            : 'bg-rose-50/30 dark:bg-rose-950/20 border-rose-500/10 text-rose-700 dark:text-rose-400'}`}>
-                                            <div className="flex items-center gap-1.5">
-                                                <span>{log.passed ? '✅' : '❌'}</span>
-                                                <span className="font-bold">{log.title}</span>
-                                            </div>
-                                            <span className="block mr-4 text-gray-500">{log.desc}</span>
-                                        </div>
-                                    ))}
-                                </div>
-
-                                <button onClick={() => setSandboxResult(null)}
-                                    className="w-full py-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 rounded-xl text-[11px] text-gray-500 font-bold cursor-pointer">
-                                    پاک کردن نتیجه
-                                </button>
-                            </motion.div>
-                        )}
                     </div>
                 </div>
             )}
@@ -684,6 +584,149 @@ export default function TutsVouchers(props: TutsVouchersProps) {
                                     </svg>
                                     تأیید و حذف
                                 </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* ===== SANDBOX MODAL ===== */}
+            <AnimatePresence>
+                {sandboxOpen && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+                        onClick={() => setSandboxOpen(false)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.95, opacity: 0 }}
+                            onClick={e => e.stopPropagation()}
+                            className="bg-white dark:bg-gray-900 rounded-3xl shadow-2xl border border-gray-100 dark:border-gray-850 w-full max-w-3xl max-h-[90vh] overflow-y-auto"
+                        >
+                            {/* Modal Header */}
+                            <div className="flex items-center justify-between p-4 sm:p-5 border-b border-gray-100 dark:border-gray-850">
+                                <h5 className="text-xs font-black text-gray-900 dark:text-white flex items-center gap-1.5">
+                                    <Beaker className="w-4 h-4 text-purple-500" />
+                                    سندباکس شبیه‌ساز بن تخفیف (۶ تست اعتبارسنجی)
+                                </h5>
+                                <button onClick={() => setSandboxOpen(false)}
+                                    className="w-7 h-7 flex items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-750 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-all cursor-pointer">
+                                    <X className="w-4 h-4" />
+                                </button>
+                            </div>
+
+                            {/* Modal Body */}
+                            <div className="p-4 sm:p-5 space-y-5">
+                                {/* Inputs Grid */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-bold text-gray-500 block">کد بن</label>
+                                        <input type="text" value={sandboxCode} onChange={(e) => setSandboxCode(e.target.value)}
+                                            placeholder="مثال: WELCOME10"
+                                            className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none font-mono" />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-bold text-gray-500 block">دوره</label>
+                                        <select value={sandboxCourseId} onChange={(e) => setSandboxCourseId(e.target.value)}
+                                            className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none cursor-pointer">
+                                            <option value="">انتخاب کنید...</option>
+                                            {courses.map(c => (<option key={c.id} value={c.id}>{c.title}</option>))}
+                                        </select>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-bold text-gray-500 block">شناسه کاربر (کد ملی/دانشجویی)</label>
+                                        <input type="text" value={sandboxUserId} onChange={(e) => setSandboxUserId(e.target.value)}
+                                            placeholder="کد ملی یا دانشجویی"
+                                            className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none" />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-bold text-gray-500 block">موبایل (بررسی خرید اول)</label>
+                                        <input type="text" value={sandboxPhone} onChange={(e) => setSandboxPhone(e.target.value)}
+                                            placeholder="مثال: ۰۹۱۲۳۴۵۶۷۸۹"
+                                            className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none" />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-bold text-gray-500 block">ایمیل (بررسی خرید اول)</label>
+                                        <input type="text" value={sandboxEmail} onChange={(e) => setSandboxEmail(e.target.value)}
+                                            placeholder="مثال: student@example.com"
+                                            className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none" />
+                                    </div>
+                                </div>
+
+                                {/* Action Buttons */}
+                                <div className="flex flex-wrap gap-3">
+                                    <button onClick={handleRunSandboxTest}
+                                        disabled={!sandboxCode || !sandboxCourseId}
+                                        className="px-5 py-2.5 bg-purple-600 hover:bg-purple-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-2xl text-xs font-black transition-all cursor-pointer shadow-xs flex items-center justify-center gap-1.5">
+                                        <Flame className="w-4 h-4" />
+                                        اجرای ۶ تست اعتبارسنجی
+                                    </button>
+                                    {sandboxResult && (
+                                        <button onClick={() => setSandboxResult(null)}
+                                            className="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 rounded-2xl text-[11px] text-gray-500 font-bold cursor-pointer">
+                                            پاک کردن نتیجه
+                                        </button>
+                                    )}
+                                </div>
+
+                                {/* Sandbox Result */}
+                                {sandboxResult && (
+                                    <div className="space-y-4 pt-4 border-t border-gray-100 dark:border-gray-850">
+                                        <div className="flex items-center justify-between">
+                                            <h5 className="text-xs font-black text-gray-900 dark:text-white flex items-center gap-1.5">
+                                                <Beaker className="w-4 h-4 text-purple-500" />
+                                                نتیجه سندباکس
+                                            </h5>
+                                            {sandboxResult.isValid ? (
+                                                <span className="text-[10px] px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 font-extrabold border border-emerald-500/15">
+                                                    ✅ معتبر
+                                                </span>
+                                            ) : (
+                                                <span className="text-[10px] px-2.5 py-1 rounded-full bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 font-extrabold border border-rose-500/15">
+                                                    ❌ نامعتبر
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        {/* Discount info */}
+                                        {sandboxResult.isValid && sandboxResult.discountAmount ? (
+                                            <div className="p-3 bg-emerald-50/50 dark:bg-emerald-950/20 rounded-2xl border border-emerald-500/10 text-center">
+                                                <span className="text-xs text-gray-500 font-bold block mb-1">مبلغ تخفیف اعمال شده</span>
+                                                <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
+                                                    {formatCurrency(sandboxResult.discountAmount)}
+                                                </span>
+                                            </div>
+                                        ) : null}
+
+                                        {/* Error message */}
+                                        {sandboxResult.error && (
+                                            <div className="p-3 bg-rose-50/50 dark:bg-rose-950/20 rounded-2xl border border-rose-500/10 flex items-start gap-2">
+                                                <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
+                                                <span className="text-[11px] text-rose-700 dark:text-rose-400">{sandboxResult.error}</span>
+                                            </div>
+                                        )}
+
+                                        {/* Trace logs */}
+                                        <div className="space-y-1.5">
+                                            <span className="text-[10px] font-black text-gray-400 flex items-center gap-1"><Info className="w-3 h-3" />گزارش تراکنش (Trace Logs)</span>
+                                            {sandboxResult.checks?.map((log, i) => (
+                                                <div key={i} className={`p-2 rounded-lg text-[10px] font-mono border ${log.passed
+                                                    ? 'bg-emerald-50/30 dark:bg-emerald-950/20 border-emerald-500/10 text-emerald-700 dark:text-emerald-400'
+                                                    : 'bg-rose-50/30 dark:bg-rose-950/20 border-rose-500/10 text-rose-700 dark:text-rose-400'}`}>
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span>{log.passed ? '✅' : '❌'}</span>
+                                                        <span className="font-bold">{log.title}</span>
+                                                    </div>
+                                                    <span className="block mr-4 text-gray-500">{log.desc}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </motion.div>
                     </motion.div>

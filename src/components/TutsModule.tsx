@@ -292,6 +292,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     geoLimit: '',
     deviceLimit: '',
     firstPurchaseOnly: false,
+    groupId: null,
   });
 
   const [sandboxUserId, setSandboxUserId] = useState('');
@@ -301,9 +302,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
   const [sandboxCourseId, setSandboxCourseId] = useState('tut-1');
   const [sandboxEmail, setSandboxEmail] = useState('student@example.com');
   const [sandboxPhone, setSandboxPhone] = useState('۰۹۱۲۳۴۵۶۷۸۹');
-  const [sandboxProvince, setSandboxProvince] = useState('تهران');
-  const [sandboxDevice, setSandboxDevice] = useState<'desktop' | 'mobile'>('desktop');
-  const [sandboxReferrer, setSandboxReferrer] = useState('');
+  // sandboxDevice, sandboxProvince, sandboxReferrer removed per user request
   const [sandboxResult, setSandboxResult] = useState<SandboxResult | null>(null);
 
   // New Survey/Feedback Form States
@@ -386,7 +385,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     }
   };
 
-  const handleCreateVoucher = (e?: React.FormEvent) => {
+  const handleCreateVoucher = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     const code = newVoucher.code.trim().toUpperCase();
     const title = newVoucher.title?.trim() || '';
@@ -400,43 +399,36 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
       return;
     }
 
-    const created: TutVoucher = {
-      id: `vouch-${Date.now()}`,
-      code,
-      title,
-      validFrom: newVoucher.validFrom || undefined,
-      validTo: newVoucher.validUntil || undefined,
-      allowedHours: undefined,
-      occasion: undefined,
-      courseId: newVoucher.applicableProductIds?.[0] || undefined,
-      category: newVoucher.applicableCategoryIds?.[0] || undefined,
-      courseLevel: undefined,
-      deliveryType: undefined,
-      minCoursePrice: undefined,
-      globalCap: newVoucher.maxUses > 0 ? newVoucher.maxUses : undefined,
-      maxUses: newVoucher.maxUses > 0 ? newVoucher.maxUses : undefined,
-      remainingUses: newVoucher.maxUses > 0 ? newVoucher.maxUses : 0,
-      status: 'active',
-      totalUsed: 0,
-      budgetLimit: newVoucher.budgetCap > 0 ? newVoucher.budgetCap : undefined,
-      budgetUsed: 0,
-      perEmailLimit: undefined,
-      allowedProvince: newVoucher.geoLimit || undefined,
-      allowedDevice: newVoucher.deviceLimit ? (newVoucher.deviceLimit as 'mobile' | 'desktop') : undefined,
-      allowedReferrer: undefined,
-      firstPurchaseOnly: newVoucher.firstPurchaseOnly,
-      discountType: newVoucher.discountType,
-      discountValue: newVoucher.discountValue,
-      discountPercent: newVoucher.discountType === 'percentage' ? newVoucher.discountValue : undefined,
-      discountAmount: newVoucher.discountType === 'fixed' ? newVoucher.discountValue : undefined,
-      allowInstallments: newVoucher.installmentsAllowed,
-      installmentCount: newVoucher.installmentsAllowed ? newVoucher.minInstallment : undefined
-    };
+    try {
+      // Build backend payload
+      const payload: any = {
+        title,
+        code,
+        type: 'discount',
+        type_discount: newVoucher.discountType === 'percentage' ? 'percent' : 'money',
+        value: newVoucher.discountValue,
+        capacity: newVoucher.maxUses > 0 ? newVoucher.maxUses : 100,
+        course_id: newVoucher.applicableProductIds?.[0] || null,
+        group_id: newVoucher.groupId || null,
+        start_date: newVoucher.validFrom || '',
+        finish_date: newVoucher.validUntil || '',
+        is_active: true,
+      };
 
-    setVouchers([created, ...vouchers]);
-    showToast(`بن خرید جدید "${title}" با کد "${code}" با موفقیت ایجاد گردید.`);
+      const res = await api.createCoupon(payload);
+      const created = mapVoucher(res);
 
-    // reset form fields
+      setVouchers([created, ...vouchers]);
+      showToast(`بن خرید جدید "${title}" با کد "${code}" با موفقیت ایجاد گردید.`);
+    } catch (err: any) {
+      const msg = err?.response?.data?.errors
+        ? Object.values(err.response.data.errors).flat().join('، ')
+        : (err?.response?.data?.message || 'خطا در ایجاد بن تخفیف.');
+      showToast(msg, 'error');
+      return;
+    }
+
+    // reset form fields & switch to list tab
     setNewVoucher({
       code: '',
       title: '',
@@ -453,7 +445,9 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
       geoLimit: '',
       deviceLimit: '',
       firstPurchaseOnly: false,
+      groupId: null,
     });
+    setVoucherActiveTab('list');
   };
 
   const handleUpdateVoucher = async (id: string, data: Partial<TutVoucher>) => {
@@ -577,30 +571,6 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     }
     checks.push({ title: 'محدودیت زمانی و تقویم', passed: datePassed, desc: dateDesc });
 
-    // Check 2: Hours Limit
-    let hoursPassed = true;
-    let hoursDesc = 'محدودیت ساعتی ندارد.';
-    if (vouch.allowedHours && vouch.allowedHours !== 'all') {
-      const currentHour = 10;
-      const currentMinute = 5;
-      const [start, end] = vouch.allowedHours.split('-');
-      const [sh, sm] = start.split(':').map(Number);
-      const [eh, em] = end.split(':').map(Number);
-      const totalCur = currentHour * 60 + currentMinute;
-      const totalStart = sh * 60 + sm;
-      const totalEnd = eh * 60 + em;
-
-      if (totalCur < totalStart || totalCur > totalEnd) {
-        hoursPassed = false;
-        isValid = false;
-        failReason = `خارج از ساعات مجاز استفاده (${toPersianDigits(vouch.allowedHours)}). ساعت فعلی شبیه‌ساز: ${toPersianDigits('۱۰:۰۵')}`;
-        hoursDesc = `غیرمجاز (ساعت فعلی ۱۰:۰۵ در بازه ${toPersianDigits(vouch.allowedHours)} نیست)`;
-      } else {
-        hoursDesc = `مجاز (در بازه ${toPersianDigits(vouch.allowedHours)})`;
-      }
-    }
-    checks.push({ title: 'ساعات خاص شبانه‌روز', passed: hoursPassed, desc: hoursDesc });
-
     // Check 3: Product Match
     let productPassed = true;
     let productDesc = 'برای تمامی کارگاه‌ها مجاز است.';
@@ -660,66 +630,6 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
       }
     }
     checks.push({ title: 'ظرفیت کل بن (Usage Cap)', passed: capPassed, desc: capDesc });
-
-    // Check 7: Budget Cap
-    let budgetPassed = true;
-    let budgetDesc = 'سقف بودجه تخفیف ندارد.';
-    if (vouch.budgetLimit) {
-      if (vouch.budgetUsed >= vouch.budgetLimit) {
-        budgetPassed = false;
-        isValid = false;
-        failReason = 'سقف کل بودجه تخصیص داده شده به این جشنواره تمام شده است.';
-        budgetDesc = `اتمام بودجه (${formatCurrency(vouch.budgetUsed)} استفاده از ${formatCurrency(vouch.budgetLimit)})`;
-      } else {
-        budgetDesc = `مجاز (بودجه باقی‌مانده: ${formatCurrency(vouch.budgetLimit - vouch.budgetUsed)})`;
-      }
-    }
-    checks.push({ title: 'سقف بودجه مالی طرح', passed: budgetPassed, desc: budgetDesc });
-
-    // Check 8: Geo Location Check
-    let geoPassed = true;
-    let geoDesc = 'برای تمامی مناطق و استان‌ها فعال است.';
-    if (vouch.allowedProvince && vouch.allowedProvince !== 'all') {
-      if (sandboxProvince !== vouch.allowedProvince) {
-        geoPassed = false;
-        isValid = false;
-        failReason = `این بن فقط برای ساکنین استان ${vouch.allowedProvince} صادر شده است.`;
-        geoDesc = `غیرمجاز (استان شبیه‌سازی شده: ${sandboxProvince})`;
-      } else {
-        geoDesc = `مجاز (استان منطبق)`;
-      }
-    }
-    checks.push({ title: 'موقعیت جغرافیایی فراگیر', passed: geoPassed, desc: geoDesc });
-
-    // Check 9: Device Check
-    let devPassed = true;
-    let devDesc = 'برای دسکتاپ و موبایل فعال است.';
-    if (vouch.allowedDevice && vouch.allowedDevice !== 'all') {
-      if (sandboxDevice !== vouch.allowedDevice) {
-        devPassed = false;
-        isValid = false;
-        failReason = `این بن فقط در بستر ${vouch.allowedDevice === 'mobile' ? 'اپلیکیشن موبایل' : 'مرورگر دسکتاپ'} معتبر است.`;
-        devDesc = `غیرمجاز (دستگاه شبیه‌سازی شده: ${sandboxDevice === 'mobile' ? 'موبایل' : 'دسکتاپ'})`;
-      } else {
-        devDesc = `مجاز (دستگاه منطبق)`;
-      }
-    }
-    checks.push({ title: 'دستگاه و کانال ثبت‌نام', passed: devPassed, desc: devDesc });
-
-    // Check 10: Referrer Check
-    let refPassed = true;
-    let refDesc = 'ارجاع کانال آزاد است.';
-    if (vouch.allowedReferrer && vouch.allowedReferrer !== 'all') {
-      if (sandboxReferrer !== vouch.allowedReferrer) {
-        refPassed = false;
-        isValid = false;
-        failReason = `این بن تخفیف فقط با ارجاع از کانال "${vouch.allowedReferrer}" معتبر است.`;
-        refDesc = `غیرمجاز (منبع ارجاع فعلی: ${sandboxReferrer || 'مستقیم'})`;
-      } else {
-        refDesc = `مجاز (منبع ارجاع منطبق)`;
-      }
-    }
-    checks.push({ title: 'منبع ورود و ارجاع (UTM)', passed: refPassed, desc: refDesc });
 
     // Check 11: First Purchase Only
     let firstPassed = true;
@@ -3423,8 +3333,10 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
           setSandboxCourseId={setSandboxCourseId}
           sandboxUserId={sandboxUserId}
           setSandboxUserId={setSandboxUserId}
-          sandboxDevice={sandboxDevice}
-          setSandboxDevice={setSandboxDevice}
+          sandboxEmail={sandboxEmail}
+          setSandboxEmail={setSandboxEmail}
+          sandboxPhone={sandboxPhone}
+          setSandboxPhone={setSandboxPhone}
           sandboxResult={sandboxResult}
           setSandboxResult={setSandboxResult}
           voucherPage={voucherPage}

@@ -207,6 +207,7 @@ export interface VoucherFormData {
     geoLimit: string;
     deviceLimit: string;
     firstPurchaseOnly: boolean;
+    groupId: number | null;
 }
 
 export interface PreRegFormData {
