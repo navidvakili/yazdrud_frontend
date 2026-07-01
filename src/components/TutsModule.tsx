@@ -3394,6 +3394,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
           handleUpdateVoucher={handleUpdateVoucher}
           handleDeleteVoucher={handleDeleteVoucher}
           openDeleteConfirm={openDeleteConfirm}
+          showToast={showToast}
         />
       )}
 

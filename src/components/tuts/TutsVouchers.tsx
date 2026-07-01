@@ -59,6 +59,7 @@ interface TutsVouchersProps {
     handleUpdateVoucher: (id: string, data: Partial<TutVoucher>) => Promise<void>;
     handleDeleteVoucher: (id: string) => Promise<void>;
     openDeleteConfirm: (v: TutVoucher) => void;
+    showToast: (text: string, type?: 'success' | 'error' | 'info') => void;
 }
 
 const VOUCHER_CONDITIONS = [
@@ -87,13 +88,19 @@ export default function TutsVouchers(props: TutsVouchersProps) {
         deletingVoucher, setDeletingVoucher,
         deleteConfirmWord, deleteInput, setDeleteInput,
         handleUpdateVoucher, handleDeleteVoucher, openDeleteConfirm,
+        showToast,
     } = props;
 
     const totalVoucherPages = Math.max(1, Math.ceil(vouchers.length / voucherPerPage));
     const paginatedVouchers = vouchers.slice((voucherPage - 1) * voucherPerPage, voucherPage * voucherPerPage);
 
     const handleCopyCode = async (code: string) => {
-        try { await navigator.clipboard.writeText(code); } catch { /* ignore */ }
+        try {
+            await navigator.clipboard.writeText(code);
+            showToast('کد بن تخفیف کپی شد.', 'success');
+        } catch {
+            showToast('خطا در کپی کردن کد.', 'error');
+        }
     };
 
     // --- Auto-generate code (frontend) ---
