@@ -70,6 +70,7 @@ export default function FinancialManagement() {
   const [sandboxCode, setSandboxCode] = useState('');
   const [sandboxCourseId, setSandboxCourseId] = useState('');
   const [sandboxCourseTitle, setSandboxCourseTitle] = useState('');
+  const [sandboxNationalCode, setSandboxNationalCode] = useState('');
   const [sandboxResult, setSandboxResult] = useState<{
     isValid: boolean;
     error?: string;
@@ -468,6 +469,26 @@ export default function FinancialManagement() {
       failReason = failReason || 'این بن فقط برای دوره خاصی صادر شده است.';
     }
 
+    // Check 5: National code restriction
+    let ncPassed = true;
+    let ncDesc = 'محدودیت کد ملی ندارد.';
+    if (coupon.national_code) {
+      if (!sandboxNationalCode.trim()) {
+        ncPassed = false;
+        ncDesc = `⚠️ این بن مختص کد ملی "${coupon.national_code}" است (کد ملی وارد نشده)`;
+      } else if (sandboxNationalCode.trim() !== coupon.national_code) {
+        ncPassed = false;
+        ncDesc = `غیرمجاز (کد ملی واردشده با کد مجاز "${coupon.national_code}" مطابقت ندارد)`;
+      } else {
+        ncDesc = `✅ مجاز (کد ملی منطبق است)`;
+      }
+    }
+    checks.push({ title: 'محدودیت کد ملی', passed: ncPassed, desc: ncDesc });
+    if (!ncPassed) {
+      isValid = false;
+      failReason = failReason || 'این بن تخفیف فقط برای کد ملی مشخص‌شده قابل استفاده است.';
+    }
+
     // Calculate discount
     let discount = 0;
     let originalPrice = 0;
@@ -477,6 +498,10 @@ export default function FinancialManagement() {
         discount = Math.round((originalPrice * coupon.value) / 100);
       } else {
         discount = Math.min(originalPrice || Infinity, coupon.value);
+      }
+      // Apply max_discount cap
+      if (coupon.max_discount && discount > coupon.max_discount) {
+        discount = coupon.max_discount;
       }
     }
 
@@ -990,6 +1015,14 @@ export default function FinancialManagement() {
                       )}
                     </div>
                   )}
+                </div>
+
+                {/* National Code Input */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">کد ملی (برای تست محدودیت کد ملی — اختیاری)</label>
+                  <input type="text" value={sandboxNationalCode} onChange={(e) => setSandboxNationalCode(e.target.value)}
+                    placeholder="مثال: ۰۰۱۲۳۴۵۶۷۸"
+                    className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none font-mono" />
                 </div>
 
                 {/* Run button */}
