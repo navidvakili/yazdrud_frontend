@@ -480,7 +480,6 @@ export default function App() {
       case 'tuts-receipts':
       case 'tuts-stats':
       case 'tuts-surveys':
-      case 'tuts-surveys-stats':
       case 'tuts-vouchers':
       case 'tuts/vouchers':
       // Map actual DB menu URLs to TutsModule sub-views
@@ -488,7 +487,6 @@ export default function App() {
       case 'tuts/bank-receipts':
       case 'tuts/statistics':
       case 'course-surveys':
-      case 'course-surveys/statistics':
         return user ? (
           <TutsModule
             user={user}
@@ -498,9 +496,8 @@ export default function App() {
                 : moduleType === 'tuts/bank-receipts' ? 'tuts-receipts'
                   : moduleType === 'tuts/statistics' ? 'tuts-stats'
                     : moduleType === 'course-surveys' ? 'tuts-surveys'
-                      : moduleType === 'course-surveys/statistics' ? 'tuts-surveys-stats'
-                        : moduleType === 'tuts/vouchers' ? 'tuts-vouchers'
-                          : moduleType}
+                      : moduleType === 'tuts/vouchers' ? 'tuts-vouchers'
+                        : moduleType}
             onOpenTab={handleOpenTab}
           />
         ) : null;
