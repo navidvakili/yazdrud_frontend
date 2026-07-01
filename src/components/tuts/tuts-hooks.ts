@@ -10,6 +10,7 @@ import type {
     VoucherFormData, PreRegFormData, CourseFormData, ReceiptReviewData,
 } from './tuts-types';
 import { mapCourse, mapVoucher, mapRegistrant, toPersianDigits, toEnglishDigits, formatCurrency } from './tuts-utils';
+import { BACKEND_API_URL } from '../../lib/constants';
 
 // =================================================================
 // Hook 1: Toast Notifications
@@ -1115,6 +1116,234 @@ export function useStatsFilter() {
         statSelectedCourse, setStatSelectedCourse,
         statAppliedYear, setStatAppliedYear,
         statAppliedCourse, setStatAppliedCourse,
+    };
+}
+
+// =================================================================
+// Hook 11: Certificate Operations
+// =================================================================
+export function useCertificateOps(
+    registrants: TutRegistrant[],
+    setRegistrants: React.Dispatch<React.SetStateAction<TutRegistrant[]>>,
+    showToast: (text: string, type?: 'success' | 'error' | 'info') => void,
+) {
+    const [previewRegId, setPreviewRegId] = useState<string | null>(null);
+    const [pdfLoading, setPdfLoading] = useState(false);
+    const [pdfError, setPdfError] = useState<string | null>(null);
+    const [numPages, setNumPages] = useState(0);
+    const [pageNumber, setPageNumber] = useState(1);
+    const [pdfScale, setPdfScale] = useState(1.0);
+    const [pdfKey, setPdfKey] = useState(0);
+    const [certificateNotif, setCertificateNotif] = useState<string | null>(null);
+
+    const handleApproveCertificate = async (registerId: string) => {
+        try {
+            const res = await api.approveCertificate(registerId);
+            setRegistrants(prev => prev.map(r =>
+                r.id === registerId ? { ...r, certificateApproved: true } : r
+            ));
+            setCertificateNotif(res.message || 'تایید شد.');
+            showToast(res.message || 'ثبت‌نام برای صدور گواهی تایید شد.');
+        } catch (err: any) {
+            showToast(err.message || 'خطا در تایید گواهی', 'error');
+        }
+    };
+
+    const handleRejectCertificate = async (registerId: string) => {
+        try {
+            const res = await api.rejectCertificate(registerId);
+            setRegistrants(prev => prev.map(r =>
+                r.id === registerId ? { ...r, certificateApproved: false, certificateNumber: undefined, hasCertificate: false } : r
+            ));
+            setCertificateNotif(res.message || 'تایید لغو شد.');
+            showToast(res.message || 'تایید صدور گواهی لغو شد.');
+        } catch (err: any) {
+            showToast(err.message || 'خطا در لغو تایید گواهی', 'error');
+        }
+    };
+
+    const handleGenerateCertificate = async (registerId: string) => {
+        try {
+            window.open(`${BACKEND_API_URL}/certificate/${registerId}`, '_blank');
+            const res = await api.getAllRegistrations({ per_page: 1000 });
+            setRegistrants((res.data || []).map(mapRegistrant));
+            showToast('گواهی با موفقیت صادر شد.');
+            setPdfKey(k => k + 1);
+        } catch (err: any) {
+            showToast(err.message || 'خطا در صدور گواهی', 'error');
+        }
+    };
+
+    const handlePreviewCertificate = async (registerId: string) => {
+        setPdfError(null);
+        setPdfLoading(true);
+        setPageNumber(1);
+        setPdfKey(0);
+        setPreviewRegId(registerId);
+    };
+
+    const handleApproveAllCertificates = async (courseId?: string) => {
+        if (!courseId) {
+            showToast('لطفاً ابتدا یک دوره را انتخاب کنید.', 'error');
+            return;
+        }
+        if (!confirm('آیا از تایید همه ثبت‌نام‌های این دوره برای صدور گواهی مطمئن هستید؟')) return;
+        try {
+            const res = await api.approveAllCertificates(Number(courseId));
+            setRegistrants(prev => prev.map(r =>
+                r.courseId === courseId ? { ...r, certificateApproved: true } : r
+            ));
+            showToast(res.message || 'همه ثبت‌نام‌ها برای صدور گواهی تایید شدند.');
+        } catch (err: any) {
+            showToast(err.message || 'خطا در تایید همه', 'error');
+        }
+    };
+
+    const handleDownloadAllCertificates = async (courseId?: number) => {
+        try {
+            const blob = await api.downloadAllCertificates(courseId);
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `certificates_${new Date().toISOString().slice(0, 10)}.zip`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            showToast('فایل فشرده گواهی‌ها با موفقیت دانلود شد.');
+        } catch (err: any) {
+            showToast(err.message || 'خطا در دانلود فایل فشرده', 'error');
+        }
+    };
+
+    return {
+        previewRegId, setPreviewRegId,
+        pdfLoading, setPdfLoading,
+        pdfError, setPdfError,
+        numPages, setNumPages,
+        pageNumber, setPageNumber,
+        pdfScale, setPdfScale,
+        pdfKey, setPdfKey,
+        certificateNotif, setCertificateNotif,
+        handleApproveCertificate,
+        handleRejectCertificate,
+        handleGenerateCertificate,
+        handlePreviewCertificate,
+        handleApproveAllCertificates,
+        handleDownloadAllCertificates,
+    };
+}
+
+// =================================================================
+// Hook 12: Instructor Management
+// =================================================================
+export function useInstructorManagement(showToast: (text: string, type?: 'success' | 'error' | 'info') => void) {
+    const [instructors, setInstructors] = useState<{ id: number; name: string; specialty: string | null }[]>([]);
+    const [instructorsLoading, setInstructorsLoading] = useState(false);
+    const [isInstructorManagementOpen, setIsInstructorManagementOpen] = useState(false);
+    const [instructorFormMode, setInstructorFormMode] = useState<'create' | 'edit'>('create');
+    const [editingInstructorId, setEditingInstructorId] = useState<number | null>(null);
+    const [instructorFormName, setInstructorFormName] = useState('');
+    const [instructorFormSpecialty, setInstructorFormSpecialty] = useState('');
+    const [instructorFormBio, setInstructorFormBio] = useState('');
+    const [instructorFormPhoto, setInstructorFormPhoto] = useState<File | null>(null);
+    const [instructorFormPhotoPreview, setInstructorFormPhotoPreview] = useState<string | null>(null);
+    const [instructorFormActive, setInstructorFormActive] = useState(true);
+    const [instructorSubmitting, setInstructorSubmitting] = useState(false);
+
+    const resetInstructorForm = () => {
+        setInstructorFormMode('create');
+        setEditingInstructorId(null);
+        setInstructorFormName('');
+        setInstructorFormSpecialty('');
+        setInstructorFormBio('');
+        setInstructorFormPhoto(null);
+        setInstructorFormPhotoPreview(null);
+        setInstructorFormActive(true);
+    };
+
+    const handleEditInstructor = async (inst: { id: number; name: string }) => {
+        try {
+            const instructor = await api.getInstructor(inst.id);
+            setEditingInstructorId(inst.id);
+            setInstructorFormName(instructor.name);
+            setInstructorFormSpecialty(instructor.specialty || '');
+            setInstructorFormBio(instructor.bio || '');
+            setInstructorFormPhoto(null);
+            setInstructorFormPhotoPreview(instructor.photo_url || null);
+            setInstructorFormActive(instructor.active);
+            setInstructorFormMode('edit');
+        } catch (err) {
+            showToast('خطا در دریافت اطلاعات استاد', 'error');
+        }
+    };
+
+    const handleDeleteInstructor = async (inst: { id: number; name: string }) => {
+        if (!window.confirm(`آیا از حذف استاد "${inst.name}" اطمینان دارید؟`)) return;
+        try {
+            await api.deleteInstructor(inst.id);
+            setInstructors(prev => prev.filter(i => i.id !== inst.id));
+            showToast(`استاد "${inst.name}" حذف شد.`);
+        } catch (err: any) {
+            showToast(err.message || 'خطا در حذف استاد', 'error');
+        }
+    };
+
+    const handleSubmitInstructor = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!instructorFormName) {
+            showToast('نام استاد الزامی است.', 'error');
+            return;
+        }
+        setInstructorSubmitting(true);
+        try {
+            const formData = new FormData();
+            formData.append('name', instructorFormName);
+            formData.append('specialty', instructorFormSpecialty);
+            formData.append('bio', instructorFormBio);
+            formData.append('active', instructorFormActive ? '1' : '0');
+            if (instructorFormPhoto) {
+                formData.append('photo', instructorFormPhoto);
+            }
+
+            if (editingInstructorId) {
+                formData.append('_method', 'PUT');
+                const updated = await api.updateInstructor(editingInstructorId, formData);
+                setInstructors(prev => prev.map(i => i.id === editingInstructorId
+                    ? { id: i.id, name: updated.name, specialty: updated.specialty || null }
+                    : i
+                ));
+                showToast(`استاد "${updated.name}" بروزرسانی شد.`);
+            } else {
+                const created = await api.createInstructor(formData);
+                setInstructors(prev => [...prev, { id: created.id, name: created.name, specialty: created.specialty || null }]);
+                showToast(`استاد "${created.name}" ثبت شد.`);
+            }
+            resetInstructorForm();
+        } catch (err: any) {
+            showToast(err.message || 'خطا در ذخیره اطلاعات استاد', 'error');
+        } finally {
+            setInstructorSubmitting(false);
+        }
+    };
+
+    return {
+        instructors, setInstructors,
+        instructorsLoading, setInstructorsLoading,
+        isInstructorManagementOpen, setIsInstructorManagementOpen,
+        instructorFormMode,
+        editingInstructorId,
+        instructorFormName, setInstructorFormName,
+        instructorFormSpecialty, setInstructorFormSpecialty,
+        instructorFormBio, setInstructorFormBio,
+        instructorFormPhoto, setInstructorFormPhoto,
+        instructorFormPhotoPreview, setInstructorFormPhotoPreview,
+        instructorFormActive, setInstructorFormActive,
+        instructorSubmitting,
+        resetInstructorForm,
+        handleEditInstructor,
+        handleDeleteInstructor,
+        handleSubmitInstructor,
     };
 }
 

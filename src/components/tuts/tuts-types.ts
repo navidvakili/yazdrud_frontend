@@ -20,9 +20,16 @@ export interface TutCourse {
     enrolled: number;
     capacity: number;
     startDate: string;
+    endDate: string;
+    registrationStartDate: string;
+    registrationEndDate: string;
     status: 'active' | 'completed' | 'ended';
     description: string;
     category: string;
+    section: string[]; // array of 'normal' | 'featured' | 'pre_register' | 'free'
+    image: string | null;
+    instructor_id: number | null;
+    instructor_name: string | null;
 }
 
 export interface TutRegistrant {

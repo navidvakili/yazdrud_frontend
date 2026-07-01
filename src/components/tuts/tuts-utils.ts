@@ -60,7 +60,7 @@ export function mapCourse(c: any): TutCourse {
         id: String(c.id),
         title: c.title,
         lecturer: c.instructor || 'مربی دوره',
-        duration: c.duration_text || '۱۲ ساعت',
+        duration: c.duration ? String(c.duration) : '12',
         cost: parseInt(String(c.amount)) || 0,
         enrolled: (c.confirmed_count ?? c.registered_count) || 0,
         capacity: c.capacity || 30,
@@ -69,9 +69,28 @@ export function mapCourse(c: any): TutCourse {
                 ? c.start_date
                 : c.start_date.replace(/-/g, '/')
             : '۱۴۰۵/۰۱/۰۱',
+        endDate: c.end_date
+            ? c.end_date.includes('/')
+                ? c.end_date
+                : c.end_date.replace(/-/g, '/')
+            : '',
+        registrationStartDate: c.registration_start_date
+            ? c.registration_start_date.includes('/')
+                ? c.registration_start_date
+                : c.registration_start_date.replace(/-/g, '/')
+            : '',
+        registrationEndDate: c.registration_end_date
+            ? c.registration_end_date.includes('/')
+                ? c.registration_end_date
+                : c.registration_end_date.replace(/-/g, '/')
+            : '',
         status: c.active ? 'active' : 'ended',
         category: c.group_title || c.category || 'عمومی',
         description: c.description || 'توضیحات دوره به زودی منتشر خواهد شد.',
+        section: Array.isArray(c.section) ? c.section : ['normal'],
+        image: c.image || null,
+        instructor_id: c.instructor_id || null,
+        instructor_name: c.instructor_name || null,
     };
 }
 
@@ -96,6 +115,9 @@ export function mapVoucher(c: any): TutVoucher {
         validFrom: c.start_date || '1405/01/01',
         validTo: c.finish_date || '1405/12/29',
         courseId: c.course_id ? String(c.course_id) : 'all',
+        courseTitle: c.course_title || '',
+        group_id: c.group_id ? Number(c.group_id) : null,
+        group_title: c.group_title || '',
         globalCap: cap,
         totalUsed: used,
         maxUses: cap,
@@ -129,9 +151,16 @@ export function mapRegistrant(r: any): TutRegistrant {
         status:
             r.status === 'approved' || r.status === 'paid' || r.status === 'verified'
                 ? 'verified'
-                : r.status === 'rejected'
-                    ? 'rejected'
-                    : 'pending',
+                : r.status === 'refunded'
+                    ? 'refunded'
+                    : r.status === 'rejected'
+                        ? 'rejected'
+                        : 'pending',
         rejectionReason: r.rejection_reason || undefined,
+        // Certificate fields
+        certificateApproved: r.certificate_approved ?? false,
+        certificateNumber: r.certificate?.certificate_number || undefined,
+        certificateIssuedAt: r.certificate?.issued_at || undefined,
+        hasCertificate: !!r.certificate,
     };
 }
