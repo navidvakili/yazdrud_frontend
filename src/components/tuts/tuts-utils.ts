@@ -177,7 +177,7 @@ export function mapVoucher(c: any): TutVoucher {
         discountAmount: c.type_discount === 'money' ? Number(c.value) : undefined,
         allowInstallments: c.type === 'installment',
         maxDiscount: c.max_discount ? Number(c.max_discount) : undefined,
-        nationalCodes: c.national_codes ? String(c.national_codes).split(',').map(s => s.trim()).filter(Boolean) : undefined,
+        nationalCodes: c.national_code ? String(c.national_code).split(',').map(s => s.trim()).filter(Boolean) : undefined,
         isActive: c.is_active ?? true,
     };
 }
