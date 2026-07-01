@@ -661,6 +661,27 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     }
     checks.push({ title: 'تشخیص فراگیر جدید (اولین خرید)', passed: firstPassed, desc: firstDesc });
 
+    // Check: National code restriction
+    let ncPassed = true;
+    let ncDesc = 'محدودیت کد ملی ندارد.';
+    if (vouch.nationalCodes && vouch.nationalCodes.length > 0) {
+      const userId = sandboxUserId.trim();
+      if (!userId) {
+        ncPassed = false;
+        ncDesc = `⚠️ این بن مختص کدهای ملی "${vouch.nationalCodes.join('، ')}" است (کد ملی وارد نشده)`;
+      } else if (!vouch.nationalCodes.includes(userId)) {
+        ncPassed = false;
+        ncDesc = `غیرمجاز (کد ملی واردشده در لیست کدهای مجاز ${vouch.nationalCodes.join('، ')} نیست)`;
+      } else {
+        ncDesc = `✅ مجاز (کد ملی در لیست مجاز است)`;
+      }
+    }
+    checks.push({ title: 'محدودیت کد ملی', passed: ncPassed, desc: ncDesc });
+    if (!ncPassed) {
+      isValid = false;
+      failReason = failReason || 'این بن تخفیف فقط برای کدهای ملی مشخص‌شده قابل استفاده است.';
+    }
+
     // Final calculation
     let discount = 0;
     if (isValid) {
@@ -668,6 +689,10 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
         discount = Math.round((course.cost * vouch.discountPercent) / 100);
       } else if (vouch.discountAmount) {
         discount = Math.min(course.cost, vouch.discountAmount);
+      }
+      // Apply max_discount cap
+      if (vouch.maxDiscount && discount > vouch.maxDiscount) {
+        discount = vouch.maxDiscount;
       }
     }
 
