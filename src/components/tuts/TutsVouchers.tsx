@@ -2,7 +2,7 @@
 // TutsModule — Vouchers (Discount Code Manager + Sandbox)
 // ============================================================
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
     Tag, Plus, List, Copy, Check, Trash2, Zap, Clock,
@@ -13,7 +13,8 @@ import type {
     TutCourse, TutCategory, TutVoucher,
     VoucherFormData, SandboxResult,
 } from './tuts-types';
-import { toPersianDigits, formatCurrency, toEnglishDigits } from './tuts-utils';
+import { toPersianDigits, formatCurrency, toEnglishDigits, formatNumberWithCommas, mapVoucher, mapCourse } from './tuts-utils';
+import api from '@/src/api';
 import { JalaliDatepicker } from './JalaliDatepicker';
 
 interface TutsVouchersProps {
@@ -164,6 +165,29 @@ export default function TutsVouchers(props: TutsVouchersProps) {
         document.addEventListener('mousedown', handleClick);
         return () => document.removeEventListener('mousedown', handleClick);
     }, []);
+
+    // --- Fetch fresh voucher data from API when edit modal opens ---
+    const [loadingEditVoucher, setLoadingEditVoucher] = useState(false);
+    const [freshEditVoucher, setFreshEditVoucher] = useState<TutVoucher | null>(null);
+
+    useEffect(() => {
+        if (showEditModal && editingVoucher) {
+            setLoadingEditVoucher(true);
+            api.getCoupon(Number(editingVoucher.id))
+                .then((res: any) => {
+                    const mapped = mapVoucher(res);
+                    setFreshEditVoucher(mapped);
+                    setEditingVoucher(mapped);
+                })
+                .catch(() => {
+                    // Keep the existing editingVoucher if fetch fails
+                    setFreshEditVoucher(editingVoucher);
+                })
+                .finally(() => setLoadingEditVoucher(false));
+        } else {
+            setFreshEditVoucher(null);
+        }
+    }, [showEditModal]);
 
     // --- Sandbox modal state ---
     const [sandboxOpen, setSandboxOpen] = useState(false);
@@ -509,8 +533,13 @@ export default function TutsVouchers(props: TutsVouchersProps) {
                                         {/* Max Discount */}
                                         <div className="space-y-1">
                                             <label className="text-[10px] font-bold text-gray-500 block">حداکثر مبلغ تخفیف (ریال)</label>
-                                            <input type="number" value={newVoucher.maxDiscount || ''} onChange={(e) => setNewVoucher(f => ({ ...f, maxDiscount: Number(e.target.value) }))}
-                                                placeholder="مثال: ۱۵۰۰۰۰۰"
+                                            <input type="text" inputMode="numeric" value={formatNumberWithCommas(newVoucher.maxDiscount)} onChange={(e) => {
+                                                const raw = e.target.value.replace(/,/g, '');
+                                                if (/^\d*$/.test(raw)) {
+                                                    setNewVoucher(f => ({ ...f, maxDiscount: raw ? Number(raw) : 0 }));
+                                                }
+                                            }}
+                                                placeholder="مثال: ۱,۵۰۰,۰۰۰"
                                                 className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none" />
                                             <p className="text-[8px] text-gray-400 mt-0.5">اگر تخفیف بیشتر از این مقدار شود، همین سقف اعمال می‌گردد</p>
                                         </div>
@@ -821,6 +850,173 @@ export default function TutsVouchers(props: TutsVouchersProps) {
 }
 
 // ===== Edit Form Sub-Component =====
+// ===== Self-contained wrapper for standalone use (e.g., FinancialManagement) =====
+export function StandaloneTutsVouchers() {
+    const [vouchers, setVouchers] = useState<TutVoucher[]>([]);
+    const [courses, setCourses] = useState<TutCourse[]>([]);
+    const [courseGroups, setCourseGroups] = useState<{ id: number; title: string }[]>([]);
+    const [loadingVouchers, setLoadingVouchers] = useState(false);
+    const [voucherActiveTab, setVoucherActiveTab] = useState<'list' | 'create'>('list');
+    const [newVoucher, setNewVoucher] = useState<VoucherFormData>({
+        code: '', title: '', discountType: 'percentage', discountValue: 0, maxUses: 100,
+        validFrom: '', validUntil: '', applicableProductIds: [], applicableCategoryIds: [],
+        budgetCap: 0, minInstallment: 0, installmentsAllowed: false, geoLimit: '', deviceLimit: '',
+        firstPurchaseOnly: false, groupId: null, isActive: true, maxDiscount: 0, nationalCodes: [],
+    });
+    const [voucherPage, setVoucherPage] = useState(1);
+    const voucherPerPage = 10;
+    const [sandboxCode, setSandboxCode] = useState('');
+    const [sandboxCourseId, setSandboxCourseId] = useState('');
+    const [sandboxUserId, setSandboxUserId] = useState('');
+    const [sandboxEmail, setSandboxEmail] = useState('');
+    const [sandboxPhone, setSandboxPhone] = useState('');
+    const [sandboxResult, setSandboxResult] = useState<SandboxResult | null>(null);
+    const [editingVoucher, setEditingVoucher] = useState<TutVoucher | null>(null);
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [deletingVoucher, setDeletingVoucher] = useState<TutVoucher | null>(null);
+    const [deleteConfirmWord, setDeleteConfirmWord] = useState('');
+    const [deleteInput, setDeleteInput] = useState('');
+
+    const fetchVouchers = useCallback(() => {
+        setLoadingVouchers(true);
+        api.getCoupons({ per_page: 1000 })
+            .then((res: any) => { const mapped = (res.data || []).map(mapVoucher); setVouchers(mapped); })
+            .catch(err => console.error('Error fetching coupons:', err))
+            .finally(() => setLoadingVouchers(false));
+    }, []);
+
+    useEffect(() => {
+        api.getCourses({ per_page: 1000 })
+            .then((res: any) => setCourses((res.data || []).map(mapCourse)))
+            .catch(() => {});
+        api.getCourseGroups()
+            .then((res: any) => setCourseGroups(res || []))
+            .catch(() => {});
+    }, []);
+
+    useEffect(() => { fetchVouchers(); }, [fetchVouchers]);
+
+    const handleCreateVoucher = async () => {
+        const code = newVoucher.code.trim().toUpperCase();
+        const title = newVoucher.title?.trim() || '';
+        if (!code || !title) return;
+        try {
+            await api.createCoupon({
+                title, code, type: 'discount',
+                type_discount: newVoucher.discountType === 'percentage' ? 'percent' : 'money',
+                value: newVoucher.discountValue,
+                capacity: newVoucher.maxUses > 0 ? newVoucher.maxUses : 100,
+                course_id: newVoucher.applicableProductIds?.[0] || null,
+                group_id: newVoucher.groupId || null,
+                start_date: newVoucher.validFrom || '',
+                finish_date: newVoucher.validUntil || '',
+                is_active: newVoucher.isActive,
+                max_discount: newVoucher.maxDiscount > 0 ? newVoucher.maxDiscount : null,
+                national_code: newVoucher.nationalCodes.filter(Boolean).join(',') || null,
+            });
+            fetchVouchers();
+            setNewVoucher({ code: '', title: '', discountType: 'percentage', discountValue: 0, maxUses: 100, validFrom: '', validUntil: '', applicableProductIds: [], applicableCategoryIds: [], budgetCap: 0, minInstallment: 0, installmentsAllowed: false, geoLimit: '', deviceLimit: '', firstPurchaseOnly: false, groupId: null, isActive: true, maxDiscount: 0, nationalCodes: [] });
+            setVoucherActiveTab('list');
+        } catch { /* ignore */ }
+    };
+
+    const handleUpdateVoucher = async (id: string, data: Partial<TutVoucher>) => {
+        try {
+            const payload: any = {};
+            if (data.title !== undefined) payload.title = data.title;
+            if (data.code !== undefined) payload.code = data.code;
+            if (data.discountValue !== undefined) { payload.value = data.discountValue; payload.type_discount = data.discountType === 'percentage' ? 'percent' : 'money'; }
+            if (data.maxUses !== undefined) payload.capacity = data.maxUses;
+            if (data.validFrom !== undefined) payload.start_date = data.validFrom;
+            if (data.validTo !== undefined) payload.finish_date = data.validTo;
+            if (data.discountType !== undefined) payload.type_discount = data.discountType === 'percentage' ? 'percent' : 'money';
+            if (data.courseId !== undefined) payload.course_id = data.courseId === 'all' ? null : Number(data.courseId);
+            if (data.group_id !== undefined) payload.group_id = data.group_id ? Number(data.group_id) : null;
+            if (data.isActive !== undefined) payload.is_active = data.isActive;
+            if (data.maxDiscount !== undefined) payload.max_discount = data.maxDiscount > 0 ? data.maxDiscount : null;
+            if (data.nationalCodes !== undefined) payload.national_code = data.nationalCodes.filter(Boolean).join(',') || null;
+            await api.updateCoupon(Number(id), payload);
+            await fetchVouchers();
+            setShowEditModal(false);
+            setEditingVoucher(null);
+        } catch { /* ignore */ }
+    };
+
+    const handleDeleteVoucher = async (id: string) => {
+        try {
+            await api.deleteCoupon(Number(id));
+            setVouchers(prev => prev.filter(v => v.id !== id));
+            setShowDeleteModal(false);
+            setDeletingVoucher(null);
+            setDeleteInput('');
+        } catch { /* ignore */ }
+    };
+
+    const openDeleteConfirm = (v: TutVoucher) => {
+        setDeletingVoucher(v);
+        setDeleteConfirmWord(String(Math.floor(1000 + Math.random() * 9000)));
+        setDeleteInput('');
+        setShowDeleteModal(true);
+    };
+
+    const handleRunSandboxTest = () => {
+        const code = sandboxCode.trim().toUpperCase();
+        if (!code) return;
+        const vouch = vouchers.find(v => v.code.toUpperCase() === code);
+        if (!vouch) {
+            setSandboxResult({ isValid: false, error: 'کد بن تخفیف در سیستم یافت نشد.', discountAmount: 0, finalPrice: 0, originalPrice: 0, checks: [{ title: 'وجود بن در سیستم', passed: false, desc: 'بن تخفیفی با این کد در سیستم وجود ندارد.' }] });
+            return;
+        }
+        const checks: { title: string; passed: boolean; desc: string }[] = [];
+        let isValid = true;
+        checks.push({ title: 'وضعیت فعال بودن', passed: vouch.isActive, desc: vouch.isActive ? 'بن فعال است.' : 'بن غیرفعال شده است.' });
+        if (!vouch.isActive) isValid = false;
+        const remainingPassed = vouch.remainingUses > 0;
+        checks.push({ title: 'ظرفیت باقی‌مانده', passed: remainingPassed, desc: remainingPassed ? `مجاز (${toPersianDigits(vouch.remainingUses)} باقی‌مانده)` : 'ظرفیت تکمیل شده' });
+        if (!remainingPassed) isValid = false;
+        let coursePassed = true;
+        let courseDesc = 'برای تمامی دوره‌ها مجاز است.';
+        if (vouch.courseId && vouch.courseId !== 'all') {
+            if (sandboxCourseId && sandboxCourseId !== vouch.courseId) { coursePassed = false; courseDesc = `فقط برای دوره "${vouch.courseTitle}" مجاز است`; }
+            else { courseDesc = `محدود به دوره "${vouch.courseTitle}"`; }
+        }
+        checks.push({ title: 'انطباق دوره', passed: coursePassed, desc: courseDesc });
+        if (!coursePassed) isValid = false;
+        let discount = 0;
+        if (isValid) {
+            discount = vouch.discountValue;
+            if (vouch.maxDiscount && discount > vouch.maxDiscount) discount = vouch.maxDiscount;
+        }
+        setSandboxResult({ isValid, error: isValid ? undefined : 'برخی از شرایط اعتبارسنجی رد شده است.', discountAmount: discount, finalPrice: Math.max(0, 0 - discount), originalPrice: 0, checks });
+    };
+
+    return (
+        <TutsVouchers
+            vouchers={vouchers} courses={courses} categories={[]} courseGroups={courseGroups}
+            loadingVouchers={loadingVouchers}
+            voucherActiveTab={voucherActiveTab} setVoucherActiveTab={setVoucherActiveTab}
+            newVoucher={newVoucher} setNewVoucher={setNewVoucher}
+            sandboxCode={sandboxCode} setSandboxCode={setSandboxCode}
+            sandboxCourseId={sandboxCourseId} setSandboxCourseId={setSandboxCourseId}
+            sandboxUserId={sandboxUserId} setSandboxUserId={setSandboxUserId}
+            sandboxEmail={sandboxEmail} setSandboxEmail={setSandboxEmail}
+            sandboxPhone={sandboxPhone} setSandboxPhone={setSandboxPhone}
+            sandboxResult={sandboxResult} setSandboxResult={setSandboxResult}
+            voucherPage={voucherPage} setVoucherPage={setVoucherPage} voucherPerPage={voucherPerPage}
+            handleCreateVoucher={handleCreateVoucher} handleRunSandboxTest={handleRunSandboxTest}
+            editingVoucher={editingVoucher} setEditingVoucher={setEditingVoucher}
+            showEditModal={showEditModal} setShowEditModal={setShowEditModal}
+            showDeleteModal={showDeleteModal} setShowDeleteModal={setShowDeleteModal}
+            deletingVoucher={deletingVoucher} setDeletingVoucher={setDeletingVoucher}
+            deleteConfirmWord={deleteConfirmWord} deleteInput={deleteInput}
+            setDeleteInput={setDeleteInput}
+            handleUpdateVoucher={handleUpdateVoucher} handleDeleteVoucher={handleDeleteVoucher}
+            openDeleteConfirm={openDeleteConfirm}
+        />
+    );
+}
+
 function EditForm({ voucher, courses, courseGroups, onSave, onCancel }: {
     voucher: TutVoucher;
     courses: TutCourse[];
@@ -1087,8 +1283,13 @@ function EditForm({ voucher, courses, courseGroups, onSave, onCancel }: {
                     {/* Max Discount */}
                     <div className="space-y-1">
                         <label className="text-[10px] font-bold text-gray-500 block">حداکثر مبلغ تخفیف (ریال)</label>
-                        <input type="number" value={maxDiscount || ''} onChange={(e) => setMaxDiscount(Number(e.target.value))}
-                            placeholder="مثال: ۱۵۰۰۰۰۰"
+                        <input type="text" inputMode="numeric" value={formatNumberWithCommas(maxDiscount)} onChange={(e) => {
+                            const raw = e.target.value.replace(/,/g, '');
+                            if (/^\d*$/.test(raw)) {
+                                setMaxDiscount(raw ? Number(raw) : 0);
+                            }
+                        }}
+                            placeholder="مثال: ۱,۵۰۰,۰۰۰"
                             className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none" />
                         <p className="text-[8px] text-gray-400 mt-0.5">اگر تخفیف بیشتر از این مقدار شود، همین سقف اعمال می‌گردد</p>
                     </div>
