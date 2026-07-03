@@ -844,8 +844,8 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     if (download) {
       return `${BACKEND_API_URL}/certificate/${regId}`;
     }
-    // For preview, use relative path → goes through Vite proxy (same-origin)
-    return `/certificate/preview/${regId}`;
+    // For preview, use BACKEND_API_URL (same as download) so it works in both dev and production
+    return `${BACKEND_API_URL}/certificate/preview/${regId}`;
   };
 
   // -----------------------------------------
