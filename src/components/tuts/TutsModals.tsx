@@ -4,7 +4,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Plus, Trash2, Layers } from 'lucide-react';
+import { X, Plus, Trash2, Layers, Edit2, Check, XCircle } from 'lucide-react';
 import type { TutCategory } from './tuts-types';
 
 // Random 4-digit number for delete confirmation
@@ -21,6 +21,7 @@ interface TutsModalsProps {
     categories: TutCategory[];
     handleAddCategory: () => void;
     handleDeleteCategory: (id: string) => void;
+    handleEditCategory: (oldTitle: string, newTitle: string) => Promise<boolean>;
     // Delete Confirmation
     courseToDelete: { id: string; title: string } | null;
     setCourseToDelete: (v: { id: string; title: string } | null) => void;
@@ -31,9 +32,13 @@ export default function TutsModals(props: TutsModalsProps) {
     const {
         isCategoryModalOpen, setIsCategoryModalOpen,
         newCategoryName, setNewCategoryName,
-        categories, handleAddCategory, handleDeleteCategory,
+        categories, handleAddCategory, handleDeleteCategory, handleEditCategory,
         courseToDelete, setCourseToDelete, confirmDeleteCourse,
     } = props;
+
+    // Category editing state
+    const [editingCategory, setEditingCategory] = useState<string | null>(null);
+    const [editCategoryName, setEditCategoryName] = useState('');
 
     // Random confirmation word for delete modal
     const [deleteConfirmWord, setDeleteConfirmWord] = useState('');
@@ -57,7 +62,7 @@ export default function TutsModals(props: TutsModalsProps) {
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
-                        onClick={() => { setIsCategoryModalOpen(false); setNewCategoryName(''); }}
+                        onClick={() => { setIsCategoryModalOpen(false); setNewCategoryName(''); setEditingCategory(null); }}
                     >
                         <motion.div
                             initial={{ scale: 0.95, opacity: 0 }}
@@ -71,7 +76,7 @@ export default function TutsModals(props: TutsModalsProps) {
                                     <Layers className="w-4 h-4 text-teal-600" />
                                     مدیریت گروه‌های علمی
                                 </h4>
-                                <button onClick={() => { setIsCategoryModalOpen(false); setNewCategoryName(''); }}
+                                <button onClick={() => { setIsCategoryModalOpen(false); setNewCategoryName(''); setEditingCategory(null); }}
                                     className="p-1.5 rounded-xl text-gray-400 hover:text-gray-600 dark:hover:text-white cursor-pointer">
                                     <X className="w-5 h-5" />
                                 </button>
@@ -81,16 +86,57 @@ export default function TutsModals(props: TutsModalsProps) {
                                 {categories.length === 0 ? (
                                     <p className="text-xs text-gray-400 text-center py-6">هیچ گروه علمی تعریف نشده است.</p>
                                 ) : (
-                                    categories.map((cat: string, idx: number) => (
+                                    categories.map((cat: string, idx: number) => {
+                                        const isEditing = editingCategory === cat;
+                                        return (
                                         <div key={idx}
                                             className="flex items-center justify-between p-3 bg-gray-55/50 dark:bg-gray-950/50 rounded-2xl border border-gray-100/50 dark:border-gray-850">
-                                            <span className="text-xs font-bold text-gray-800 dark:text-gray-200">{cat}</span>
-                                            <button onClick={() => handleDeleteCategory(cat)}
-                                                className="p-1 rounded-lg text-gray-300 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-all cursor-pointer">
-                                                <Trash2 className="w-3.5 h-3.5" />
-                                            </button>
+                                            {isEditing ? (
+                                                <div className="flex-1 flex items-center gap-2 ml-2">
+                                                    <input
+                                                        type="text"
+                                                        value={editCategoryName}
+                                                        onChange={(e) => setEditCategoryName(e.target.value)}
+                                                        onKeyDown={async (e) => {
+                                                            if (e.key === 'Enter') {
+                                                                const success = await handleEditCategory(cat, editCategoryName);
+                                                                if (success) setEditingCategory(null);
+                                                            }
+                                                            if (e.key === 'Escape') setEditingCategory(null);
+                                                        }}
+                                                        className="flex-1 text-xs px-2.5 py-1.5 rounded-lg border border-teal-500/40 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:border-teal-500"
+                                                        autoFocus
+                                                    />
+                                                    <button onClick={async () => {
+                                                        const success = await handleEditCategory(cat, editCategoryName);
+                                                        if (success) setEditingCategory(null);
+                                                    }}
+                                                        className="p-1 rounded-lg text-teal-600 hover:bg-teal-50 dark:hover:bg-teal-950/30 transition-all cursor-pointer">
+                                                        <Check className="w-3.5 h-3.5" />
+                                                    </button>
+                                                    <button onClick={() => setEditingCategory(null)}
+                                                        className="p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all cursor-pointer">
+                                                        <XCircle className="w-3.5 h-3.5" />
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <span className="text-xs font-bold text-gray-800 dark:text-gray-200">{cat}</span>
+                                            )}
+                                            <div className="flex items-center gap-1">
+                                                {!isEditing && (
+                                                    <button onClick={() => { setEditingCategory(cat); setEditCategoryName(cat); }}
+                                                        className="p-1 rounded-lg text-gray-300 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-all cursor-pointer">
+                                                        <Edit2 className="w-3.5 h-3.5" />
+                                                    </button>
+                                                )}
+                                                <button onClick={() => handleDeleteCategory(cat)}
+                                                    className="p-1 rounded-lg text-gray-300 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-all cursor-pointer">
+                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                </button>
+                                            </div>
                                         </div>
-                                    ))
+                                        );
+                                    })
                                 )}
                             </div>
 

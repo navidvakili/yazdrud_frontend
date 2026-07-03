@@ -784,6 +784,34 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     }
   };
 
+  const handleEditCategory = async (oldTitle: string, newTitle: string) => {
+    const trimmed = newTitle.trim();
+    if (!trimmed) {
+      showToast('لطفاً عنوان گروه را وارد کنید.', 'error');
+      return false;
+    }
+    if (oldTitle === trimmed) return true;
+    if (categories.includes(trimmed)) {
+      showToast('این گروه آموزشی از قبل تعریف شده است.', 'error');
+      return false;
+    }
+    const group = courseGroups.find(g => g.title === oldTitle);
+    if (!group) {
+      showToast('گروه آموزشی مورد نظر یافت نشد.', 'error');
+      return false;
+    }
+    try {
+      const updated = await api.updateCourseGroup(group.id, trimmed);
+      setCourseGroups(prev => prev.map(g => g.id === group.id ? updated : g));
+      setCategories(prev => prev.map(c => c === oldTitle ? updated.title : c));
+      showToast(`گروه آموزشی "${updated.title}" با موفقیت بروزرسانی گردید.`);
+      return true;
+    } catch {
+      showToast('خطا در بروزرسانی گروه آموزشی.', 'error');
+      return false;
+    }
+  };
+
   // Notifications
   const { toast: toastMsg, showToast } = useToast();
 
@@ -866,6 +894,10 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
   const [newCourseSection, setNewCourseSection] = useState<string[]>(['normal']);
   const [newCourseImage, setNewCourseImage] = useState<File | null>(null);
   const [newCourseImagePreview, setNewCourseImagePreview] = useState<string | null>(null);
+  const [newCoursePrerequisites, setNewCoursePrerequisites] = useState('');
+  const [newCourseDaysOfWeek, setNewCourseDaysOfWeek] = useState<string[]>([]);
+  const [newCourseTime, setNewCourseTime] = useState('');
+  const [newCourseLocation, setNewCourseLocation] = useState('');
 
   const handleCreateNewCourse = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -907,10 +939,14 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
       if (groupId !== null) {
         formData.append('group_id', String(groupId));
       }
-      newCourseSection.forEach(s => formData.append('section[]', s));
+      newCourseSection.forEach(s => formData.append('sections[]', s));
       if (newCourseInstructorId) {
         formData.append('instructor_id', newCourseInstructorId);
       }
+      if (newCoursePrerequisites) formData.append('prerequisites', newCoursePrerequisites);
+      newCourseDaysOfWeek.forEach(d => formData.append('days_of_week[]', d));
+      if (newCourseTime) formData.append('course_time', newCourseTime);
+      if (newCourseLocation) formData.append('location', newCourseLocation);
       if (newCourseImage) {
         formData.append('image', newCourseImage);
       }
@@ -937,6 +973,10 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
       setNewCourseImage(null);
       setNewCourseImagePreview(null);
       setNewCourseInstructorId('');
+      setNewCoursePrerequisites('');
+      setNewCourseDaysOfWeek([]);
+      setNewCourseTime('');
+      setNewCourseLocation('');
     } catch (err: any) {
       let msg = err?.message || 'خطا در ارتباط با سرور';
       // Include validation errors if available
@@ -970,6 +1010,10 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
   const [editCourseSection, setEditCourseSection] = useState<string[]>(['normal']);
   const [editCourseImage, setEditCourseImage] = useState<File | null>(null);
   const [editCourseImagePreview, setEditCourseImagePreview] = useState<string | null>(null);
+  const [editCoursePrerequisites, setEditCoursePrerequisites] = useState('');
+  const [editCourseDaysOfWeek, setEditCourseDaysOfWeek] = useState<string[]>([]);
+  const [editCourseTime, setEditCourseTime] = useState('');
+  const [editCourseLocation, setEditCourseLocation] = useState('');
 
   // Course Report selection
   const [selectedCourseReport, setSelectedCourseReport] = useState<TutCourse | null>(null);
@@ -1040,10 +1084,14 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
       if (groupId !== null) {
         formData.append('group_id', String(groupId));
       }
-      editCourseSection.forEach(s => formData.append('section[]', s));
+      editCourseSection.forEach(s => formData.append('sections[]', s));
       if (editCourseInstructorId) {
         formData.append('instructor_id', editCourseInstructorId);
       }
+      if (editCoursePrerequisites) formData.append('prerequisites', editCoursePrerequisites);
+      editCourseDaysOfWeek.forEach(d => formData.append('days_of_week[]', d));
+      if (editCourseTime) formData.append('course_time', editCourseTime);
+      if (editCourseLocation) formData.append('location', editCourseLocation);
       if (editCourseImage) {
         formData.append('image', editCourseImage);
       }
@@ -1719,7 +1767,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                             setEditingCourse(c);
                             setEditCourseTitle(c.title);
                             setEditCourseDuration(c.duration);
-                            setEditCourseCost(c.cost.toString());
+                            setEditCourseCost(formatCostInput(c.cost.toString()));
                             setEditCourseCapacity(c.capacity.toString());
                             setEditCourseStartDate(c.startDate);
                             setEditCourseCategory(c.category);
@@ -1728,11 +1776,15 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                             setEditCourseRegStartDate(c.registrationStartDate || '');
                             setEditCourseRegEndDate(c.registrationEndDate || '');
                             setEditCourseActive(c.status === 'active');
-                            setEditCourseSection(Array.isArray(c.section) ? c.section : ['normal']);
+                            setEditCourseSection(Array.isArray(c.sections) ? c.sections : ['normal']);
                             setEditCourseImagePreview(c.image || null);
                             setEditCourseImage(null);
                             setEditCourseInstructorId(c.instructor_id ? String(c.instructor_id) : '');
                             setEditCourseInstructorSearch(c.instructor_name || '');
+                            setEditCoursePrerequisites(c.prerequisites || '');
+                            setEditCourseDaysOfWeek(c.daysOfWeek || []);
+                            setEditCourseTime(c.courseTime || '');
+                            setEditCourseLocation(c.location || '');
                           }}
                           onReport={(c) => { setSelectedCourseReport(c); setReportFetchKey(k => k + 1); }}
                           onToggleStatus={(courseId) => handleToggleCourseStatus(courseId)}
@@ -1804,7 +1856,32 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                       <span className="text-[10px] text-gray-400 dark:text-gray-500 font-sans block mb-1">تاریخ پایان دوره:</span>
                       <span className="font-bold text-gray-800 dark:text-gray-200">{selectedCourseForDetail.endDate ? toPersianDigits(selectedCourseForDetail.endDate) : '---'}</span>
                     </div>
+                    <div className="p-3 bg-gray-50 dark:bg-gray-950 rounded-xl border border-gray-100 dark:border-gray-850">
+                      <span className="text-[10px] text-gray-400 dark:text-gray-500 font-sans block mb-1">ساعت برگزاری:</span>
+                      <span className="font-bold text-gray-800 dark:text-gray-200">{selectedCourseForDetail.courseTime || '---'}</span>
+                    </div>
+                    <div className="p-3 bg-gray-50 dark:bg-gray-950 rounded-xl border border-gray-100 dark:border-gray-850">
+                      <span className="text-[10px] text-gray-400 dark:text-gray-500 font-sans block mb-1">مکان برگزاری:</span>
+                      <span className="font-bold text-gray-800 dark:text-gray-200">{selectedCourseForDetail.location || '---'}</span>
+                    </div>
                   </div>
+
+                  {(selectedCourseForDetail.prerequisites || selectedCourseForDetail.daysOfWeek?.length > 0) && (
+                    <div className="grid grid-cols-2 gap-4 text-xs mb-6">
+                      {selectedCourseForDetail.prerequisites && (
+                        <div className="p-3 bg-gray-50 dark:bg-gray-950 rounded-xl border border-gray-100 dark:border-gray-850 col-span-2">
+                          <span className="text-[10px] text-gray-400 dark:text-gray-500 font-sans block mb-1">پیشنیازها:</span>
+                          <span className="font-bold text-gray-800 dark:text-gray-200">{selectedCourseForDetail.prerequisites}</span>
+                        </div>
+                      )}
+                      {selectedCourseForDetail.daysOfWeek?.length > 0 && (
+                        <div className="p-3 bg-gray-50 dark:bg-gray-950 rounded-xl border border-gray-100 dark:border-gray-850 col-span-2">
+                          <span className="text-[10px] text-gray-400 dark:text-gray-500 font-sans block mb-1">روزهای برگزاری:</span>
+                          <span className="font-bold text-gray-800 dark:text-gray-200">{selectedCourseForDetail.daysOfWeek.join(' - ')}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   <button
                     onClick={() => {
@@ -1813,7 +1890,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                       setEditingCourse(course);
                       setEditCourseTitle(course.title);
                       setEditCourseDuration(course.duration);
-                      setEditCourseCost(course.cost.toString());
+                      setEditCourseCost(formatCostInput(course.cost.toString()));
                       setEditCourseCapacity(course.capacity.toString());
                       setEditCourseStartDate(course.startDate);
                       setEditCourseCategory(course.category);
@@ -1822,11 +1899,15 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                       setEditCourseRegStartDate(course.registrationStartDate || '');
                       setEditCourseRegEndDate(course.registrationEndDate || '');
                       setEditCourseActive(course.status === 'active');
-                      setEditCourseSection(Array.isArray(course.section) ? course.section : ['normal']);
+                      setEditCourseSection(Array.isArray(course.sections) ? course.sections : ['normal']);
                       setEditCourseImagePreview(course.image || null);
                       setEditCourseImage(null);
                       setEditCourseInstructorId(course.instructor_id ? String(course.instructor_id) : '');
                       setEditCourseInstructorSearch(course.instructor_name || '');
+                      setEditCoursePrerequisites(course.prerequisites || '');
+                      setEditCourseDaysOfWeek(course.daysOfWeek || []);
+                      setEditCourseTime(course.courseTime || '');
+                      setEditCourseLocation(course.location || '');
                     }}
                     className="w-full py-3 bg-teal-600 hover:bg-teal-700 text-white font-extrabold text-xs rounded-2xl transition-all cursor-pointer shadow-sm shadow-teal-600/15 flex items-center justify-center gap-1.5"
                   >
@@ -2376,6 +2457,71 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                       ></textarea>
                     </div>
 
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">پیشنیازها</label>
+                        <input
+                          type="text"
+                          value={newCoursePrerequisites}
+                          onChange={(e) => setNewCoursePrerequisites(e.target.value)}
+                          placeholder="مثال: پایتون مقدماتی"
+                          className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">ساعت برگزاری دوره</label>
+                        <input
+                          type="text"
+                          value={newCourseTime}
+                          onChange={(e) => setNewCourseTime(e.target.value)}
+                          placeholder="مثال: ۱۴:۰۰ - ۱۸:۰۰"
+                          className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">مکان برگزاری</label>
+                        <input
+                          type="text"
+                          value={newCourseLocation}
+                          onChange={(e) => setNewCourseLocation(e.target.value)}
+                          placeholder="مثال: سالن کنفرانس شماره ۲"
+                          className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">روزهای برگزاری</label>
+                      <div className="flex flex-wrap gap-3 mt-1">
+                        {[
+                          { value: 'شنبه', label: 'شنبه' },
+                          { value: 'یکشنبه', label: 'یکشنبه' },
+                          { value: 'دوشنبه', label: 'دوشنبه' },
+                          { value: 'سه‌شنبه', label: 'سه‌شنبه' },
+                          { value: 'چهارشنبه', label: 'چهارشنبه' },
+                          { value: 'پنجشنبه', label: 'پنجشنبه' },
+                          { value: 'جمعه', label: 'جمعه' },
+                        ].map(({ value, label }) => (
+                          <label key={value} className="flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              value={value}
+                              checked={newCourseDaysOfWeek.includes(value)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setNewCourseDaysOfWeek([...newCourseDaysOfWeek, value]);
+                                } else {
+                                  setNewCourseDaysOfWeek(newCourseDaysOfWeek.filter(v => v !== value));
+                                }
+                              }}
+                              className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
+                            />
+                            {label}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
                     <div className="pt-4 flex justify-end gap-2.5">
                       <button
                         type="button"
@@ -2652,6 +2798,72 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                       <span className={`text-xs font-bold ${editCourseActive ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400'}`}>
                         {editCourseActive ? 'فعال' : 'غیرفعال'}
                       </span>
+                    </div>
+
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">پیشنیازها</label>
+                        <input
+                          type="text"
+                          value={editCoursePrerequisites}
+                          onChange={(e) => setEditCoursePrerequisites(e.target.value)}
+                          placeholder="مثال: پایتون مقدماتی"
+                          className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">ساعت برگزاری دوره</label>
+                        <input
+                          type="text"
+                          value={editCourseTime}
+                          onChange={(e) => setEditCourseTime(e.target.value)}
+                          placeholder="مثال: ۱۴:۰۰ - ۱۸:۰۰"
+                          className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">مکان برگزاری</label>
+                        <input
+                          type="text"
+                          value={editCourseLocation}
+                          onChange={(e) => setEditCourseLocation(e.target.value)}
+                          placeholder="مثال: سالن کنفرانس شماره ۲"
+                          className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">روزهای برگزاری</label>
+                      <div className="flex flex-wrap gap-3 mt-1">
+                        {[
+                          { value: 'شنبه', label: 'شنبه' },
+                          { value: 'یکشنبه', label: 'یکشنبه' },
+                          { value: 'دوشنبه', label: 'دوشنبه' },
+                          { value: 'سه‌شنبه', label: 'سه‌شنبه' },
+                          { value: 'چهارشنبه', label: 'چهارشنبه' },
+                          { value: 'پنجشنبه', label: 'پنجشنبه' },
+                          { value: 'جمعه', label: 'جمعه' },
+                        ].map(({ value, label }) => (
+                          <label key={value} className="flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              value={value}
+                              checked={editCourseDaysOfWeek.includes(value)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setEditCourseDaysOfWeek([...editCourseDaysOfWeek, value]);
+                                } else {
+                                  setEditCourseDaysOfWeek(editCourseDaysOfWeek.filter(v => v !== value));
+                                }
+                              }}
+                              className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
+                            />
+                            {label}
+                          </label>
+                        ))}
+                      </div>
                     </div>
 
                     <div>
@@ -3372,6 +3584,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
           categories={categories}
           handleAddCategory={handleAddCategory}
           handleDeleteCategory={handleDeleteCategory}
+          handleEditCategory={handleEditCategory}
           courseToDelete={courseToDelete}
           setCourseToDelete={(v: { id: string; title: string } | null) => setCourseToDelete(v as TutCourse | null)}
           confirmDeleteCourse={confirmDeleteCourse}
