@@ -446,6 +446,7 @@ export default function App() {
       return (
         <DashboardModule
           user={user}
+          userRoles={userRoles}
           onNavigate={handleOpenTab}
           openTabsCount={tabs.length}
           pinnedMenus={pinnedMenus}
@@ -461,6 +462,7 @@ export default function App() {
         return user ? (
           <ProfileModule
             user={user}
+            userRoles={userRoles}
             onUpdateUser={(updated) => {
               setUser(updated);
               localStorage.setItem(USER_STRING, JSON.stringify(updated));

@@ -200,7 +200,9 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
   }, [moduleId]);
 
   // Dedicated role for education expert (کارشناس آموزش)
-  const currentUserRole = user?.role || 'admin';
+  // Non-student roles (e.g. pajouheshikol, amouzesh_karshanes) get admin-level access
+  const isStudent = user?.role === 'student';
+  const currentUserRole = isStudent ? 'student' : 'admin';
 
   // Dynamic Categories (Groups) management — synced with backend API
   const [courseGroups, setCourseGroups] = useState<{ id: number; title: string }[]>([]);

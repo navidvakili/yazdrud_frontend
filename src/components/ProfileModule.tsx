@@ -6,9 +6,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import {
   User,
-  Mail,
   Phone,
-  MapPin,
   Save,
   Loader2,
   CheckCircle2,
@@ -22,16 +20,17 @@ import {
 } from 'lucide-react';
 import type { User as UserType, ActiveSession } from '@/src/types';
 import api from '@/src/api';
+import type { RoleInfo } from '@/src/types';
 
 interface ProfileModuleProps {
   user: UserType;
+  userRoles: RoleInfo[];
   onUpdateUser: (user: UserType) => void;
 }
 
-export default function ProfileModule({ user, onUpdateUser }: ProfileModuleProps) {
+export default function ProfileModule({ user, userRoles, onUpdateUser }: ProfileModuleProps) {
   const [fname, setFname] = useState(user.fname);
   const [lname, setLname] = useState(user.lname);
-  const [email, setEmail] = useState(user.email);
   const [mobile, setMobile] = useState(user.mobile);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -93,7 +92,7 @@ export default function ProfileModule({ user, onUpdateUser }: ProfileModuleProps
     setMessage(null);
     setIsSaving(true);
     try {
-      const updated = await api.updateProfile({ fname, lname, email, mobile });
+      const updated = await api.updateProfile({ fname, lname, mobile });
       onUpdateUser(updated);
       setMessage({ type: 'success', text: 'پروفایل با موفقیت به‌روزرسانی شد.' });
     } catch (err: any) {
@@ -103,7 +102,8 @@ export default function ProfileModule({ user, onUpdateUser }: ProfileModuleProps
     }
   };
 
-  const roleLabel = user.role === 'admin' ? 'مدیر سیستم' : user.role === 'professor' ? 'استاد' : 'دانشجو';
+  const roleLabel = userRoles.find(r => r.active === 1)?.label
+    || (user.role === 'admin' ? 'مدیر سیستم' : user.role === 'professor' ? 'استاد' : user.role === 'student' ? 'دانشجو' : user.role);
 
   const formatDateTime = (dateStr: string | null | undefined): string => {
     if (!dateStr) return '—';
@@ -195,19 +195,6 @@ export default function ProfileModule({ user, onUpdateUser }: ProfileModuleProps
                 onChange={(e) => setLname(e.target.value)}
                 className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-850 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20"
               />
-            </div>
-            <div>
-              <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300 mb-1.5">ایمیل</label>
-              <div className="relative">
-                <Mail className="w-4 h-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pr-9 pl-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-850 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20"
-                  dir="ltr"
-                />
-              </div>
             </div>
             <div>
               <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300 mb-1.5">موبایل</label>

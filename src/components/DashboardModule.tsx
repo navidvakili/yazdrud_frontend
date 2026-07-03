@@ -12,7 +12,7 @@ import {
   Pin,
   type LucideIcon,
 } from 'lucide-react';
-import type { User as UserType } from '@/src/types';
+import type { User as UserType, RoleInfo } from '@/src/types';
 import { MAX_TABS } from '@/src/lib/constants';
 
 interface MenuAction {
@@ -25,6 +25,7 @@ interface MenuAction {
 
 interface DashboardModuleProps {
   user: UserType | null;
+  userRoles?: RoleInfo[];
   onNavigate: (id: string, title: string, iconName: string) => void;
   openTabsCount: number;
   pinnedMenus?: string[];
@@ -33,6 +34,7 @@ interface DashboardModuleProps {
 
 export default function DashboardModule({
   user,
+  userRoles = [],
   onNavigate,
   openTabsCount,
   pinnedMenus = [],
@@ -60,7 +62,8 @@ export default function DashboardModule({
 
   const filteredActions = quickActions.filter(a => a.roles.includes(user.role as any));
 
-  const roleLabel = user.role === 'admin' ? 'مدیر سیستم' : user.role === 'professor' ? 'استاد' : 'دانشجو';
+  const roleLabel = userRoles.find(r => r.active === 1)?.label
+    || (user.role === 'admin' ? 'مدیر سیستم' : user.role === 'professor' ? 'استاد' : user.role === 'student' ? 'دانشجو' : user.role);
   const roleColor = user.role === 'admin' ? 'from-rose-500/10 to-amber-500/10' : user.role === 'professor' ? 'from-indigo-500/10 to-teal-500/10' : 'from-teal-500/10 to-indigo-500/10';
 
   return (
