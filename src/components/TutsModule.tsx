@@ -84,6 +84,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
   // ===== Lazy Data Fetching: each section fetches only its own data when activated =====
   const fetchedRef = useRef({ courses: false, registrants: false, surveys: false, vouchers: false });
   const lastFetchModuleRef = useRef<string | null>(null);
+  const coursesTopRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     // When switching between receipts tab (bank-only) and other tabs (all), re-fetch registrants
@@ -329,6 +330,15 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
   // ===== Pagination States =====
   const [listPage, setListPage] = useState(1);
   const listPerPage = 12;
+
+  // Scroll to top of course list when pagination page changes
+  useEffect(() => {
+    if (moduleId === 'tuts-list') {
+      requestAnimationFrame(() => {
+        coursesTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    }
+  }, [listPage, moduleId]);
   const [reportPage, setReportPage] = useState(1);
   const reportPerPage = 15;
 
@@ -1718,6 +1728,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
           ========================================================================= */}
       {moduleId === 'tuts-list' && (
         <div className="space-y-6">
+          <div ref={coursesTopRef} />
           {/* Top filter utility block */}
           <CourseFilterBar
             searchQuery={searchQuery}
