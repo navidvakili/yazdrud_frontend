@@ -11,7 +11,7 @@ import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/TextLayer.css';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import Pagination from './Pagination';
-import type { VoucherFormData, SandboxResult, TutCourse, TutRegistrant, TutVoucher, TutsModuleProps } from './tuts/tuts-types';
+import type { VoucherFormData, SandboxResult, TutCourse, TutRegistrant, TutSurvey, TutVoucher, TutsModuleProps } from './tuts/tuts-types';
 
 // Configure PDF.js worker — served from /public/ to avoid CSP issues with CDN
 pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
@@ -20,6 +20,7 @@ import TutsReports from './tuts/TutsReports';
 import TutsReceipts from './tuts/TutsReceipts';
 import TutsStats from './tuts/TutsStats';
 import TutsSurveys from './tuts/TutsSurveys';
+import TutsSurveysStats from './tuts/TutsSurveysStats';
 import TutsVouchers from './tuts/TutsVouchers';
 import TutsModals from './tuts/TutsModals';
 import ToastNotification from './tuts/ToastNotification';
@@ -29,7 +30,7 @@ import { JalaliDatepicker } from './tuts/JalaliDatepicker';
 import { formatCostInput, mapCourse, mapVoucher, mapRegistrant, toPersianDigits, formatCurrency, toEnglishDigits, normalizePersian as normalizePersianSearch } from './tuts/tuts-utils';
 import {
   useToast, useTutsData, useCourseCRUD, useVoucherOps, usePreRegistration,
-  useReceiptOps, usePagination, useStatsFilter,
+  useSurveyOps, useReceiptOps, usePagination, useStatsFilter,
   useCertificateOps, useInstructorManagement,
 } from './tuts/tuts-hooks';
 
@@ -43,6 +44,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
   // ===== Courses =====
   const [courses, setCourses] = useState<TutCourse[]>([]);
   const [registrants, setRegistrants] = useState<TutRegistrant[]>([]);
+  const [surveys, setSurveys] = useState<TutSurvey[]>([]);
 
   // ===== Instructors for dropdown selection =====
   const [instructors, setInstructors] = useState<{ id: number; name: string; specialty: string | null }[]>([]);
@@ -95,7 +97,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     // Determine which data types are needed based on the active moduleId
     const needsCourses = moduleId === 'tuts-list' || moduleId === 'tuts-reports' || moduleId === 'tuts-stats' || moduleId === 'tuts-surveys' || moduleId === 'tuts-vouchers';
     const needsRegistrants = moduleId === 'tuts-receipts' || moduleId === 'tuts-stats';
-    const needsSurveys = moduleId === 'tuts-surveys';
+    const needsSurveys = moduleId === 'tuts-surveys' || moduleId === 'tuts-surveys-stats';
     const needsVouchers = moduleId === 'tuts-vouchers';
 
     if (needsCourses && !fetchedRef.current.courses) {
@@ -136,17 +138,49 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
           const rows: any[] = res.data || [];
           setIndividualSurveys(rows.map((s: any) => ({
             id: s.id,
-            firstName: s.first_name || '',
-            lastName: s.last_name || '',
-            userName: s.full_name || `${s.first_name || ''} ${s.last_name || ''}`.trim(),
-            userPhone: s.phone_number || '',
-            ipAddress: s.ip_address || '',
-            date: s.created_at ? s.created_at.replace(/-/g, '/') : '',
+            name: s.full_name || `${s.first_name || ''} ${s.last_name || ''}`.trim(),
+            phone: s.phone_number || '',
+            date: s.created_at ? s.created_at.split(' ')[0].replace(/-/g, '/') : '',
             courseTitle: s.course_title || '',
             rating: s.rating || 0,
-            comment: s.comment || '',
-            suggestions: s.suggestions || ''
+            comment: s.comment || s.suggestions || ''
           })));
+          const grouped: Record<string, any> = {};
+          rows.forEach((s: any) => {
+            const key = String(s.course_id);
+            if (!grouped[key]) {
+              grouped[key] = {
+                courseId: key,
+                courseTitle: s.course_title || '',
+                rating: 0,
+                totalResponses: 0,
+                breakdown: { content: 0, lecturer: 0, organization: 0, facilities: 0 },
+                comments: []
+              };
+            }
+            const g = grouped[key];
+            g.totalResponses++;
+            g.rating += s.rating || 0;
+            if (s.comment || s.suggestions) {
+              g.comments.push({
+                user: s.full_name || `${s.first_name || ''} ${s.last_name || ''}`.trim() || 'کاربر',
+                rating: s.rating || 0,
+                comment: s.comment || s.suggestions || '',
+                date: s.created_at ? s.created_at.split(' ')[0].replace(/-/g, '/') : ''
+              });
+            }
+          });
+          const aggregated = Object.values(grouped).map((g: any) => ({
+            ...g,
+            rating: g.totalResponses > 0 ? Math.round(g.rating / g.totalResponses) : 0,
+            breakdown: {
+              content: Math.round((g.rating / g.totalResponses) * 20),
+              lecturer: Math.round((g.rating / g.totalResponses) * 20),
+              organization: Math.round((g.rating / g.totalResponses) * 18),
+              facilities: Math.round((g.rating / g.totalResponses) * 17)
+            }
+          }));
+          setSurveys(aggregated);
         })
         .catch(err => { console.error('Error fetching surveys:', err); fetchedRef.current.surveys = false; })
         .finally(() => setLoadingSurveys(false));
@@ -259,9 +293,6 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     deviceLimit: '',
     firstPurchaseOnly: false,
     groupId: null,
-    isActive: true,
-    maxDiscount: 0,
-    nationalCodes: [],
   });
 
   const [sandboxUserId, setSandboxUserId] = useState('');
@@ -274,7 +305,17 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
   // sandboxDevice, sandboxProvince, sandboxReferrer removed per user request
   const [sandboxResult, setSandboxResult] = useState<SandboxResult | null>(null);
 
-  // States for the survey list
+  // New Survey/Feedback Form States
+  const [surveyFormCourseId, setSurveyFormCourseId] = useState('tut-1');
+  const [surveyFormUser, setSurveyFormUser] = useState(user?.name || '');
+  const [surveyFormRating, setSurveyFormRating] = useState(5);
+  const [surveyFormContent, setSurveyFormContent] = useState(90);
+  const [surveyFormLecturer, setSurveyFormLecturer] = useState(95);
+  const [surveyFormOrg, setSurveyFormOrg] = useState(85);
+  const [surveyFormFacilities, setSurveyFormFacilities] = useState(80);
+  const [surveyFormComment, setSurveyFormComment] = useState('');
+
+  // States for the survey list and statistical reporting
   const [individualSurveys, setIndividualSurveys] = useState<any[]>([]);
 
   const [surveySearch, setSurveySearch] = useState('');
@@ -371,9 +412,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
         group_id: newVoucher.groupId || null,
         start_date: newVoucher.validFrom || '',
         finish_date: newVoucher.validUntil || '',
-        is_active: newVoucher.isActive,
-        max_discount: newVoucher.maxDiscount > 0 ? newVoucher.maxDiscount : null,
-        national_code: newVoucher.nationalCodes.filter(Boolean).join(',') || null,
+        is_active: true,
       };
 
       const res = await api.createCoupon(payload);
@@ -407,9 +446,6 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
       deviceLimit: '',
       firstPurchaseOnly: false,
       groupId: null,
-      isActive: true,
-      maxDiscount: 0,
-      nationalCodes: [],
     });
     setVoucherActiveTab('list');
   };
@@ -431,9 +467,6 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
       }
       if (data.courseId !== undefined) payload.course_id = data.courseId === 'all' ? null : Number(data.courseId);
       if (data.group_id !== undefined) payload.group_id = data.group_id ? Number(data.group_id) : null;
-      if (data.isActive !== undefined) payload.is_active = data.isActive;
-      if (data.maxDiscount !== undefined) payload.max_discount = data.maxDiscount > 0 ? data.maxDiscount : null;
-      if (data.nationalCodes !== undefined) payload.national_code = data.nationalCodes.filter(Boolean).join(',') || null;
 
       const res = await api.updateCoupon(Number(id), payload);
 
@@ -617,27 +650,6 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     }
     checks.push({ title: 'تشخیص فراگیر جدید (اولین خرید)', passed: firstPassed, desc: firstDesc });
 
-    // Check: National code restriction
-    let ncPassed = true;
-    let ncDesc = 'محدودیت کد ملی ندارد.';
-    if (vouch.nationalCodes && vouch.nationalCodes.length > 0) {
-      const userId = sandboxUserId.trim();
-      if (!userId) {
-        ncPassed = false;
-        ncDesc = `⚠️ این بن مختص کدهای ملی "${vouch.nationalCodes.join('، ')}" است (کد ملی وارد نشده)`;
-      } else if (!vouch.nationalCodes.includes(userId)) {
-        ncPassed = false;
-        ncDesc = `غیرمجاز (کد ملی واردشده در لیست کدهای مجاز ${vouch.nationalCodes.join('، ')} نیست)`;
-      } else {
-        ncDesc = `✅ مجاز (کد ملی در لیست مجاز است)`;
-      }
-    }
-    checks.push({ title: 'محدودیت کد ملی', passed: ncPassed, desc: ncDesc });
-    if (!ncPassed) {
-      isValid = false;
-      failReason = failReason || 'این بن تخفیف فقط برای کدهای ملی مشخص‌شده قابل استفاده است.';
-    }
-
     // Final calculation
     let discount = 0;
     if (isValid) {
@@ -645,10 +657,6 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
         discount = Math.round((course.cost * vouch.discountPercent) / 100);
       } else if (vouch.discountAmount) {
         discount = Math.min(course.cost, vouch.discountAmount);
-      }
-      // Apply max_discount cap
-      if (vouch.maxDiscount && discount > vouch.maxDiscount) {
-        discount = vouch.maxDiscount;
       }
     }
 
@@ -681,6 +689,82 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     } else {
       showToast(`شبیه‌سازی انجام شد: بن غیرمعتبر است. علت: ${failReason}`, 'error');
     }
+  };
+
+  const handleSubmitSurvey = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!surveyFormComment.trim()) {
+      showToast('لطفاً دیدگاه متنی خود را وارد کنید.', 'error');
+      return;
+    }
+    const targetCourse = courses.find(c => c.id === surveyFormCourseId);
+    if (!targetCourse) return;
+
+    const existingIndex = surveys.findIndex(s => s.courseId === surveyFormCourseId);
+    const newComment = {
+      user: surveyFormUser || 'کاربر مهمان پورتال',
+      rating: surveyFormRating,
+      comment: surveyFormComment,
+      date: '۱۴۰۵/۰۳/۲۳'
+    };
+
+    if (existingIndex > -1) {
+      const updatedSurveys = [...surveys];
+      const s = updatedSurveys[existingIndex];
+      const oldTotal = s.totalResponses;
+      const newTotal = oldTotal + 1;
+      const newRating = parseFloat(((s.rating * oldTotal + surveyFormRating) / newTotal).toFixed(1));
+      const newBreakdown = {
+        content: Math.round((s.breakdown.content * oldTotal + surveyFormContent) / newTotal),
+        lecturer: Math.round((s.breakdown.lecturer * oldTotal + surveyFormLecturer) / newTotal),
+        organization: Math.round((s.breakdown.organization * oldTotal + surveyFormOrg) / newTotal),
+        facilities: Math.round((s.breakdown.facilities * oldTotal + surveyFormFacilities) / newTotal),
+      };
+
+      updatedSurveys[existingIndex] = {
+        ...s,
+        rating: newRating,
+        totalResponses: newTotal,
+        breakdown: newBreakdown,
+        comments: [newComment, ...s.comments]
+      };
+      setSurveys(updatedSurveys);
+    } else {
+      const newSurvey: TutSurvey = {
+        courseId: surveyFormCourseId,
+        courseTitle: targetCourse.title,
+        rating: surveyFormRating,
+        totalResponses: 1,
+        breakdown: {
+          content: surveyFormContent,
+          lecturer: surveyFormLecturer,
+          organization: surveyFormOrg,
+          facilities: surveyFormFacilities
+        },
+        comments: [newComment]
+      };
+      setSurveys([newSurvey, ...surveys]);
+    }
+
+    const newIndividual = {
+      id: individualSurveys.length > 0 ? Math.max(...individualSurveys.map(x => x.id)) + 1 : 1,
+      name: surveyFormUser || 'کاربر مهمان پورتال',
+      phone: '۰۹۱۲۰۰۰۰۰۰۰',
+      date: '۱۴۰۵/۰۳/۲۳ ۱۲:۰۰',
+      courseTitle: targetCourse.title,
+      rating: surveyFormRating,
+      comment: surveyFormComment,
+      answers: {
+        content: surveyFormContent,
+        lecturer: surveyFormLecturer,
+        organization: surveyFormOrg,
+        facilities: surveyFormFacilities
+      }
+    };
+    setIndividualSurveys(prev => [newIndividual, ...prev]);
+
+    showToast('دیدگاه و ارزیابی شما با موفقیت ثبت شد و در آمارهای پورتال اعمال گردید.', 'success');
+    setSurveyFormComment('');
   };
 
   const handleDeleteCategory = async (catToDelete: string) => {
@@ -780,10 +864,6 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
   const [newCourseSection, setNewCourseSection] = useState<string[]>(['normal']);
   const [newCourseImage, setNewCourseImage] = useState<File | null>(null);
   const [newCourseImagePreview, setNewCourseImagePreview] = useState<string | null>(null);
-  const [newCourseDaysOfWeek, setNewCourseDaysOfWeek] = useState<string[]>([]);
-  const [newCourseTime, setNewCourseTime] = useState('');
-  const [newCourseLocation, setNewCourseLocation] = useState('');
-  const [newCoursePrerequisites, setNewCoursePrerequisites] = useState('');
 
   const handleCreateNewCourse = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -825,19 +905,13 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
       if (groupId !== null) {
         formData.append('group_id', String(groupId));
       }
-      newCourseSection.forEach(s => formData.append('sections[]', s));
+      newCourseSection.forEach(s => formData.append('section[]', s));
       if (newCourseInstructorId) {
         formData.append('instructor_id', newCourseInstructorId);
       }
       if (newCourseImage) {
         formData.append('image', newCourseImage);
       }
-      if (newCourseDaysOfWeek.length > 0) {
-        newCourseDaysOfWeek.forEach(day => formData.append('days_of_week[]', day));
-      }
-      if (newCourseTime) formData.append('course_time', newCourseTime);
-      if (newCourseLocation) formData.append('location', newCourseLocation);
-      if (newCoursePrerequisites) formData.append('prerequisites', newCoursePrerequisites);
 
       const created = await api.createCourse(formData);
 
@@ -861,10 +935,6 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
       setNewCourseImage(null);
       setNewCourseImagePreview(null);
       setNewCourseInstructorId('');
-      setNewCourseDaysOfWeek([]);
-      setNewCourseTime('');
-      setNewCourseLocation('');
-      setNewCoursePrerequisites('');
     } catch (err: any) {
       let msg = err?.message || 'خطا در ارتباط با سرور';
       // Include validation errors if available
@@ -898,10 +968,6 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
   const [editCourseSection, setEditCourseSection] = useState<string[]>(['normal']);
   const [editCourseImage, setEditCourseImage] = useState<File | null>(null);
   const [editCourseImagePreview, setEditCourseImagePreview] = useState<string | null>(null);
-  const [editCourseDaysOfWeek, setEditCourseDaysOfWeek] = useState<string[]>([]);
-  const [editCourseTime, setEditCourseTime] = useState('');
-  const [editCourseLocation, setEditCourseLocation] = useState('');
-  const [editCoursePrerequisites, setEditCoursePrerequisites] = useState('');
 
   // Course Report selection
   const [selectedCourseReport, setSelectedCourseReport] = useState<TutCourse | null>(null);
@@ -972,19 +1038,13 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
       if (groupId !== null) {
         formData.append('group_id', String(groupId));
       }
-      editCourseSection.forEach(s => formData.append('sections[]', s));
+      editCourseSection.forEach(s => formData.append('section[]', s));
       if (editCourseInstructorId) {
         formData.append('instructor_id', editCourseInstructorId);
       }
       if (editCourseImage) {
         formData.append('image', editCourseImage);
       }
-      if (editCourseDaysOfWeek.length > 0) {
-        editCourseDaysOfWeek.forEach(day => formData.append('days_of_week[]', day));
-      }
-      if (editCourseTime) formData.append('course_time', editCourseTime);
-      if (editCourseLocation) formData.append('location', editCourseLocation);
-      if (editCoursePrerequisites) formData.append('prerequisites', editCoursePrerequisites);
       // Use POST with _method=PUT for form data with file upload
       formData.append('_method', 'PUT');
 
@@ -1569,6 +1629,11 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     }
   };
 
+  // -----------------------------------------
+  // 4. TUTS-STATS (CHART SELECTION & INTERACTIVE STATE)
+  // -----------------------------------------
+  const [selectedStatCourse, setSelectedStatCourse] = useState<string>('all');
+
   const currentModuleTitle = () => {
     switch (moduleId) {
       case 'tuts-list': return 'دوره های آموزشی';
@@ -1576,6 +1641,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
       case 'tuts-receipts': return 'مدیریت فیش های بانکی';
       case 'tuts-stats': return 'گزارشات آماری دوره‌های آموزشی';
       case 'tuts-surveys': return 'مدیریت نظرسنجی های دوره های آموزشی';
+      case 'tuts-surveys-stats': return 'آمار و نمودارهای نظرسنجی';
       case 'tuts-vouchers': return 'مدیریت و شرایط بن خرید';
       default: return 'مدیریت دوره‌های آموزشی';
     }
@@ -1660,15 +1726,11 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                             setEditCourseRegStartDate(c.registrationStartDate || '');
                             setEditCourseRegEndDate(c.registrationEndDate || '');
                             setEditCourseActive(c.status === 'active');
-                            setEditCourseSection(Array.isArray(c.sections) ? c.sections : ['normal']);
+                            setEditCourseSection(Array.isArray(c.section) ? c.section : ['normal']);
                             setEditCourseImagePreview(c.image || null);
                             setEditCourseImage(null);
                             setEditCourseInstructorId(c.instructor_id ? String(c.instructor_id) : '');
                             setEditCourseInstructorSearch(c.instructor_name || '');
-                            setEditCourseDaysOfWeek(c.daysOfWeek || []);
-                            setEditCourseTime(c.courseTime || '');
-                            setEditCourseLocation(c.location || '');
-                            setEditCoursePrerequisites(c.prerequisites || '');
                           }}
                           onReport={(c) => { setSelectedCourseReport(c); setReportFetchKey(k => k + 1); }}
                           onToggleStatus={(courseId) => handleToggleCourseStatus(courseId)}
@@ -1714,26 +1776,9 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                     {selectedCourseForDetail.category}
                   </span>
 
-                  <h3 className="text-base font-black text-gray-900 dark:text-white leading-snug mb-3">
+                  <h3 className="text-base font-black text-gray-900 dark:text-white leading-snug mb-4">
                     {selectedCourseForDetail.title}
                   </h3>
-
-                  {/* Course Image in Detail Modal */}
-                  <div className="relative w-full aspect-[403/226] mb-4 rounded-2xl overflow-hidden bg-gray-100 dark:bg-gray-800 border border-gray-100 dark:border-gray-800">
-                    {selectedCourseForDetail.image ? (
-                      <img
-                        src={selectedCourseForDetail.image}
-                        alt={selectedCourseForDetail.title}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <svg className="w-12 h-12 text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                      </div>
-                    )}
-                  </div>
 
                   <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed text-justify mb-5 bg-gray-50 dark:bg-gray-950 p-4 rounded-2xl border border-gray-100 dark:border-gray-850">
                     {selectedCourseForDetail.description}
@@ -1753,30 +1798,6 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                       <span className="font-bold text-gray-800 dark:text-gray-200">{toPersianDigits(selectedCourseForDetail.duration)} ساعت</span>
                       <span className="font-bold text-gray-800 dark:text-gray-200">{toPersianDigits(selectedCourseForDetail.startDate)}</span>
                     </div>
-                    {selectedCourseForDetail.daysOfWeek.length > 0 && (
-                      <div className="p-3 bg-gray-50 dark:bg-gray-950 rounded-xl border border-gray-100 dark:border-gray-850">
-                        <span className="text-[10px] text-gray-400 dark:text-gray-500 font-sans block mb-1">روزهای برگزاری:</span>
-                        <span className="font-bold text-gray-800 dark:text-gray-200">{selectedCourseForDetail.daysOfWeek.join('، ')}</span>
-                      </div>
-                    )}
-                    {selectedCourseForDetail.courseTime && (
-                      <div className="p-3 bg-gray-50 dark:bg-gray-950 rounded-xl border border-gray-100 dark:border-gray-850">
-                        <span className="text-[10px] text-gray-400 dark:text-gray-500 font-sans block mb-1">ساعت برگزاری:</span>
-                        <span className="font-bold text-gray-800 dark:text-gray-200">{selectedCourseForDetail.courseTime}</span>
-                      </div>
-                    )}
-                    {selectedCourseForDetail.location && (
-                      <div className="p-3 bg-gray-50 dark:bg-gray-950 rounded-xl border border-gray-100 dark:border-gray-850">
-                        <span className="text-[10px] text-gray-400 dark:text-gray-500 font-sans block mb-1">مکان برگزاری:</span>
-                        <span className="font-bold text-gray-800 dark:text-gray-200">{selectedCourseForDetail.location}</span>
-                      </div>
-                    )}
-                    {selectedCourseForDetail.prerequisites && (
-                      <div className="p-3 bg-gray-50 dark:bg-gray-950 rounded-xl border border-gray-100 dark:border-gray-850">
-                        <span className="text-[10px] text-gray-400 dark:text-gray-500 font-sans block mb-1">پیش‌نیازها:</span>
-                        <span className="font-bold text-gray-800 dark:text-gray-200">{selectedCourseForDetail.prerequisites.split('\n').join('، ')}</span>
-                      </div>
-                    )}
                     <div className="p-3 bg-gray-50 dark:bg-gray-950 rounded-xl border border-gray-100 dark:border-gray-850">
                       <span className="text-[10px] text-gray-400 dark:text-gray-500 font-sans block mb-1">تاریخ پایان دوره:</span>
                       <span className="font-bold text-gray-800 dark:text-gray-200">{selectedCourseForDetail.endDate ? toPersianDigits(selectedCourseForDetail.endDate) : '---'}</span>
@@ -1804,10 +1825,6 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                       setEditCourseImage(null);
                       setEditCourseInstructorId(course.instructor_id ? String(course.instructor_id) : '');
                       setEditCourseInstructorSearch(course.instructor_name || '');
-                      setEditCourseDaysOfWeek(course.daysOfWeek || []);
-                      setEditCourseTime(course.courseTime || '');
-                      setEditCourseLocation(course.location || '');
-                      setEditCoursePrerequisites(course.prerequisites || '');
                     }}
                     className="w-full py-3 bg-teal-600 hover:bg-teal-700 text-white font-extrabold text-xs rounded-2xl transition-all cursor-pointer shadow-sm shadow-teal-600/15 flex items-center justify-center gap-1.5"
                   >
@@ -2316,19 +2333,6 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                               onChange={(e) => {
                                 const file = e.target.files?.[0];
                                 if (file) {
-                                  // Client-side validation
-                                  const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
-                                  const maxSize = 2 * 1024 * 1024; // 2MB
-                                  if (!allowedTypes.includes(file.type)) {
-                                    showToast('فرمت تصویر باید jpeg, png یا gif باشد.', 'error');
-                                    e.target.value = '';
-                                    return;
-                                  }
-                                  if (file.size > maxSize) {
-                                    showToast('حجم تصویر نباید بیشتر از ۲ مگابایت باشد.', 'error');
-                                    e.target.value = '';
-                                    return;
-                                  }
                                   setNewCourseImage(file);
                                   setNewCourseImagePreview(URL.createObjectURL(file));
                                 }
@@ -2357,64 +2361,6 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                           )}
                         </div>
                       </div>
-                    </div>
-
-                    {/* Days of week & time & location */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                      <div>
-                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">روزهای برگزاری</label>
-                        <div className="flex flex-wrap gap-2 mt-1">
-                          {['شنبه','یکشنبه','دوشنبه','سه‌شنبه','چهارشنبه','پنج‌شنبه','جمعه'].map((day) => (
-                            <label key={day} className="flex items-center gap-1 text-xs text-gray-700 dark:text-gray-300 cursor-pointer">
-                              <input
-                                type="checkbox"
-                                value={day}
-                                checked={newCourseDaysOfWeek.includes(day)}
-                                onChange={(e) => {
-                                  if (e.target.checked) {
-                                    setNewCourseDaysOfWeek([...newCourseDaysOfWeek, day]);
-                                  } else {
-                                    setNewCourseDaysOfWeek(newCourseDaysOfWeek.filter(d => d !== day));
-                                  }
-                                }}
-                                className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
-                              />
-                              {day}
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">ساعت برگزاری</label>
-                        <input
-                          type="text"
-                          value={newCourseTime}
-                          onChange={(e) => setNewCourseTime(e.target.value)}
-                          placeholder="مثال: ۱۴:۰۰ الی ۱۸:۰۰"
-                          className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">مکان برگزاری</label>
-                        <input
-                          type="text"
-                          value={newCourseLocation}
-                          onChange={(e) => setNewCourseLocation(e.target.value)}
-                          placeholder="مثال: دانشگاه علم و هنر، طبقه سوم"
-                          className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">پیش‌نیازهای دوره</label>
-                      <textarea
-                        value={newCoursePrerequisites}
-                        onChange={(e) => setNewCoursePrerequisites(e.target.value)}
-                        placeholder="هر پیش‌نیاز را در یک خط جداگانه وارد کنید..."
-                        rows={2}
-                        className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none resize-none font-sans"
-                      ></textarea>
                     </div>
 
                     <div>
@@ -2594,19 +2540,6 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                             onChange={(e) => {
                               const file = e.target.files?.[0];
                               if (file) {
-                                // Client-side validation
-                                const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
-                                const maxSize = 2 * 1024 * 1024; // 2MB
-                                if (!allowedTypes.includes(file.type)) {
-                                  showToast('فرمت تصویر باید jpeg, png یا gif باشد.', 'error');
-                                  e.target.value = '';
-                                  return;
-                                }
-                                if (file.size > maxSize) {
-                                  showToast('حجم تصویر نباید بیشتر از ۲ مگابایت باشد.', 'error');
-                                  e.target.value = '';
-                                  return;
-                                }
                                 setEditCourseImage(file);
                                 setEditCourseImagePreview(URL.createObjectURL(file));
                               }
@@ -2717,64 +2650,6 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
                       <span className={`text-xs font-bold ${editCourseActive ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400'}`}>
                         {editCourseActive ? 'فعال' : 'غیرفعال'}
                       </span>
-                    </div>
-
-                    {/* Edit: Days of week & time & location */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                      <div>
-                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">روزهای برگزاری</label>
-                        <div className="flex flex-wrap gap-2 mt-1">
-                          {['شنبه','یکشنبه','دوشنبه','سه‌شنبه','چهارشنبه','پنج‌شنبه','جمعه'].map((day) => (
-                            <label key={day} className="flex items-center gap-1 text-xs text-gray-700 dark:text-gray-300 cursor-pointer">
-                              <input
-                                type="checkbox"
-                                value={day}
-                                checked={editCourseDaysOfWeek.includes(day)}
-                                onChange={(e) => {
-                                  if (e.target.checked) {
-                                    setEditCourseDaysOfWeek([...editCourseDaysOfWeek, day]);
-                                  } else {
-                                    setEditCourseDaysOfWeek(editCourseDaysOfWeek.filter(d => d !== day));
-                                  }
-                                }}
-                                className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
-                              />
-                              {day}
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">ساعت برگزاری</label>
-                        <input
-                          type="text"
-                          value={editCourseTime}
-                          onChange={(e) => setEditCourseTime(e.target.value)}
-                          placeholder="مثال: ۱۴:۰۰ الی ۱۸:۰۰"
-                          className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">مکان برگزاری</label>
-                        <input
-                          type="text"
-                          value={editCourseLocation}
-                          onChange={(e) => setEditCourseLocation(e.target.value)}
-                          placeholder="مثال: دانشگاه علم و هنر، طبقه سوم"
-                          className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">پیش‌نیازهای دوره</label>
-                      <textarea
-                        value={editCoursePrerequisites}
-                        onChange={(e) => setEditCoursePrerequisites(e.target.value)}
-                        placeholder="هر پیش‌نیاز را در یک خط جداگانه وارد کنید..."
-                        rows={2}
-                        className="w-full text-xs p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none resize-none font-sans"
-                      ></textarea>
                     </div>
 
                     <div>
@@ -3370,6 +3245,31 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
 
       {moduleId === 'tuts-surveys' && (
         <div className="space-y-6">
+          {/* Statistics section */}
+          <TutsSurveysStats
+            courses={courses}
+            surveys={surveys}
+            surveyFormCourseId={surveyFormCourseId}
+            setSurveyFormCourseId={setSurveyFormCourseId}
+            surveyFormUser={surveyFormUser}
+            setSurveyFormUser={setSurveyFormUser}
+            surveyFormRating={surveyFormRating}
+            setSurveyFormRating={setSurveyFormRating}
+            surveyFormContent={surveyFormContent}
+            setSurveyFormContent={setSurveyFormContent}
+            surveyFormLecturer={surveyFormLecturer}
+            setSurveyFormLecturer={setSurveyFormLecturer}
+            surveyFormOrg={surveyFormOrg}
+            setSurveyFormOrg={setSurveyFormOrg}
+            surveyFormFacilities={surveyFormFacilities}
+            setSurveyFormFacilities={setSurveyFormFacilities}
+            surveyFormComment={surveyFormComment}
+            setSurveyFormComment={setSurveyFormComment}
+            selectedStatCourse={selectedStatCourse}
+            setSelectedStatCourse={setSelectedStatCourse}
+            handleSubmitSurvey={handleSubmitSurvey}
+          />
+          {/* Survey list section */}
           <TutsSurveys
             currentUserRole={currentUserRole}
             individualSurveys={individualSurveys}
@@ -3384,8 +3284,36 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
             setSurveyPage={setSurveyPage}
             selectedSurveyDetails={selectedSurveyDetails}
             setSelectedSurveyDetails={setSelectedSurveyDetails}
+            onOpenTab={(id: string) => onOpenTab(id, '', '', false)}
+            courses={courses}
           />
         </div>
+      )}
+
+      {moduleId === 'tuts-surveys-stats' && (
+        <TutsSurveysStats
+          courses={courses}
+          surveys={surveys}
+          surveyFormCourseId={surveyFormCourseId}
+          setSurveyFormCourseId={setSurveyFormCourseId}
+          surveyFormUser={surveyFormUser}
+          setSurveyFormUser={setSurveyFormUser}
+          surveyFormRating={surveyFormRating}
+          setSurveyFormRating={setSurveyFormRating}
+          surveyFormContent={surveyFormContent}
+          setSurveyFormContent={setSurveyFormContent}
+          surveyFormLecturer={surveyFormLecturer}
+          setSurveyFormLecturer={setSurveyFormLecturer}
+          surveyFormOrg={surveyFormOrg}
+          setSurveyFormOrg={setSurveyFormOrg}
+          surveyFormFacilities={surveyFormFacilities}
+          setSurveyFormFacilities={setSurveyFormFacilities}
+          surveyFormComment={surveyFormComment}
+          setSurveyFormComment={setSurveyFormComment}
+          selectedStatCourse={selectedStatCourse}
+          setSelectedStatCourse={setSelectedStatCourse}
+          handleSubmitSurvey={handleSubmitSurvey}
+        />
       )}
 
       {moduleId === 'tuts-vouchers' && (
@@ -3430,7 +3358,6 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
           handleUpdateVoucher={handleUpdateVoucher}
           handleDeleteVoucher={handleDeleteVoucher}
           openDeleteConfirm={openDeleteConfirm}
-          showToast={showToast}
         />
       )}
 
