@@ -6,6 +6,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { AnimatePresence } from 'motion/react';
 import {
   Bell, HelpCircle, MessageSquare, LogOut,
+  type LucideIcon,
 } from 'lucide-react';
 import type { User as UserType, Tab, PortalNotification, NavItem, RoleInfo } from '@/src/types';
 import api from '@/src/api';
@@ -288,15 +289,39 @@ export default function App() {
 
   // Flat list of all menu items for dashboard quick access (derived from API categories)
   const allMenuItems = useMemo(() => {
-    return menuCategories.flatMap(cat =>
-      cat.submenus.map(sub => ({
-        id: sub.targetId,
-        title: sub.title,
-        icon: resolveIcon(sub.iconName),
-        desc: cat.title,
-        roles: ['student', 'professor', 'admin'] as const,
-      }))
-    );
+    const items: Array<{
+      id: string;
+      title: string;
+      icon: LucideIcon;
+      desc: string;
+      roles: readonly ('student' | 'professor' | 'admin')[];
+    }> = [];
+
+    menuCategories.forEach(cat => {
+      // Include submenu items (children)
+      cat.submenus.forEach(sub => {
+        items.push({
+          id: sub.targetId,
+          title: sub.title,
+          icon: resolveIcon(sub.iconName),
+          desc: cat.title,
+          roles: ['student', 'professor', 'admin'] as const,
+        });
+      });
+
+      // Include direct/top-level items (categories without children)
+      if (cat.targetId && cat.submenus.length === 0) {
+        items.push({
+          id: cat.targetId,
+          title: cat.title,
+          icon: cat.icon,
+          desc: cat.title,
+          roles: ['student', 'professor', 'admin'] as const,
+        });
+      }
+    });
+
+    return items;
   }, [menuCategories]);
 
   // ========== Handlers ==========

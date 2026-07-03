@@ -296,6 +296,9 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     deviceLimit: '',
     firstPurchaseOnly: false,
     groupId: null,
+    isActive: true,
+    maxDiscount: 0,
+    nationalCodes: [],
   });
 
   const [sandboxUserId, setSandboxUserId] = useState('');
@@ -458,6 +461,9 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
       deviceLimit: '',
       firstPurchaseOnly: false,
       groupId: null,
+      isActive: true,
+      maxDiscount: 0,
+      nationalCodes: [],
     });
     setVoucherActiveTab('list');
   };
@@ -3509,8 +3515,6 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
             setSurveyPage={setSurveyPage}
             selectedSurveyDetails={selectedSurveyDetails}
             setSelectedSurveyDetails={setSelectedSurveyDetails}
-            onOpenTab={(id: string) => onOpenTab(id, '', '', false)}
-            courses={courses}
           />
         </div>
       )}
