@@ -244,7 +244,7 @@ class ApiService {
   }
 
   /**
-   * Export registrations as CSV based on current filters.
+   * Export registrations as XLSX based on current filters.
    */
   async exportRegistrations(params?: { course_id?: string; search?: string; year?: string; status?: string; payment_method?: string; refunded?: string }): Promise<void> {
     const query = new URLSearchParams();
@@ -267,7 +267,7 @@ class ApiService {
     const downloadUrl = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = downloadUrl;
-    a.download = 'registrations-report.csv';
+    a.download = 'registrations-report.xlsx';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
