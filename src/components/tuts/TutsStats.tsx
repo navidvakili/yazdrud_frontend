@@ -122,8 +122,6 @@ export default function TutsStats(props: TutsStatsProps) {
         };
     })();
 
-    const totalGrossRevenue = courses.reduce((sum, c) => sum + (c.enrolled * c.cost), 0);
-
     // Year options: from 1400 to current Jalali year
     const currentJalaliYear = new Date().getFullYear() - 621; // approx conversion
     const yearOptions: string[] = [];
@@ -344,12 +342,11 @@ export default function TutsStats(props: TutsStatsProps) {
                 </div>
 
                 {/* Quick Metrics */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {[
                         { label: 'تعداد کل کارگاه‌ها', value: `${toPersianDigits(courses.length)} دوره فعال`, cls: '' },
                         { label: 'میانگین ثبت‌نامی‌ها', value: `${toPersianDigits(Math.round(totalEnrolledAllWorkshops / courses.length))} دانشجو در کلاس`, cls: 'text-teal-600 dark:text-teal-400' },
                         { label: 'درصد پوشش کل ظرفیت', value: `${toPersianDigits(Math.round((totalEnrolledAllWorkshops / totalCapacityAllWorkshops) * 100))}٪`, cls: 'text-indigo-500' },
-                        { label: 'مجموع گردش ناخالص', value: `${toPersianDigits((totalGrossRevenue / 10).toLocaleString('fa-IR'))} تومان`, cls: 'text-emerald-600 dark:text-emerald-400' },
                     ].map((kpi, i) => (
                         <div key={i} className="p-4 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-850 rounded-2xl">
                             <span className="text-[10px] text-gray-400 block font-bold mb-1">{kpi.label}</span>
@@ -365,22 +362,43 @@ export default function TutsStats(props: TutsStatsProps) {
                             <TrendingUp className="w-4 h-4 text-teal-600" />
                             توزیع آمار کل ثبت‌نامی‌ها نسبت به ظرفیت کلاس‌ها
                         </h5>
-                        <div className="space-y-4 max-h-[400px] overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700 scrollbar-track-transparent pr-1">
+                        <div className="space-y-4 max-h-[600px] overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700 scrollbar-track-transparent pr-1">
                             {courses.map(c => {
                                 const percent = (c.enrolled / c.capacity) * 100;
                                 return (
-                                    <div key={c.id} className="space-y-1.5">
-                                        <div className="flex justify-between items-center text-[10.5px]">
-                                            <span className="font-bold text-gray-700 dark:text-gray-300 truncate max-w-[280px]">{c.title}</span>
-                                            <span className="text-gray-400">{toPersianDigits(c.enrolled)} از {toPersianDigits(c.capacity)} نفر ({toPersianDigits(Math.round(percent))}٪)</span>
+                                    <div key={c.id} className="p-4 bg-gray-50/50 dark:bg-gray-950/30 rounded-2xl border border-gray-100 dark:border-gray-800/60 space-y-3">
+                                        {/* Header: title + lecturer + status */}
+                                        <div className="flex items-start justify-between gap-2">
+                                            <div className="min-w-0">
+                                                <span className="font-black text-gray-900 dark:text-white text-sm block truncate">{c.title}</span>
+                                                <span className="text-[10px] text-gray-400 block mt-0.5">مدرس: {c.lecturer}</span>
+                                            </div>
+                                            <span className={`shrink-0 px-2 py-1 rounded-full text-[9px] font-extrabold ${c.status === 'active' ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-500/10' :
+                                                c.status === 'completed' ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-400 border border-indigo-500/10' :
+                                                    'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'}`}>
+                                                {c.status === 'active' ? 'در حال ثبت‌نام' : c.status === 'completed' ? 'پایان کلاس مهارتی' : 'پایان یافته و بسته شده'}
+                                            </span>
                                         </div>
-                                        <div className="w-full h-3 rounded-full bg-gray-50 dark:bg-gray-950 overflow-hidden relative">
-                                            <motion.div initial={{ width: 0 }} animate={{ width: `${Math.min(100, percent)}%` }}
-                                                transition={{ duration: 1, ease: 'easeOut' }}
-                                                className={`absolute h-full rounded-full ${percent >= 100 ? 'bg-gradient-to-r from-emerald-500 to-teal-500' :
-                                                    percent >= 75 ? 'bg-gradient-to-r from-teal-500 to-indigo-500' :
-                                                        'bg-gradient-to-r from-indigo-500 to-purple-500'}`}>
-                                            </motion.div>
+                                        {/* Meta row: category + cost */}
+                                        <div className="flex items-center gap-4 text-[10px]">
+                                            <span className="text-gray-500 font-medium">{c.category}</span>
+                                            <span className="text-gray-400">•</span>
+                                            <span className="text-gray-500">هزینه: {toPersianDigits((c.cost / 10).toLocaleString('fa-IR'))} تومان</span>
+                                        </div>
+                                        {/* Progress bar */}
+                                        <div className="space-y-1.5">
+                                            <div className="flex justify-between items-center text-[10.5px]">
+                                                <span className="font-bold text-gray-700 dark:text-gray-300">ظرفیت / ثبت‌نامی</span>
+                                                <span className="text-gray-400">{toPersianDigits(c.enrolled)} از {toPersianDigits(c.capacity)} نفر ({toPersianDigits(Math.round(percent))}٪)</span>
+                                            </div>
+                                            <div className="w-full h-3 rounded-full bg-gray-50 dark:bg-gray-950 overflow-hidden relative">
+                                                <motion.div initial={{ width: 0 }} animate={{ width: `${Math.min(100, percent)}%` }}
+                                                    transition={{ duration: 1, ease: 'easeOut' }}
+                                                    className={`absolute h-full rounded-full ${percent >= 100 ? 'bg-gradient-to-r from-emerald-500 to-teal-500' :
+                                                        percent >= 75 ? 'bg-gradient-to-r from-teal-500 to-indigo-500' :
+                                                            'bg-gradient-to-r from-indigo-500 to-purple-500'}`}>
+                                                </motion.div>
+                                            </div>
                                         </div>
                                     </div>
                                 );
@@ -413,59 +431,6 @@ export default function TutsStats(props: TutsStatsProps) {
                                 );
                             })}
                         </div>
-                    </div>
-                </div>
-
-                {/* Course breakdown table */}
-                <div className="p-5 rounded-3xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800/80 shadow-xs">
-                    <h5 className="text-xs font-black text-gray-900 dark:text-white mb-4 flex items-center gap-1.5">
-                        <FileText className="w-4 h-4 text-emerald-600" />
-                        جدول جامع موازنه‌های آماری و درآمدی کارگاه‌ها
-                    </h5>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-right text-xs">
-                            <thead>
-                                <tr className="bg-gray-55 dark:bg-gray-950 border-b border-gray-100 dark:border-gray-850 text-gray-400 dark:text-gray-500 font-extrabold">
-                                    <th className="p-3">عنوان کارگاه / مدرس</th>
-                                    <th className="p-3 text-center">گروه علمی</th>
-                                    <th className="p-3 text-center">ظرفیت / ثبت‌نامی</th>
-                                    <th className="p-3 text-left">هزینه دوره</th>
-                                    <th className="p-3 text-left">مجموع ناخالص تولید شده</th>
-                                    <th className="p-3 text-center">وضعیت برگزاری</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-100 dark:divide-gray-850">
-                                {courses.map(c => {
-                                    const rev = c.enrolled * c.cost;
-                                    return (
-                                        <tr key={c.id} className="hover:bg-gray-55/40 dark:hover:bg-gray-950/40 transition-colors">
-                                            <td className="p-3">
-                                                <span className="font-black text-gray-900 dark:text-white block">{c.title}</span>
-                                                <span className="text-[10px] text-gray-400 block mt-0.5">مدرس: {c.lecturer}</span>
-                                            </td>
-                                            <td className="p-3 text-center text-[10.5px] text-gray-500 font-medium">{c.category}</td>
-                                            <td className="p-3 text-center">
-                                                <span className="font-bold text-gray-800 dark:text-gray-200 block">{toPersianDigits(c.enrolled)} از {toPersianDigits(c.capacity)}</span>
-                                                <span className="text-[10px] text-gray-400">({toPersianDigits(Math.round((c.enrolled / c.capacity) * 100))}٪)</span>
-                                            </td>
-                                            <td className="p-3 text-left font-bold text-gray-700 dark:text-gray-300">
-                                                {toPersianDigits((c.cost / 10).toLocaleString('fa-IR'))} <span className="text-[10px] font-sans text-gray-400">تومان</span>
-                                            </td>
-                                            <td className="p-3 text-left font-black text-emerald-600 dark:text-emerald-400">
-                                                {toPersianDigits((rev / 10).toLocaleString('fa-IR'))} <span className="text-[10px] font-sans font-normal text-gray-400">تومان</span>
-                                            </td>
-                                            <td className="p-3 text-center">
-                                                <span className={`px-2 py-1 rounded-full text-[9px] font-extrabold ${c.status === 'active' ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-500/10' :
-                                                    c.status === 'completed' ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-400 border border-indigo-500/10' :
-                                                        'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'}`}>
-                                                    {c.status === 'active' ? 'در حال ثبت‌نام' : c.status === 'completed' ? 'پایان کلاس مهارتی' : 'پایان یافته و بسته شده'}
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
                     </div>
                 </div>
             </div>

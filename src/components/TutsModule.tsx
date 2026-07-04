@@ -209,12 +209,9 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
   const [courseGroups, setCourseGroups] = useState<{ id: number; title: string }[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
-  const categoriesFetched = useRef(false);
 
-  // Fetch course groups from backend API (guarded to run once even in StrictMode)
+  // Fetch course groups from backend API
   useEffect(() => {
-    if (categoriesFetched.current) return;
-    categoriesFetched.current = true;
     api.getCourseGroups()
       .then(groups => {
         setCourseGroups(groups);
