@@ -373,10 +373,13 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     </div>
   );
 
+  // Current Jalali year (dynamic — based on real date)
+  const currentJalaliYear = String(new Date().getFullYear() - 621);
+
   // States for reporting filters (Target: tuts-stats)
-  const [statSelectedYear, setStatSelectedYear] = useState('1405');
+  const [statSelectedYear, setStatSelectedYear] = useState(currentJalaliYear);
   const [statSelectedCourse, setStatSelectedCourse] = useState('all');
-  const [statAppliedYear, setStatAppliedYear] = useState('1405');
+  const [statAppliedYear, setStatAppliedYear] = useState(currentJalaliYear);
   const [statAppliedCourse, setStatAppliedCourse] = useState('all');
 
   const handleAddCategory = async (e?: React.FormEvent) => {
@@ -1449,7 +1452,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
   // -----------------------------------------
   const [reportSearch, setReportSearch] = useState('');
   const [reportCourseFilter, setReportCourseFilter] = useState('');
-  const [reportYear, setReportYear] = useState('');
+  const [reportYear, setReportYear] = useState(currentJalaliYear);
 
   // ===== Optimized: Server-side paginated fetch for Reports (tuts-reports) =====
   // Instead of fetching all 10000 records client-side, fetch only the needed page

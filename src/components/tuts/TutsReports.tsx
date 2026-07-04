@@ -2,6 +2,7 @@
 // TutsModule — Reports (Registrants Report List with Filters)
 // ============================================================
 
+import { useMemo } from 'react';
 import { Search, FileText, RotateCcw, CheckCircle2, CreditCard, Landmark, PiggyBank } from 'lucide-react';
 import type { TutCourse, TutRegistrant } from './tuts-types';
 import { toPersianDigits, formatCurrency } from './tuts-utils';
@@ -40,6 +41,16 @@ export default function TutsReports(props: TutsReportsProps) {
         handleExportExcel, onRefundRequest, onUndoRefund,
     } = props;
 
+    // Generate year options dynamically: from 1400 to current Jalali year
+    const currentJalaliYear = new Date().getFullYear() - 621;
+    const yearOptions = useMemo(() => {
+        const years: string[] = [];
+        for (let y = 1400; y <= currentJalaliYear; y++) {
+            years.push(String(y));
+        }
+        return years;
+    }, []);
+
     return (
         <div className="space-y-5">
             {/* Filters Area */}
@@ -64,12 +75,9 @@ export default function TutsReports(props: TutsReportsProps) {
                         className="w-full text-xs px-3.5 py-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none"
                     >
                         <option value="">همه سال‌ها</option>
-                        <option value="1405">۱۴۰۵</option>
-                        <option value="1404">۱۴۰۴</option>
-                        <option value="1403">۱۴۰۳</option>
-                        <option value="1402">۱۴۰۲</option>
-                        <option value="1401">۱۴۰۱</option>
-                        <option value="1400">۱۴۰۰</option>
+                        {yearOptions.map(y => (
+                            <option key={y} value={y}>{toPersianDigits(y)}</option>
+                        ))}
                     </select>
 
                     <select
