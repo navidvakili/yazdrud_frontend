@@ -193,7 +193,7 @@ export function mapRegistrant(r: any): TutRegistrant {
         typeText: r.type_text || '',
         courseId: String(r.course_id),
         courseTitle: r.course_title || '',
-        date: r.created_at ? r.created_at.split(' ')[0].replace(/-/g, '/') : '',
+        date: r.created_at ? r.created_at.replace(/-/g, '/') : '',
         verifiedAt: r.verified_at || '',
         amount: parseInt(String(r.amount)) || 0,
         enrollmentCode: r.enrollment_code || '',

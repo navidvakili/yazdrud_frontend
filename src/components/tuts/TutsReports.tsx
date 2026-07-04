@@ -132,7 +132,15 @@ export default function TutsReports(props: TutsReportsProps) {
                                                         <td className="p-2 text-gray-700 dark:text-gray-300 font-medium max-w-[180px] truncate" title={reg.courseTitle}>{reg.courseTitle}</td>
                                                         <td className="p-2 font-bold text-emerald-600 dark:text-emerald-400 text-left whitespace-nowrap">{formatCurrency(reg.amount)}</td>
                                                         <td className="p-2 font-bold text-gray-800 dark:text-gray-200 whitespace-nowrap" dir="ltr">{reg.trackingCode ? toPersianDigits(reg.trackingCode) : '—'}</td>
-                                                        <td className="p-2 text-gray-500 whitespace-nowrap">{toPersianDigits(reg.date)}</td>
+                                                        <td className="p-2 text-gray-500 whitespace-nowrap text-center">
+                                                            {(() => {
+                                                                const parts = reg.date.split(' ');
+                                                                return <>
+                                                                    <span className="block">{toPersianDigits(parts[0] || '')}</span>
+                                                                    {parts[1] && <span className="block text-[10px] text-gray-400 mt-0.5">{toPersianDigits(parts[1])}</span>}
+                                                                </>;
+                                                            })()}
+                                                        </td>
                                                         <td className="p-2 text-center whitespace-nowrap">
                                                             {reg.status === 'verified' && (
                                                                 <button
