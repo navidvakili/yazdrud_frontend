@@ -196,6 +196,7 @@ export function mapRegistrant(r: any): TutRegistrant {
         date: r.created_at ? r.created_at.split(' ')[0].replace(/-/g, '/') : '',
         verifiedAt: r.verified_at || '',
         amount: parseInt(String(r.amount)) || 0,
+        enrollmentCode: r.enrollment_code || '',
         paymentMethod: r.payment_method_text || '',
         trackingCode: r.tracking_code || r.bank_receipt_filename || '',
         bankReceipt: r.bank_receipt || '',
