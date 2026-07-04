@@ -15,12 +15,14 @@ interface TutsReportsProps {
     setReportSearch: (v: string) => void;
     reportCourseFilter: string;
     setReportCourseFilter: (v: string) => void;
+    reportYear: string;
+    setReportYear: (v: string) => void;
     reportPage: number;
     setReportPage: (p: number) => void;
     reportPerPage: number;
     reportTotal?: number;
     filteredRegistrants: TutRegistrant[];
-    handleExportSimulate: () => void;
+    handleExportExcel: () => void;
     onRefundRequest: (reg: TutRegistrant) => void;
     onUndoRefund: (reg: TutRegistrant) => void;
 }
@@ -30,9 +32,10 @@ export default function TutsReports(props: TutsReportsProps) {
         courses, loadingRegistrants,
         reportSearch, setReportSearch,
         reportCourseFilter, setReportCourseFilter,
+        reportYear, setReportYear,
         reportPage, setReportPage, reportPerPage, reportTotal = 0,
         filteredRegistrants,
-        handleExportSimulate, onRefundRequest, onUndoRefund,
+        handleExportExcel, onRefundRequest, onUndoRefund,
     } = props;
 
     return (
@@ -54,6 +57,20 @@ export default function TutsReports(props: TutsReportsProps) {
 
                 <div className="flex flex-wrap sm:flex-nowrap gap-3 w-full xl:w-auto">
                     <select
+                        value={reportYear}
+                        onChange={(e) => { setReportYear(e.target.value); setReportPage(1); }}
+                        className="w-full text-xs px-3.5 py-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none"
+                    >
+                        <option value="">همه سال‌ها</option>
+                        <option value="1405">۱۴۰۵</option>
+                        <option value="1404">۱۴۰۴</option>
+                        <option value="1403">۱۴۰۳</option>
+                        <option value="1402">۱۴۰۲</option>
+                        <option value="1401">۱۴۰۱</option>
+                        <option value="1400">۱۴۰۰</option>
+                    </select>
+
+                    <select
                         value={reportCourseFilter}
                         onChange={(e) => { setReportCourseFilter(e.target.value); setReportPage(1); }}
                         className="w-full text-xs px-3.5 py-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none"
@@ -65,7 +82,7 @@ export default function TutsReports(props: TutsReportsProps) {
                     </select>
 
                     <button
-                        onClick={handleExportSimulate}
+                        onClick={handleExportExcel}
                         className="px-4 py-3 bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100/50 dark:hover:bg-indigo-900/40 border border-indigo-500/15 text-indigo-700 dark:text-indigo-400 font-extrabold text-xs rounded-xl flex items-center justify-center gap-1.5 shrink-0 transition-all cursor-pointer w-full sm:w-auto"
                     >
                         <FileText className="w-4 h-4" />

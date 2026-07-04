@@ -1402,6 +1402,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
       date: '۱۴۰۵/۰۳/۲۰',
       verifiedAt: '',
       amount: finalCost,
+      enrollmentCode: '',
       paymentMethod: 'فیش بانکی',
       trackingCode: refCodeInput,
       bankReceipt: '',
@@ -1447,6 +1448,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
   // -----------------------------------------
   const [reportSearch, setReportSearch] = useState('');
   const [reportCourseFilter, setReportCourseFilter] = useState('');
+  const [reportYear, setReportYear] = useState('');
 
   // ===== Optimized: Server-side paginated fetch for Reports (tuts-reports) =====
   // Instead of fetching all 10000 records client-side, fetch only the needed page
@@ -1463,6 +1465,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
         };
         if (reportSearch.trim()) params.search = normalizePersianSearch(reportSearch.trim());
         if (reportCourseFilter) params.course_id = reportCourseFilter;
+        if (reportYear) params.year = reportYear;
 
         const res = await api.getAllRegistrations(params);
         setReportRegistrants((res.data || []).map(mapRegistrant));
@@ -1475,7 +1478,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     }, 400); // 400ms debounce for search input
 
     return () => clearTimeout(timer);
-  }, [moduleId, reportSearch, reportCourseFilter, reportPage]);
+  }, [moduleId, reportSearch, reportCourseFilter, reportPage, reportYear]);
 
   const filteredRegistrants = moduleId === 'tuts-reports'
     ? reportRegistrants
@@ -1490,8 +1493,18 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     return matchText && matchCourse;
   });
 
-  const handleExportSimulate = () => {
-    showToast('خروجی اکسل با فرمت استاندارد تولید و دانلود فایل آغاز شد (شبیه‌سازی)', 'success');
+  const handleExportExcel = async () => {
+    try {
+      const params: Record<string, any> = {};
+      if (reportSearch.trim()) params.search = normalizePersianSearch(reportSearch.trim());
+      if (reportCourseFilter) params.course_id = reportCourseFilter;
+      if (reportYear) params.year = reportYear;
+      await api.exportRegistrations(params);
+      showToast('خروجی اکسل با موفقیت دانلود شد.', 'success');
+    } catch (err) {
+      console.error('Export error:', err);
+      showToast('خطا در دریافت خروجی اکسل. لطفاً دوباره تلاش کنید.', 'error');
+    }
   };
 
   // -----------------------------------------
@@ -3426,12 +3439,14 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
           setReportSearch={setReportSearch}
           reportCourseFilter={reportCourseFilter}
           setReportCourseFilter={setReportCourseFilter}
+          reportYear={reportYear}
+          setReportYear={setReportYear}
           reportPage={reportPage}
           setReportPage={setReportPage}
           reportPerPage={reportPerPage}
           reportTotal={reportTotal}
           filteredRegistrants={filteredRegistrants}
-          handleExportSimulate={handleExportSimulate}
+          handleExportExcel={handleExportExcel}
           onRefundRequest={(reg) => setRefundTarget(reg)}
           onUndoRefund={(reg) => setUndoRefundTarget(reg)}
         />
