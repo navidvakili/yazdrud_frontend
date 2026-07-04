@@ -228,7 +228,7 @@ class ApiService {
   /**
    * Get all registrations (with optional filters).
    */
-  async getAllRegistrations(params?: { course_id?: number; status?: string; page?: number; per_page?: number; payment_method?: string; search?: string; year?: string }): Promise<{ data: CourseRegistration[]; meta: any; stats?: { total_confirmed: number; online_paid: number; bank_verified: number; total_amount: number } }> {
+  async getAllRegistrations(params?: { course_id?: number; status?: string; page?: number; per_page?: number; payment_method?: string; search?: string; year?: string; refunded?: string }): Promise<{ data: CourseRegistration[]; meta: any; stats?: { total_confirmed: number; online_paid: number; bank_verified: number; total_amount: number } }> {
     const query = new URLSearchParams();
     if (params?.course_id) query.set('course_id', String(params.course_id));
     if (params?.status) query.set('status', params.status);
@@ -237,6 +237,7 @@ class ApiService {
     if (params?.payment_method) query.set('payment_method', params.payment_method);
     if (params?.search) query.set('search', params.search);
     if (params?.year) query.set('year', params.year);
+    if (params?.refunded) query.set('refunded', params.refunded);
     const qs = query.toString();
     const url = qs ? `courses/registrations?${qs}` : 'courses/registrations';
     return API<any>(url);
@@ -245,13 +246,14 @@ class ApiService {
   /**
    * Export registrations as CSV based on current filters.
    */
-  async exportRegistrations(params?: { course_id?: string; search?: string; year?: string; status?: string; payment_method?: string }): Promise<void> {
+  async exportRegistrations(params?: { course_id?: string; search?: string; year?: string; status?: string; payment_method?: string; refunded?: string }): Promise<void> {
     const query = new URLSearchParams();
     if (params?.course_id) query.set('course_id', params.course_id);
     if (params?.search) query.set('search', params.search);
     if (params?.year) query.set('year', params.year);
     if (params?.status) query.set('status', params.status);
     if (params?.payment_method) query.set('payment_method', params.payment_method);
+    if (params?.refunded) query.set('refunded', params.refunded);
     const qs = query.toString();
     const url = qs ? `courses/registrations/export?${qs}` : 'courses/registrations/export';
     const token = localStorage.getItem(TOKEN_STRING);

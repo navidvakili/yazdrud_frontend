@@ -1450,6 +1450,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
   const [reportSearch, setReportSearch] = useState('');
   const [reportCourseFilter, setReportCourseFilter] = useState('');
   const [reportYear, setReportYear] = useState(currentJalaliYear);
+  const [reportRefundedFilter, setReportRefundedFilter] = useState<'show' | 'hide' | 'only'>('show');
 
   // ===== Optimized: Server-side paginated fetch for Reports (tuts-reports) =====
   // Instead of fetching all 10000 records client-side, fetch only the needed page
@@ -1467,6 +1468,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
         if (reportSearch.trim()) params.search = normalizePersianSearch(reportSearch.trim());
         if (reportCourseFilter) params.course_id = reportCourseFilter;
         if (reportYear) params.year = reportYear;
+        params.refunded = reportRefundedFilter;
 
         const res = await api.getAllRegistrations(params);
         setReportRegistrants((res.data || []).map(mapRegistrant));
@@ -1480,7 +1482,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     }, 400); // 400ms debounce for search input
 
     return () => clearTimeout(timer);
-  }, [moduleId, reportSearch, reportCourseFilter, reportPage, reportYear]);
+  }, [moduleId, reportSearch, reportCourseFilter, reportPage, reportYear, reportRefundedFilter]);
 
   const filteredRegistrants = moduleId === 'tuts-reports'
     ? reportRegistrants
@@ -1501,6 +1503,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
       if (reportSearch.trim()) params.search = normalizePersianSearch(reportSearch.trim());
       if (reportCourseFilter) params.course_id = reportCourseFilter;
       if (reportYear) params.year = reportYear;
+      params.refunded = reportRefundedFilter;
       await api.exportRegistrations(params);
       showToast('خروجی اکسل با موفقیت دانلود شد.', 'success');
     } catch (err) {
@@ -3443,6 +3446,8 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
           setReportCourseFilter={setReportCourseFilter}
           reportYear={reportYear}
           setReportYear={setReportYear}
+          reportRefundedFilter={reportRefundedFilter}
+          setReportRefundedFilter={setReportRefundedFilter}
           reportPage={reportPage}
           setReportPage={setReportPage}
           reportPerPage={reportPerPage}

@@ -18,6 +18,8 @@ interface TutsReportsProps {
     setReportCourseFilter: (v: string) => void;
     reportYear: string;
     setReportYear: (v: string) => void;
+    reportRefundedFilter: 'show' | 'hide' | 'only';
+    setReportRefundedFilter: (v: 'show' | 'hide' | 'only') => void;
     reportPage: number;
     setReportPage: (p: number) => void;
     reportPerPage: number;
@@ -35,6 +37,7 @@ export default function TutsReports(props: TutsReportsProps) {
         reportSearch, setReportSearch,
         reportCourseFilter, setReportCourseFilter,
         reportYear, setReportYear,
+        reportRefundedFilter, setReportRefundedFilter,
         reportPage, setReportPage, reportPerPage, reportTotal = 0,
         reportStats,
         filteredRegistrants,
@@ -90,6 +93,40 @@ export default function TutsReports(props: TutsReportsProps) {
                             <option key={c.id} value={c.id}>{c.title}</option>
                         ))}
                     </select>
+
+                    {/* Refunded filter toggle */}
+                    <div className="flex rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden shrink-0">
+                        <button
+                            onClick={() => { setReportRefundedFilter('show'); setReportPage(1); }}
+                            className={`px-3 py-3 text-[11px] font-extrabold transition-all cursor-pointer ${
+                                reportRefundedFilter === 'show'
+                                    ? 'bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-900'
+                                    : 'bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+                            }`}
+                        >
+                            همه
+                        </button>
+                        <button
+                            onClick={() => { setReportRefundedFilter('hide'); setReportPage(1); }}
+                            className={`px-3 py-3 text-[11px] font-extrabold transition-all cursor-pointer ${
+                                reportRefundedFilter === 'hide'
+                                    ? 'bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-900'
+                                    : 'bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+                            }`}
+                        >
+                            مستردد نشده
+                        </button>
+                        <button
+                            onClick={() => { setReportRefundedFilter('only'); setReportPage(1); }}
+                            className={`px-3 py-3 text-[11px] font-extrabold transition-all cursor-pointer ${
+                                reportRefundedFilter === 'only'
+                                    ? 'bg-rose-700 dark:bg-rose-400 text-white'
+                                    : 'bg-white dark:bg-gray-900 text-rose-500 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30'
+                            }`}
+                        >
+                            مستردد شده
+                        </button>
+                    </div>
 
                     <button
                         onClick={handleExportExcel}
