@@ -186,7 +186,7 @@ export default function TutsReports(props: TutsReportsProps) {
                                             displayData.map((reg, idx) => {
                                                 const globalIdx = (safePage - 1) * reportPerPage + idx + 1;
                                                 return (
-                                                    <tr key={reg.id} className="hover:bg-gray-55/40 dark:hover:bg-gray-850/10 transition-colors">
+                                                    <tr key={reg.id} className={`hover:bg-gray-55/40 dark:hover:bg-gray-850/10 transition-colors ${reg.status === 'refunded' ? 'line-through opacity-60' : ''}`}>
                                                         <td className="p-2 text-center font-bold text-gray-400 w-10">{toPersianDigits(globalIdx)}</td>
                                                         <td className="p-2 font-bold text-gray-800 dark:text-gray-200 whitespace-nowrap" dir="ltr">{reg.enrollmentCode ? toPersianDigits(reg.enrollmentCode) : '—'}</td>
                                                         <td className="p-2 font-bold text-gray-600 dark:text-gray-400 whitespace-nowrap">{toPersianDigits(reg.nationalCode)}</td>
