@@ -198,6 +198,7 @@ export function mapRegistrant(r: any): TutRegistrant {
         amount: parseInt(String(r.amount)) || 0,
         enrollmentCode: r.enrollment_code || '',
         paymentMethod: r.payment_method_text || '',
+        paymentMethodRaw: r.payment_method || '',
         trackingCode: r.tracking_code || r.bank_receipt_filename || '',
         bankReceipt: r.bank_receipt || '',
         status:
@@ -209,6 +210,8 @@ export function mapRegistrant(r: any): TutRegistrant {
                         ? 'rejected'
                         : 'pending',
         rejectionReason: r.rejection_reason || undefined,
+        verifiedReceipt: r.verified_receipt ?? false,
+        rejectedReceipt: r.rejected_receipt ?? false,
         // Certificate fields
         certificateApproved: r.certificate_approved ?? false,
         certificateNumber: r.certificate?.certificate_number || undefined,

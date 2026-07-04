@@ -50,11 +50,14 @@ export interface TutRegistrant {
     verifiedAt: string;
     amount: number;
     paymentMethod: string;
+    paymentMethodRaw: string;
     trackingCode: string;
     bankReceipt: string;
     enrollmentCode: string;
     status: 'pending' | 'verified' | 'rejected' | 'refunded';
     rejectionReason?: string;
+    verifiedReceipt: boolean;
+    rejectedReceipt: boolean;
     // Certificate fields
     certificateApproved?: boolean;
     certificateNumber?: string;

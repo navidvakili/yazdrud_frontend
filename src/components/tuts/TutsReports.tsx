@@ -203,6 +203,26 @@ export default function TutsReports(props: TutsReportsProps) {
                                 safePage * reportPerPage
                             );
                         return (
+                            <>
+                            {/* Color legend */}
+                            <div className="flex flex-wrap gap-4 mb-3 px-1 text-[11px] font-bold">
+                                <span className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400">
+                                    <span className="inline-block w-3.5 h-3.5 rounded-sm bg-amber-50 border border-amber-300 dark:bg-amber-950/30 dark:border-amber-700"></span>
+                                    فیش بانکی در انتظار تأیید
+                                </span>
+                                <span className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400">
+                                    <span className="inline-block w-3.5 h-3.5 rounded-sm bg-rose-50 border border-rose-300 dark:bg-rose-950/30 dark:border-rose-700"></span>
+                                    فیش بانکی رد شده
+                                </span>
+                                <span className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400">
+                                    <span className="inline-block w-3.5 h-3.5 rounded-sm bg-white border border-gray-300 dark:bg-gray-800 dark:border-gray-600"></span>
+                                    تأیید شده / پرداخت آنلاین
+                                </span>
+                                <span className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400">
+                                    <span className="inline-block w-6 h-0.5 bg-gray-400 dark:bg-gray-500"></span>
+                                    <span className="line-through">مستردد شده</span>
+                                </span>
+                            </div>
                             <div className="overflow-x-auto rounded-3xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-xs">
                                 <table className="w-full text-right text-xs">
                                     <thead>
@@ -230,8 +250,16 @@ export default function TutsReports(props: TutsReportsProps) {
                                         ) : (
                                             displayData.map((reg, idx) => {
                                                 const globalIdx = (safePage - 1) * reportPerPage + idx + 1;
+                                                let rowHighlight = '';
+                                                if (reg.status !== 'refunded') {
+                                                    if (reg.rejectedReceipt) {
+                                                        rowHighlight = 'bg-rose-50/60 dark:bg-rose-950/15';
+                                                    } else if (reg.paymentMethodRaw === 'bank' && !reg.verifiedReceipt) {
+                                                        rowHighlight = 'bg-amber-50/60 dark:bg-amber-950/15';
+                                                    }
+                                                }
                                                 return (
-                                                    <tr key={reg.id} className={`hover:bg-gray-55/40 dark:hover:bg-gray-850/10 transition-colors ${reg.status === 'refunded' ? 'line-through opacity-60' : ''}`}>
+                                                    <tr key={reg.id} className={`hover:bg-gray-55/40 dark:hover:bg-gray-850/10 transition-colors ${reg.status === 'refunded' ? 'line-through opacity-60' : rowHighlight}`}>
                                                         <td className="p-2 text-center font-bold text-gray-400 w-10">{toPersianDigits(globalIdx)}</td>
                                                         <td className="p-2 font-bold text-gray-800 dark:text-gray-200 whitespace-nowrap" dir="ltr">{reg.enrollmentCode ? toPersianDigits(reg.enrollmentCode) : '—'}</td>
                                                         <td className="p-2 font-bold text-gray-600 dark:text-gray-400 whitespace-nowrap">{toPersianDigits(reg.nationalCode)}</td>
@@ -277,6 +305,26 @@ export default function TutsReports(props: TutsReportsProps) {
                                     </tbody>
                                 </table>
                             </div>
+                            {/* Bottom color legend */}
+                            <div className="flex flex-wrap gap-4 mt-3 px-1 text-[11px] font-bold">
+                                <span className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400">
+                                    <span className="inline-block w-3.5 h-3.5 rounded-sm bg-amber-50 border border-amber-300 dark:bg-amber-950/30 dark:border-amber-700"></span>
+                                    فیش بانکی در انتظار تأیید
+                                </span>
+                                <span className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400">
+                                    <span className="inline-block w-3.5 h-3.5 rounded-sm bg-rose-50 border border-rose-300 dark:bg-rose-950/30 dark:border-rose-700"></span>
+                                    فیش بانکی رد شده
+                                </span>
+                                <span className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400">
+                                    <span className="inline-block w-3.5 h-3.5 rounded-sm bg-white border border-gray-300 dark:bg-gray-800 dark:border-gray-600"></span>
+                                    تأیید شده / پرداخت آنلاین
+                                </span>
+                                <span className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400">
+                                    <span className="inline-block w-6 h-0.5 bg-gray-400 dark:bg-gray-500"></span>
+                                    <span className="line-through">مستردد شده</span>
+                                </span>
+                            </div>
+                            </>
                         );
                     })()}
 
