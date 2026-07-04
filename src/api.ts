@@ -228,7 +228,7 @@ class ApiService {
   /**
    * Get all registrations (with optional filters).
    */
-  async getAllRegistrations(params?: { course_id?: number; status?: string; page?: number; per_page?: number; payment_method?: string; search?: string; year?: string }): Promise<{ data: CourseRegistration[]; meta: any }> {
+  async getAllRegistrations(params?: { course_id?: number; status?: string; page?: number; per_page?: number; payment_method?: string; search?: string; year?: string }): Promise<{ data: CourseRegistration[]; meta: any; stats?: { total_confirmed: number; online_paid: number; bank_verified: number; total_amount: number } }> {
     const query = new URLSearchParams();
     if (params?.course_id) query.set('course_id', String(params.course_id));
     if (params?.status) query.set('status', params.status);

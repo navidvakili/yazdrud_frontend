@@ -2,7 +2,7 @@
 // TutsModule — Reports (Registrants Report List with Filters)
 // ============================================================
 
-import { Search, FileText, RotateCcw } from 'lucide-react';
+import { Search, FileText, RotateCcw, CheckCircle2, CreditCard, Landmark, PiggyBank } from 'lucide-react';
 import type { TutCourse, TutRegistrant } from './tuts-types';
 import { toPersianDigits, formatCurrency } from './tuts-utils';
 import { LoadingSpinner } from './tuts-components';
@@ -21,6 +21,7 @@ interface TutsReportsProps {
     setReportPage: (p: number) => void;
     reportPerPage: number;
     reportTotal?: number;
+    reportStats: { total_confirmed: number; online_paid: number; bank_verified: number; total_amount: number } | null;
     filteredRegistrants: TutRegistrant[];
     handleExportExcel: () => void;
     onRefundRequest: (reg: TutRegistrant) => void;
@@ -34,6 +35,7 @@ export default function TutsReports(props: TutsReportsProps) {
         reportCourseFilter, setReportCourseFilter,
         reportYear, setReportYear,
         reportPage, setReportPage, reportPerPage, reportTotal = 0,
+        reportStats,
         filteredRegistrants,
         handleExportExcel, onRefundRequest, onUndoRefund,
     } = props;
@@ -90,6 +92,51 @@ export default function TutsReports(props: TutsReportsProps) {
                     </button>
                 </div>
             </div>
+
+            {/* Stats Cards */}
+            {reportStats && (
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                    <div className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 dark:from-emerald-950/30 dark:to-emerald-900/20 border border-emerald-200/60 dark:border-emerald-800/40 rounded-2xl p-4 flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center shrink-0">
+                            <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-bold text-emerald-600/70 dark:text-emerald-500/70 uppercase tracking-wider">تایید شده</p>
+                            <p className="text-lg font-extrabold text-emerald-700 dark:text-emerald-300">{toPersianDigits(reportStats.total_confirmed)}</p>
+                        </div>
+                    </div>
+
+                    <div className="bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-950/30 dark:to-blue-900/20 border border-blue-200/60 dark:border-blue-800/40 rounded-2xl p-4 flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center shrink-0">
+                            <CreditCard className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-bold text-blue-600/70 dark:text-blue-500/70 uppercase tracking-wider">پرداخت آنلاین</p>
+                            <p className="text-lg font-extrabold text-blue-700 dark:text-blue-300">{toPersianDigits(reportStats.online_paid)}</p>
+                        </div>
+                    </div>
+
+                    <div className="bg-gradient-to-br from-amber-50 to-amber-100/50 dark:from-amber-950/30 dark:to-amber-900/20 border border-amber-200/60 dark:border-amber-800/40 rounded-2xl p-4 flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center shrink-0">
+                            <Landmark className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-bold text-amber-600/70 dark:text-amber-500/70 uppercase tracking-wider">فیش بانکی</p>
+                            <p className="text-lg font-extrabold text-amber-700 dark:text-amber-300">{toPersianDigits(reportStats.bank_verified)}</p>
+                        </div>
+                    </div>
+
+                    <div className="bg-gradient-to-br from-purple-50 to-purple-100/50 dark:from-purple-950/30 dark:to-purple-900/20 border border-purple-200/60 dark:border-purple-800/40 rounded-2xl p-4 flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center shrink-0">
+                            <PiggyBank className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-bold text-purple-600/70 dark:text-purple-500/70 uppercase tracking-wider">مجموع مبلغ</p>
+                            <p className="text-sm font-extrabold text-purple-700 dark:text-purple-300">{formatCurrency(reportStats.total_amount)}</p>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Table Container */}
             {loadingRegistrants ? (

@@ -90,6 +90,13 @@ export interface TutSurvey {
     }[];
 }
 
+export interface ReportStats {
+    total_confirmed: number;
+    online_paid: number;
+    bank_verified: number;
+    total_amount: number;
+}
+
 export interface TutVoucher {
     id: string;
     code: string;

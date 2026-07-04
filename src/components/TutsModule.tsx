@@ -346,6 +346,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
   const reportPerPage = 15;
 
   // Server-side paginated report data (optimized: avoids fetching all 10k records)
+  const [reportStats, setReportStats] = useState<{ total_confirmed: number; online_paid: number; bank_verified: number; total_amount: number } | null>(null);
   const [reportRegistrants, setReportRegistrants] = useState<TutRegistrant[]>([]);
   const [reportTotal, setReportTotal] = useState(0);
   const [voucherPage, setVoucherPage] = useState(1);
@@ -1470,6 +1471,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
         const res = await api.getAllRegistrations(params);
         setReportRegistrants((res.data || []).map(mapRegistrant));
         setReportTotal(res.meta?.total ?? 0);
+        setReportStats(res.stats ?? null);
       } catch (err) {
         console.error('Error fetching report registrations:', err);
       } finally {
@@ -3445,6 +3447,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
           setReportPage={setReportPage}
           reportPerPage={reportPerPage}
           reportTotal={reportTotal}
+          reportStats={reportStats}
           filteredRegistrants={filteredRegistrants}
           handleExportExcel={handleExportExcel}
           onRefundRequest={(reg) => setRefundTarget(reg)}
