@@ -11,17 +11,14 @@ import {
 import type { User as UserType, Tab, PortalNotification, NavItem, RoleInfo } from '@/src/shared-types';
 import api from '@/src/shared-api';
 import { THEME_STRING, USER_STRING, MAX_TABS, STANDBY_TIMEOUT } from '@/src/shared-constants';
-import { defaultNotifications, urlToTargetId, resolveIcon, faToLucideName } from '@/src/lib/menuConfig';
-import type { MenuCategory } from '@/src/lib/menuConfig';
 import { AppModules, resolveApp, LoadingFallback } from '@/src/apps';
 import LoginForm from '@/src/components/LoginForm';
 import DashboardModule from '@/src/components/DashboardModule';
 import ThesisManagement from '@/src/components/ThesisManagement';
 import FloatingPanels from '@/src/components/FloatingPanels';
-import Header from '@/src/components/Header';
-import Sidebar from '@/src/components/Sidebar';
-import TabsBar from '@/src/components/TabsBar';
-import { Footer, LogoutModal, StandbyModal, TabLimitAlert, SessionWarningModal, NetworkStatus } from '@/src/shared-components';
+import { Header, Sidebar, TabsBar, Footer, NetworkStatus, defaultNotifications, urlToTargetId, resolveIcon, faToLucideName } from '@/src/layouts';
+import type { MenuCategory } from '@/src/layouts';
+import { LogoutModal, StandbyModal, TabLimitAlert, SessionWarningModal } from '@/src/shared-components';
 
 export default function App() {
   // ========== Core State ==========

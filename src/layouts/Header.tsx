@@ -8,8 +8,8 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import type { User as UserType, Tab, RoleInfo } from '@/src/shared-types';
-import type { MenuCategory, SubmenuItem } from '@/src/lib/menuConfig';
-import { ThemeToggle } from '@/src/shared-components';
+import type { MenuCategory, SubmenuItem } from './menuConfig';
+import ThemeToggle from './ThemeToggle';
 
 interface HeaderProps {
   user: UserType | null;
