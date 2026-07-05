@@ -163,7 +163,19 @@ export default function TutsVouchers(props: TutsVouchersProps) {
                     { id: 'list' as const, label: 'لیست بن‌های تخفیف', icon: List },
                     { id: 'create' as const, label: 'ایجاد بن جدید', icon: Plus },
                 ].map(tab => (
-                    <button key={tab.id} onClick={() => { setVoucherActiveTab(tab.id); setSandboxResult(null); }}
+                    <button key={tab.id} onClick={() => {
+                        setVoucherActiveTab(tab.id);
+                        setSandboxResult(null);
+                        if (tab.id === 'create') {
+                            setNewVoucher({
+                                code: '', title: '', discountType: 'percentage', discountValue: 0, maxUses: 100,
+                                validFrom: '', validUntil: '', applicableProductIds: [], applicableCategoryIds: [],
+                                budgetCap: 0, minInstallment: 0, installmentsAllowed: false, geoLimit: '',
+                                deviceLimit: '', firstPurchaseOnly: false, groupId: null, isActive: true,
+                                maxDiscount: 0, nationalCodes: [],
+                            });
+                        }
+                    }}
                         className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${voucherActiveTab === tab.id
                             ? 'bg-white dark:bg-gray-800 shadow-xs text-teal-600 dark:text-teal-400'
                             : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}>
