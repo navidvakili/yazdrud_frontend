@@ -8,8 +8,9 @@
 // ============================================================
 
 import { useState, useMemo } from 'react';
-import { Eye, Phone, Clock, Star, X, MessageCircle, Lightbulb, Globe, MessageSquare, Calendar } from 'lucide-react';
+import { Eye, Phone, Clock, Star, X, MessageCircle, Lightbulb, Globe, MessageSquare, Calendar, FileDown } from 'lucide-react';
 import { toPersianDigits, toPersianDateString, toJalaliYearMonth } from './tuts-utils';
+import api from '../../api';
 
 // --- Local interface matching the mapped survey data from TutsModule ---
 interface SurveyItem {
@@ -81,6 +82,19 @@ export default function TutsSurveys(props: TutsSurveysProps) {
         return { total, sortedYears, sortedMonths };
     }, [individualSurveys]);
 
+    const [exporting, setExporting] = useState(false);
+
+    const handleExport = async () => {
+        setExporting(true);
+        try {
+            await api.exportSurveys();
+        } catch (err) {
+            console.error('Export failed:', err);
+        } finally {
+            setExporting(false);
+        }
+    };
+
     const itemsPerPage = 10;
     const totalPages = Math.max(1, Math.ceil(sortedSurveys.length / itemsPerPage));
     const [page, setPage] = useState(1);
@@ -88,6 +102,17 @@ export default function TutsSurveys(props: TutsSurveysProps) {
 
     return (
         <div className="space-y-6">
+            {/* Toolbar: Export button */}
+            {!loadingSurveys && stats.total > 0 && (
+                <div className="flex justify-end">
+                    <button onClick={handleExport} disabled={exporting}
+                        className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/30 dark:hover:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 rounded-xl text-[10px] font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-all">
+                        <FileDown className="w-3.5 h-3.5" />
+                        {exporting ? 'در حال خروجی...' : 'خروجی اکسل'}
+                    </button>
+                </div>
+            )}
+
             {/* Stats Cards */}
             {!loadingSurveys && stats.total > 0 && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

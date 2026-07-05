@@ -360,6 +360,34 @@ class ApiService {
     await API(`surveys/${id}`, {}, 'DELETE');
   }
 
+  /**
+   * Export surveys as Excel file based on current filters.
+   */
+  async exportSurveys(params?: { course_id?: string; search?: string; from_date?: string; to_date?: string }): Promise<void> {
+    const query = new URLSearchParams();
+    if (params?.course_id) query.set('course_id', params.course_id);
+    if (params?.search) query.set('search', params.search);
+    if (params?.from_date) query.set('from_date', params.from_date);
+    if (params?.to_date) query.set('to_date', params.to_date);
+    const qs = query.toString();
+    const url = qs ? `surveys/export?${qs}` : 'surveys/export';
+    const token = localStorage.getItem(TOKEN_STRING);
+    const fullUrl = `${API_BASE_URL}/${url}`;
+    const response = await fetch(fullUrl, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!response.ok) throw new Error('Export failed');
+    const blob = await response.blob();
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = downloadUrl;
+    a.download = 'survey-report.xlsx';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(downloadUrl);
+  }
+
   // ========== Coupons / Vouchers (بن‌های تخفیف) ==========
 
   /**
