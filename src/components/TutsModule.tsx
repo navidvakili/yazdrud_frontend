@@ -11,7 +11,7 @@ import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/TextLayer.css';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import Pagination from './Pagination';
-import type { VoucherFormData, SandboxResult, TutCourse, TutRegistrant, TutSurvey, TutVoucher, TutsModuleProps } from './tuts/tuts-types';
+import type { VoucherFormData, SandboxResult, TutCourse, TutRegistrant, TutVoucher, TutsModuleProps } from './tuts/tuts-types';
 
 // Configure PDF.js worker — served from /public/ to avoid CSP issues with CDN
 pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
@@ -20,7 +20,6 @@ import TutsReports from './tuts/TutsReports';
 import TutsReceipts from './tuts/TutsReceipts';
 import TutsStats from './tuts/TutsStats';
 import TutsSurveys from './tuts/TutsSurveys';
-import TutsSurveysStats from './tuts/TutsSurveysStats';
 import TutsVouchers from './tuts/TutsVouchers';
 import TutsModals from './tuts/TutsModals';
 import ToastNotification from './tuts/ToastNotification';
@@ -44,7 +43,6 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
   // ===== Courses =====
   const [courses, setCourses] = useState<TutCourse[]>([]);
   const [registrants, setRegistrants] = useState<TutRegistrant[]>([]);
-  const [surveys, setSurveys] = useState<TutSurvey[]>([]);
 
   // ===== Instructors for dropdown selection =====
   const [instructors, setInstructors] = useState<{ id: number; name: string; specialty: string | null }[]>([]);
@@ -139,49 +137,17 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
           const rows: any[] = res.data || [];
           setIndividualSurveys(rows.map((s: any) => ({
             id: s.id,
-            name: s.full_name || `${s.first_name || ''} ${s.last_name || ''}`.trim(),
-            phone: s.phone_number || '',
-            date: s.created_at ? s.created_at.split(' ')[0].replace(/-/g, '/') : '',
+            firstName: s.first_name || '',
+            lastName: s.last_name || '',
+            userName: s.full_name || `${s.first_name || ''} ${s.last_name || ''}`.trim(),
+            userPhone: s.phone_number || '',
+            ipAddress: s.ip_address || '',
+            date: s.created_at ? s.created_at.replace(/-/g, '/') : '',
             courseTitle: s.course_title || '',
             rating: s.rating || 0,
-            comment: s.comment || s.suggestions || ''
+            comment: s.comment || '',
+            suggestions: s.suggestions || ''
           })));
-          const grouped: Record<string, any> = {};
-          rows.forEach((s: any) => {
-            const key = String(s.course_id);
-            if (!grouped[key]) {
-              grouped[key] = {
-                courseId: key,
-                courseTitle: s.course_title || '',
-                rating: 0,
-                totalResponses: 0,
-                breakdown: { content: 0, lecturer: 0, organization: 0, facilities: 0 },
-                comments: []
-              };
-            }
-            const g = grouped[key];
-            g.totalResponses++;
-            g.rating += s.rating || 0;
-            if (s.comment || s.suggestions) {
-              g.comments.push({
-                user: s.full_name || `${s.first_name || ''} ${s.last_name || ''}`.trim() || 'کاربر',
-                rating: s.rating || 0,
-                comment: s.comment || s.suggestions || '',
-                date: s.created_at ? s.created_at.split(' ')[0].replace(/-/g, '/') : ''
-              });
-            }
-          });
-          const aggregated = Object.values(grouped).map((g: any) => ({
-            ...g,
-            rating: g.totalResponses > 0 ? Math.round(g.rating / g.totalResponses) : 0,
-            breakdown: {
-              content: Math.round((g.rating / g.totalResponses) * 20),
-              lecturer: Math.round((g.rating / g.totalResponses) * 20),
-              organization: Math.round((g.rating / g.totalResponses) * 18),
-              facilities: Math.round((g.rating / g.totalResponses) * 17)
-            }
-          }));
-          setSurveys(aggregated);
         })
         .catch(err => { console.error('Error fetching surveys:', err); fetchedRef.current.surveys = false; })
         .finally(() => setLoadingSurveys(false));
@@ -308,23 +274,9 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
   // sandboxDevice, sandboxProvince, sandboxReferrer removed per user request
   const [sandboxResult, setSandboxResult] = useState<SandboxResult | null>(null);
 
-  // New Survey/Feedback Form States
-  const [surveyFormCourseId, setSurveyFormCourseId] = useState('tut-1');
-  const [surveyFormUser, setSurveyFormUser] = useState(user?.name || '');
-  const [surveyFormRating, setSurveyFormRating] = useState(5);
-  const [surveyFormContent, setSurveyFormContent] = useState(90);
-  const [surveyFormLecturer, setSurveyFormLecturer] = useState(95);
-  const [surveyFormOrg, setSurveyFormOrg] = useState(85);
-  const [surveyFormFacilities, setSurveyFormFacilities] = useState(80);
-  const [surveyFormComment, setSurveyFormComment] = useState('');
-
-  // States for the survey list and statistical reporting
+  // States for the survey list
   const [individualSurveys, setIndividualSurveys] = useState<any[]>([]);
 
-  const [surveySearch, setSurveySearch] = useState('');
-  const [surveyFromDate, setSurveyFromDate] = useState('');
-  const [surveyToDate, setSurveyToDate] = useState('');
-  const [surveyPage, setSurveyPage] = useState(1);
   const [selectedSurveyDetails, setSelectedSurveyDetails] = useState<any | null>(null);
 
   // ===== Pagination States =====
@@ -708,82 +660,6 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     } else {
       showToast(`شبیه‌سازی انجام شد: بن غیرمعتبر است. علت: ${failReason}`, 'error');
     }
-  };
-
-  const handleSubmitSurvey = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (!surveyFormComment.trim()) {
-      showToast('لطفاً دیدگاه متنی خود را وارد کنید.', 'error');
-      return;
-    }
-    const targetCourse = courses.find(c => c.id === surveyFormCourseId);
-    if (!targetCourse) return;
-
-    const existingIndex = surveys.findIndex(s => s.courseId === surveyFormCourseId);
-    const newComment = {
-      user: surveyFormUser || 'کاربر مهمان پورتال',
-      rating: surveyFormRating,
-      comment: surveyFormComment,
-      date: '۱۴۰۵/۰۳/۲۳'
-    };
-
-    if (existingIndex > -1) {
-      const updatedSurveys = [...surveys];
-      const s = updatedSurveys[existingIndex];
-      const oldTotal = s.totalResponses;
-      const newTotal = oldTotal + 1;
-      const newRating = parseFloat(((s.rating * oldTotal + surveyFormRating) / newTotal).toFixed(1));
-      const newBreakdown = {
-        content: Math.round((s.breakdown.content * oldTotal + surveyFormContent) / newTotal),
-        lecturer: Math.round((s.breakdown.lecturer * oldTotal + surveyFormLecturer) / newTotal),
-        organization: Math.round((s.breakdown.organization * oldTotal + surveyFormOrg) / newTotal),
-        facilities: Math.round((s.breakdown.facilities * oldTotal + surveyFormFacilities) / newTotal),
-      };
-
-      updatedSurveys[existingIndex] = {
-        ...s,
-        rating: newRating,
-        totalResponses: newTotal,
-        breakdown: newBreakdown,
-        comments: [newComment, ...s.comments]
-      };
-      setSurveys(updatedSurveys);
-    } else {
-      const newSurvey: TutSurvey = {
-        courseId: surveyFormCourseId,
-        courseTitle: targetCourse.title,
-        rating: surveyFormRating,
-        totalResponses: 1,
-        breakdown: {
-          content: surveyFormContent,
-          lecturer: surveyFormLecturer,
-          organization: surveyFormOrg,
-          facilities: surveyFormFacilities
-        },
-        comments: [newComment]
-      };
-      setSurveys([newSurvey, ...surveys]);
-    }
-
-    const newIndividual = {
-      id: individualSurveys.length > 0 ? Math.max(...individualSurveys.map(x => x.id)) + 1 : 1,
-      name: surveyFormUser || 'کاربر مهمان پورتال',
-      phone: '۰۹۱۲۰۰۰۰۰۰۰',
-      date: '۱۴۰۵/۰۳/۲۳ ۱۲:۰۰',
-      courseTitle: targetCourse.title,
-      rating: surveyFormRating,
-      comment: surveyFormComment,
-      answers: {
-        content: surveyFormContent,
-        lecturer: surveyFormLecturer,
-        organization: surveyFormOrg,
-        facilities: surveyFormFacilities
-      }
-    };
-    setIndividualSurveys(prev => [newIndividual, ...prev]);
-
-    showToast('دیدگاه و ارزیابی شما با موفقیت ثبت شد و در آمارهای پورتال اعمال گردید.', 'success');
-    setSurveyFormComment('');
   };
 
   const handleDeleteCategory = async (catToDelete: string) => {
@@ -1716,7 +1592,6 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
   // -----------------------------------------
   // 4. TUTS-STATS (CHART SELECTION & INTERACTIVE STATE)
   // -----------------------------------------
-  const [selectedStatCourse, setSelectedStatCourse] = useState<string>('all');
 
   const currentModuleTitle = () => {
     switch (moduleId) {
@@ -3498,73 +3373,12 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
       )}
 
       {moduleId === 'tuts-surveys' && (
-        <div className="space-y-6">
-          {/* Statistics section */}
-          <TutsSurveysStats
-            courses={courses}
-            surveys={surveys}
-            surveyFormCourseId={surveyFormCourseId}
-            setSurveyFormCourseId={setSurveyFormCourseId}
-            surveyFormUser={surveyFormUser}
-            setSurveyFormUser={setSurveyFormUser}
-            surveyFormRating={surveyFormRating}
-            setSurveyFormRating={setSurveyFormRating}
-            surveyFormContent={surveyFormContent}
-            setSurveyFormContent={setSurveyFormContent}
-            surveyFormLecturer={surveyFormLecturer}
-            setSurveyFormLecturer={setSurveyFormLecturer}
-            surveyFormOrg={surveyFormOrg}
-            setSurveyFormOrg={setSurveyFormOrg}
-            surveyFormFacilities={surveyFormFacilities}
-            setSurveyFormFacilities={setSurveyFormFacilities}
-            surveyFormComment={surveyFormComment}
-            setSurveyFormComment={setSurveyFormComment}
-            selectedStatCourse={selectedStatCourse}
-            setSelectedStatCourse={setSelectedStatCourse}
-            handleSubmitSurvey={handleSubmitSurvey}
-          />
-          {/* Survey list section */}
-          <TutsSurveys
-            currentUserRole={currentUserRole}
-            individualSurveys={individualSurveys}
-            loadingSurveys={loadingSurveys}
-            surveySearch={surveySearch}
-            setSurveySearch={setSurveySearch}
-            surveyFromDate={surveyFromDate}
-            setSurveyFromDate={setSurveyFromDate}
-            surveyToDate={surveyToDate}
-            setSurveyToDate={setSurveyToDate}
-            surveyPage={surveyPage}
-            setSurveyPage={setSurveyPage}
-            selectedSurveyDetails={selectedSurveyDetails}
-            setSelectedSurveyDetails={setSelectedSurveyDetails}
-          />
-        </div>
-      )}
-
-      {moduleId === 'tuts-surveys-stats' && (
-        <TutsSurveysStats
-          courses={courses}
-          surveys={surveys}
-          surveyFormCourseId={surveyFormCourseId}
-          setSurveyFormCourseId={setSurveyFormCourseId}
-          surveyFormUser={surveyFormUser}
-          setSurveyFormUser={setSurveyFormUser}
-          surveyFormRating={surveyFormRating}
-          setSurveyFormRating={setSurveyFormRating}
-          surveyFormContent={surveyFormContent}
-          setSurveyFormContent={setSurveyFormContent}
-          surveyFormLecturer={surveyFormLecturer}
-          setSurveyFormLecturer={setSurveyFormLecturer}
-          surveyFormOrg={surveyFormOrg}
-          setSurveyFormOrg={setSurveyFormOrg}
-          surveyFormFacilities={surveyFormFacilities}
-          setSurveyFormFacilities={setSurveyFormFacilities}
-          surveyFormComment={surveyFormComment}
-          setSurveyFormComment={setSurveyFormComment}
-          selectedStatCourse={selectedStatCourse}
-          setSelectedStatCourse={setSelectedStatCourse}
-          handleSubmitSurvey={handleSubmitSurvey}
+        <TutsSurveys
+          currentUserRole={currentUserRole}
+          individualSurveys={individualSurveys}
+          loadingSurveys={loadingSurveys}
+          selectedSurveyDetails={selectedSurveyDetails}
+          setSelectedSurveyDetails={setSelectedSurveyDetails}
         />
       )}
 

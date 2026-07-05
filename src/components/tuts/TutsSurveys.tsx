@@ -7,8 +7,9 @@
 //   suggestions (دوره‌های پیشنهادی), comment (توضیحات), course_id, course_title
 // ============================================================
 
-import { MessageSquare, Eye, Phone, BarChart2, Clock, Star, X, Search, Filter, MessageCircle, Lightbulb, Globe, Info } from 'lucide-react';
-import { toPersianDigits, toPersianDateString } from './tuts-utils';
+import { useState, useMemo } from 'react';
+import { Eye, Phone, Clock, Star, X, MessageCircle, Lightbulb, Globe, MessageSquare, Calendar } from 'lucide-react';
+import { toPersianDigits, toPersianDateString, toJalaliYearMonth } from './tuts-utils';
 
 // --- Local interface matching the mapped survey data from TutsModule ---
 interface SurveyItem {
@@ -29,14 +30,6 @@ interface TutsSurveysProps {
     currentUserRole: string;
     individualSurveys: SurveyItem[];
     loadingSurveys: boolean;
-    surveySearch: string;
-    setSurveySearch: (v: string) => void;
-    surveyFromDate: string;
-    setSurveyFromDate: (v: string) => void;
-    surveyToDate: string;
-    setSurveyToDate: (v: string) => void;
-    surveyPage: number;
-    setSurveyPage: (v: number) => void;
     selectedSurveyDetails: SurveyItem | null;
     setSelectedSurveyDetails: (v: SurveyItem | null) => void;
 }
@@ -44,17 +37,10 @@ interface TutsSurveysProps {
 export default function TutsSurveys(props: TutsSurveysProps) {
     const {
         currentUserRole, individualSurveys, loadingSurveys,
-        surveySearch, setSurveySearch,
-        surveyFromDate, setSurveyFromDate,
-        surveyToDate, setSurveyToDate,
-        surveyPage, setSurveyPage,
         selectedSurveyDetails, setSelectedSurveyDetails,
     } = props;
 
-    const surveysPerPage = 10;
-    const totalSurveyCount = individualSurveys.length;
-
-    // Sort by date descending (newest first), then filter
+    // Sort by date descending (newest first)
     const sortedSurveys = [...individualSurveys].sort((a, b) => {
         if (!a.date && !b.date) return 0;
         if (!a.date) return 1;
@@ -62,108 +48,88 @@ export default function TutsSurveys(props: TutsSurveysProps) {
         return b.date.localeCompare(a.date);
     });
 
-    const filteredSurveys = sortedSurveys.filter(s => {
-        const q = surveySearch.trim();
-        const matchesSearch = !q ||
-            (s.userName || '').includes(q) ||
-            (s.courseTitle || '').includes(q) ||
-            (s.userPhone || '').includes(q) ||
-            (s.suggestions || '').includes(q) ||
-            (s.comment || '').includes(q);
-        const matchesFromDate = !surveyFromDate || s.date >= surveyFromDate;
-        const matchesToDate = !surveyToDate || s.date <= surveyToDate;
-        return matchesSearch && matchesFromDate && matchesToDate;
-    });
+    // Compute survey statistics from Jalali dates
+    const stats = useMemo(() => {
+        const total = individualSurveys.length;
+        const byYear: Record<string, number> = {};
+        const byMonth: Record<string, number> = {};
 
-    const totalPages = Math.max(1, Math.ceil(filteredSurveys.length / surveysPerPage));
-    const paginatedSurveys = filteredSurveys.slice((surveyPage - 1) * surveysPerPage, surveyPage * surveysPerPage);
+        individualSurveys.forEach(s => {
+            const jalali = toJalaliYearMonth(s.date);
+            if (jalali) {
+                const yearMonth = `${jalali.year}/${jalali.month}`;
+                byYear[jalali.year] = (byYear[jalali.year] || 0) + 1;
+                byMonth[yearMonth] = (byMonth[yearMonth] || 0) + 1;
+            }
+        });
 
-    const avgRating = totalSurveyCount > 0
-        ? (individualSurveys.reduce((sum, s) => sum + s.rating, 0) / totalSurveyCount)
-        : 0;
+        // Sort years descending, limit to last 5
+        const sortedYears = Object.entries(byYear)
+            .sort(([a], [b]) => b.localeCompare(a))
+            .slice(0, 5)
+            .map(([year, count]) => ({ year, count }));
 
-    const ratingLabel = avgRating >= 4.5 ? 'عالی' : avgRating >= 3.5 ? 'خوب' : avgRating >= 2.5 ? 'متوسط' : 'ضعیف';
-    const ratingColor = avgRating >= 4.5 ? 'text-emerald-500' : avgRating >= 3.5 ? 'text-blue-500' : avgRating >= 2.5 ? 'text-amber-500' : 'text-rose-500';
+        // Sort months descending, limit to last 6
+        const sortedMonths = Object.entries(byMonth)
+            .sort(([a], [b]) => b.localeCompare(a))
+            .slice(0, 6)
+            .map(([ym, count]) => {
+                const [y, m] = ym.split('/');
+                return { year: y, month: m, label: `${y}/${m}`, count };
+            });
 
-    // Best course by count (most surveys)
-    const bestCourse = totalSurveyCount > 0
-        ? [...individualSurveys].sort((a, b) => b.rating - a.rating)[0]
-        : null;
+        return { total, sortedYears, sortedMonths };
+    }, [individualSurveys]);
+
+    const itemsPerPage = 10;
+    const totalPages = Math.max(1, Math.ceil(sortedSurveys.length / itemsPerPage));
+    const [page, setPage] = useState(1);
+    const paginatedSurveys = sortedSurveys.slice((page - 1) * itemsPerPage, page * itemsPerPage);
 
     return (
         <div className="space-y-6">
-            {/* Survey Stats Summary */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="p-4 bg-gradient-to-br from-pink-500/10 to-pink-500/5 border border-pink-500/15 rounded-2xl flex items-center justify-between shadow-xs">
-                    <div>
-                        <span className="text-[10px] font-black text-pink-500 block">کل نظرات ثبت شده</span>
-                        <span className="text-xl font-black text-gray-900 dark:text-white mt-1 block">{toPersianDigits(totalSurveyCount)} نظر</span>
+            {/* Stats Cards */}
+            {!loadingSurveys && stats.total > 0 && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {/* Total surveys */}
+                    <div className="p-4 bg-gradient-to-br from-pink-500/10 to-pink-500/5 border border-pink-500/15 rounded-2xl flex items-center justify-between shadow-xs">
+                        <div>
+                            <span className="text-[10px] font-black text-pink-500 block">کل نظرات ثبت شده</span>
+                            <span className="text-xl font-black text-gray-900 dark:text-white mt-1 block">{toPersianDigits(stats.total)} نظر</span>
+                        </div>
+                        <div className="p-2.5 bg-white dark:bg-gray-900 rounded-xl"><MessageSquare className="w-5 h-5 text-pink-500" /></div>
                     </div>
-                    <div className="p-2.5 bg-white dark:bg-gray-900 rounded-xl"><MessageSquare className="w-5 h-5 text-pink-500" /></div>
-                </div>
-                <div className="p-4 bg-gradient-to-br from-purple-500/10 to-purple-500/5 border border-purple-500/15 rounded-2xl flex items-center justify-between shadow-xs">
-                    <div>
-                        <span className="text-[10px] font-black text-purple-500 block">میانگین امتیاز کلی</span>
-                        <span className={`text-xl font-black ${ratingColor} mt-1 block`}>{toPersianDigits(avgRating.toFixed(1))} — {ratingLabel}</span>
-                    </div>
-                    <div className="p-2.5 bg-white dark:bg-gray-900 rounded-xl"><Star className={`w-5 h-5 ${ratingColor} fill-current`} /></div>
-                </div>
-                <div className="p-4 bg-gradient-to-br from-indigo-500/10 to-indigo-500/5 border border-indigo-500/15 rounded-2xl flex items-center justify-between shadow-xs">
-                    <div>
-                        <span className="text-[10px] font-black text-indigo-500 block">دوره با بیشترین امتیاز</span>
-                        <span className="text-xs font-black text-gray-900 dark:text-white mt-1 block max-w-[120px] truncate">
-                            {bestCourse?.courseTitle || '---'}
-                        </span>
-                    </div>
-                    <div className="p-2.5 bg-white dark:bg-gray-900 rounded-xl"><BarChart2 className="w-5 h-5 text-indigo-500" /></div>
-                </div>
-                <div className="p-4 bg-gradient-to-br from-teal-500/10 to-teal-500/5 border border-teal-500/15 rounded-2xl flex items-center justify-between shadow-xs">
-                    <div>
-                        <span className="text-[10px] font-black text-teal-500 block">نظرات نیازمند رسیدگی</span>
-                        <span className="text-xl font-black text-gray-900 dark:text-white mt-1 block">
-                            {toPersianDigits(individualSurveys.filter(s => s.rating <= 2).length)} نظر
-                        </span>
-                    </div>
-                    <div className="p-2.5 bg-white dark:bg-gray-900 rounded-xl"><Phone className="w-5 h-5 text-teal-500" /></div>
-                </div>
-            </div>
 
-            {/* Filter Card */}
-            <div className="p-4 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-850 rounded-3xl shadow-xs space-y-3">
-                <div className="flex items-center gap-1.5 text-xs font-black text-gray-800 dark:text-white">
-                    <Filter className="w-4 h-4 text-teal-600" />
-                    جستجو و فیلتر نظرات
+                    {/* Last 6 months — show the most recent month first */}
+                    {stats.sortedMonths.slice(0, 3).map(m => (
+                        <div key={m.label} className="p-4 bg-gradient-to-br from-purple-500/10 to-purple-500/5 border border-purple-500/15 rounded-2xl flex items-center justify-between shadow-xs">
+                            <div>
+                                <span className="text-[10px] font-black text-purple-500 block">{toPersianDigits(m.label)}</span>
+                                <span className="text-xl font-black text-gray-900 dark:text-white mt-1 block">{toPersianDigits(m.count)} نظر</span>
+                            </div>
+                            <div className="p-2.5 bg-white dark:bg-gray-900 rounded-xl"><Calendar className="w-5 h-5 text-purple-500" /></div>
+                        </div>
+                    ))}
+
+                    {/* Yearly — show the most recent year first */}
+                    {stats.sortedYears.slice(0, 1).map(y => (
+                        <div key={y.year} className="p-4 bg-gradient-to-br from-indigo-500/10 to-indigo-500/5 border border-indigo-500/15 rounded-2xl flex items-center justify-between shadow-xs">
+                            <div>
+                                <span className="text-[10px] font-black text-indigo-500 block">سال {toPersianDigits(y.year)}</span>
+                                <span className="text-xl font-black text-gray-900 dark:text-white mt-1 block">{toPersianDigits(y.count)} نظر</span>
+                            </div>
+                            <div className="p-2.5 bg-white dark:bg-gray-900 rounded-xl"><Calendar className="w-5 h-5 text-indigo-500" /></div>
+                        </div>
+                    ))}
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-                    <div className="relative">
-                        <Search className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-gray-300" />
-                        <input type="text" value={surveySearch} onChange={(e) => { setSurveySearch(e.target.value); setSurveyPage(1); }}
-                            placeholder="جستجوی نام کاربر، دوره، تلفن یا دیدگاه..."
-                            className="w-full text-xs pr-9 pl-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-950 text-gray-950 dark:text-white focus:outline-none focus:ring-1 focus:ring-teal-500/30" />
-                    </div>
-                    <div>
-                        <input type="date" value={surveyFromDate} onChange={(e) => { setSurveyFromDate(e.target.value); setSurveyPage(1); }}
-                            className="w-full text-xs px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-950 dark:text-white focus:outline-none" />
-                    </div>
-                    <div>
-                        <input type="date" value={surveyToDate} onChange={(e) => { setSurveyToDate(e.target.value); setSurveyPage(1); }}
-                            className="w-full text-xs px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-950 dark:text-white focus:outline-none" />
-                    </div>
-                    <div className="flex gap-2">
-                        <button onClick={() => { setSurveySearch(''); setSurveyFromDate(''); setSurveyToDate(''); setSurveyPage(1); }}
-                            className="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-750 rounded-xl text-[11px] text-gray-500 font-bold cursor-pointer">
-                            بازنشانی فیلتر
-                        </button>
-                    </div>
-                </div>
-            </div>
+            )}
 
             {/* Table */}
             <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-850 rounded-3xl shadow-xs overflow-hidden">
                 {loadingSurveys ? (
                     <div className="p-8 text-center text-xs text-gray-400 dark:text-gray-500">در حال بارگذاری نظرات...</div>
                 ) : paginatedSurveys.length === 0 ? (
-                    <div className="p-8 text-center text-xs text-gray-400 dark:text-gray-500">هیچ نظری با معیارهای جستجو یافت نشد.</div>
+                    <div className="p-8 text-center text-xs text-gray-400 dark:text-gray-500">هیچ نظری یافت نشد.</div>
                 ) : (
                     <table className="w-full text-right text-xs">
                         <thead>
@@ -199,17 +165,17 @@ export default function TutsSurveys(props: TutsSurveysProps) {
                 )}
 
                 {/* Pagination */}
-                {!loadingSurveys && filteredSurveys.length > surveysPerPage && (
+                {!loadingSurveys && sortedSurveys.length > itemsPerPage && (
                     <div className="flex justify-between items-center p-3.5 border-t border-gray-100 dark:border-gray-850 bg-gray-55/50 dark:bg-gray-950/50">
-                        <span className="text-[10px] text-gray-400">{toPersianDigits(filteredSurveys.length)} نظر یافت شد.</span>
+                        <span className="text-[10px] text-gray-400">{toPersianDigits(sortedSurveys.length)} نظر یافت شد.</span>
                         <div className="flex items-center gap-1">
-                            <button disabled={surveyPage <= 1} onClick={() => setSurveyPage(surveyPage - 1)}
-                                className={`px-2.5 py-1 rounded-lg text-[10px] font-bold ${surveyPage <= 1 ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer'}`}>
+                            <button disabled={page <= 1} onClick={() => setPage(page - 1)}
+                                className={`px-2.5 py-1 rounded-lg text-[10px] font-bold ${page <= 1 ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer'}`}>
                                 قبلی
                             </button>
-                            <span className="text-[10px] text-gray-500 px-2">{toPersianDigits(surveyPage)} از {toPersianDigits(totalPages)}</span>
-                            <button disabled={surveyPage >= totalPages} onClick={() => setSurveyPage(surveyPage + 1)}
-                                className={`px-2.5 py-1 rounded-lg text-[10px] font-bold ${surveyPage >= totalPages ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer'}`}>
+                            <span className="text-[10px] text-gray-500 px-2">{toPersianDigits(page)} از {toPersianDigits(totalPages)}</span>
+                            <button disabled={page >= totalPages} onClick={() => setPage(page + 1)}
+                                className={`px-2.5 py-1 rounded-lg text-[10px] font-bold ${page >= totalPages ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer'}`}>
                                 بعدی
                             </button>
                         </div>

@@ -67,6 +67,27 @@ export function toPersianDateString(gregorianDate: string): string {
     }
 }
 
+/**
+ * Convert a Gregorian date string (e.g. "2026/07/01" or "2026/07/01 09:21")
+ * to Jalali year and month strings.
+ * Returns { year: "1405", month: "04" } or null if parsing fails.
+ */
+export function toJalaliYearMonth(gregorianDate: string): { year: string; month: string } | null {
+    if (!gregorianDate) return null;
+    try {
+        const [datePart] = gregorianDate.split(' ');
+        const [y, m, d] = datePart.split('/').map(Number);
+        if (!y || !m || !d) return null;
+        const jsDate = new Date(y, m - 1, d);
+        const pd = new PersianDate(jsDate).toLocale('en');
+        const year = pd.format('YYYY');
+        const month = pd.format('MM');
+        return { year, month };
+    } catch {
+        return null;
+    }
+}
+
 /** Format a number as currency in Rials with Persian digits */
 export function formatCurrency(amount: number): string {
     return toPersianDigits(amount.toLocaleString('fa-IR')) + ' ریال';

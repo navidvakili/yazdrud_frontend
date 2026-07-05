@@ -105,12 +105,16 @@ export function useTutsData(moduleId: string, showToast: (text: string, type?: '
                     const rows: any[] = res.data || [];
                     setIndividualSurveys(rows.map((s: any) => ({
                         id: s.id,
-                        name: s.full_name || `${s.first_name || ''} ${s.last_name || ''}`.trim(),
-                        phone: s.phone_number || '',
-                        date: s.created_at ? s.created_at.split(' ')[0].replace(/-/g, '/') : '',
+                        firstName: s.first_name || '',
+                        lastName: s.last_name || '',
+                        userName: s.full_name || `${s.first_name || ''} ${s.last_name || ''}`.trim(),
+                        userPhone: s.phone_number || '',
+                        ipAddress: s.ip_address || '',
+                        date: s.created_at ? s.created_at.replace(/-/g, '/') : '',
                         courseTitle: s.course_title || '',
                         rating: s.rating || 0,
-                        comment: s.comment || s.suggestions || ''
+                        comment: s.comment || '',
+                        suggestions: s.suggestions || ''
                     })));
                     const grouped: Record<string, any> = {};
                     rows.forEach((s: any) => {
