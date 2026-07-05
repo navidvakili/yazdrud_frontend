@@ -5,7 +5,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Plus, User, Edit2, Trash2, Upload } from 'lucide-react';
-import api from '@/src/shared-api';
+import { coursesApi } from '../api';
 import type { Instructor } from '../../shared/types';
 
 interface InstructorManagementDialogProps {
@@ -63,7 +63,7 @@ export default function InstructorManagementDialog({
 
   const handleEdit = async (id: number) => {
     try {
-      const instructor = await api.getInstructor(id);
+      const instructor = await coursesApi.getInstructor(id);
       setEditingId(id);
       setFormName(instructor.name);
       setFormSpecialty(instructor.specialty || '');
@@ -80,7 +80,7 @@ export default function InstructorManagementDialog({
   const handleDelete = async (id: number, name: string) => {
     if (!window.confirm(`آیا از حذف استاد "${name}" اطمینان دارید؟`)) return;
     try {
-      await api.deleteInstructor(id);
+      await coursesApi.deleteInstructor(id);
       setInstructors((prev) => prev.filter((i) => i.id !== id));
       showToast(`استاد "${name}" حذف شد.`);
     } catch (err: any) {
@@ -107,7 +107,7 @@ export default function InstructorManagementDialog({
 
       if (editingId) {
         formData.append('_method', 'PUT');
-        const updated = await api.updateInstructor(editingId, formData);
+        const updated = await coursesApi.updateInstructor(editingId, formData);
         setInstructors((prev) =>
           prev.map((i) =>
             i.id === editingId
@@ -117,7 +117,7 @@ export default function InstructorManagementDialog({
         );
         showToast(`استاد "${updated.name}" بروزرسانی شد.`);
       } else {
-        const created = await api.createInstructor(formData);
+        const created = await coursesApi.createInstructor(formData);
         setInstructors((prev) => [
           ...prev,
           { id: created.id, name: created.name, specialty: created.specialty || null },

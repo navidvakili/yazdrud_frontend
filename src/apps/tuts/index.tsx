@@ -1,6 +1,11 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 
-import api from '@/src/shared-api';
+import { coursesApi } from './courses/api';
+import { reportsApi } from './reports/api';
+import { receiptsApi } from './receipts/api';
+import { surveysApi } from './surveys/api';
+import { vouchersApi } from './vouchers/api';
+import { certificatesApi } from './certificates/api';
 import { BACKEND_API_URL } from '@/src/shared-constants';
 import { pdfjs } from 'react-pdf';
 import { Pagination } from '@/src/shared-components';
@@ -96,7 +101,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     if (needsCourses && !fetchedRef.current.courses) {
       setLoadingCourses(true);
       fetchedRef.current.courses = true;
-      api.getCourses({ per_page: 1000 })
+      coursesApi.getCourses({ per_page: 1000 })
         .then(res => {
           const mapped = (res.data || []).map(mapCourse);
           setCourses(mapped);
@@ -114,7 +119,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
       if (isReceiptsTab) {
         params.payment_method = 'bank';
       }
-      api.getAllRegistrations(params)
+      reportsApi.getAllRegistrations(params)
         .then(res => {
           const mapped = (res.data || []).map(mapRegistrant);
           setRegistrants(mapped);
@@ -126,7 +131,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     if (needsSurveys && !fetchedRef.current.surveys) {
       setLoadingSurveys(true);
       fetchedRef.current.surveys = true;
-      api.getSurveys({ per_page: 1000 })
+      surveysApi.getSurveys({ per_page: 1000 })
         .then(res => {
           const rows: any[] = res.data || [];
           setIndividualSurveys(rows.map((s: any) => ({
@@ -150,7 +155,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     if (needsVouchers && !fetchedRef.current.vouchers) {
       setLoadingVouchers(true);
       fetchedRef.current.vouchers = true;
-      api.getCoupons({ per_page: 1000 })
+      vouchersApi.getCoupons({ per_page: 1000 })
         .then(res => {
           const mapped = (res.data || []).map(mapVoucher);
           setVouchers(mapped);
@@ -172,7 +177,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
 
   // Fetch course groups from backend API
   useEffect(() => {
-    api.getCourseGroups()
+    coursesApi.getCourseGroups()
       .then(groups => {
         setCourseGroups(groups);
         const groupTitles = groups.map((g: any) => g.title);
@@ -191,7 +196,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
 
   // Fetch instructors for course form dropdowns
   useEffect(() => {
-    api.getInstructors({ per_page: 1000 })
+    coursesApi.getInstructors({ per_page: 1000 })
       .then(res => {
         const mapped = (res.data || []).map((inst: any) => ({
           id: inst.id,
@@ -337,7 +342,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
       return;
     }
     try {
-      const created = await api.createCourseGroup(trimmed);
+      const created = await coursesApi.createCourseGroup(trimmed);
       setCourseGroups(prev => [...prev, created]);
       setCategories(prev => [...prev, created.title]);
       setNewCategoryName('');
@@ -379,7 +384,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
         national_code: newVoucher.nationalCodes?.length ? newVoucher.nationalCodes.join(',') : null,
       };
 
-      const res = await api.createCoupon(payload);
+      const res = await vouchersApi.createCoupon(payload);
       const created = mapVoucher(res);
 
       setVouchers([created, ...vouchers]);
@@ -437,7 +442,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
       if (data.maxDiscount !== undefined) payload.max_discount = data.maxDiscount > 0 ? data.maxDiscount : null;
       if (data.nationalCodes !== undefined) payload.national_code = data.nationalCodes.length > 0 ? data.nationalCodes.join(',') : null;
 
-      const res = await api.updateCoupon(Number(id), payload);
+      const res = await vouchersApi.updateCoupon(Number(id), payload);
 
       // Refresh local state — recalculate remainingUses and status
       setVouchers(prev => prev.map(v => {
@@ -464,7 +469,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
 
   const handleDeleteVoucher = async (id: string) => {
     try {
-      await api.deleteCoupon(Number(id));
+      await vouchersApi.deleteCoupon(Number(id));
       setVouchers(prev => prev.filter(v => v.id !== id));
       setShowDeleteModal(false);
       setDeletingVoucher(null);
@@ -677,7 +682,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     if (!confirm(`آیا از حذف گروه "${catToDelete}" اطمینان دارید؟`)) return;
     try {
       if (group) {
-        await api.deleteCourseGroup(group.id);
+        await coursesApi.deleteCourseGroup(group.id);
       }
       setCourseGroups(prev => prev.filter(g => g.title !== catToDelete));
       setCategories(prev => prev.filter(c => c !== catToDelete));
@@ -704,7 +709,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
       return false;
     }
     try {
-      const updated = await api.updateCourseGroup(group.id, trimmed);
+      const updated = await coursesApi.updateCourseGroup(group.id, trimmed);
       setCourseGroups(prev => prev.map(g => g.id === group.id ? updated : g));
       setCategories(prev => prev.map(c => c === oldTitle ? updated.title : c));
       showToast(`گروه آموزشی "${updated.title}" با موفقیت بروزرسانی گردید.`);
@@ -848,7 +853,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
         formData.append('image', newCourseImage);
       }
 
-      const created = await api.createCourse(formData);
+      const created = await coursesApi.createCourse(formData);
 
       const mappedCourse = mapCourse(created);
       setCourses([mappedCourse, ...courses]);
@@ -925,7 +930,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
 
     setLoadingRegistrants(true);
     // Re-fetch registrations for this course every time dialog opens
-    api.getCourseRegistrations(courseIdNum)
+    coursesApi.getCourseRegistrations(courseIdNum)
       .then(data => {
         const mapped = (data || []).map(mapRegistrant);
         // Replace existing registrants for this course with fresh data
@@ -994,7 +999,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
       // Use POST with _method=PUT for form data with file upload
       formData.append('_method', 'PUT');
 
-      const updated = await api.updateCourse(courseId, formData);
+      const updated = await coursesApi.updateCourse(courseId, formData);
 
       const mappedCourse = mapCourse(updated);
       setCourses(prev => prev.map(c => c.id === editingCourse.id ? mappedCourse : c));
@@ -1015,7 +1020,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
   const handleToggleCourseStatus = async (id: string) => {
     try {
       const courseId = parseInt(id);
-      const updated = await api.toggleCourseActive(courseId);
+      const updated = await coursesApi.toggleCourseActive(courseId);
       const mappedCourse = mapCourse(updated);
       setCourses(prev => prev.map(c => c.id === id ? mappedCourse : c));
       const newStatus = mappedCourse.status;
@@ -1043,7 +1048,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     const title = courseToDelete.title;
     try {
       const courseId = parseInt(id);
-      await api.deleteCourse(courseId);
+      await coursesApi.deleteCourse(courseId);
       setCourses(prev => prev.filter(c => c.id !== id));
       setRegistrants(prev => prev.filter(r => r.courseId !== id));
       showToast(`دوره آموزشی "${title}" با موفقیت حذف گردید.`, 'info');
@@ -1352,7 +1357,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
         if (reportYear) params.year = reportYear;
         params.refunded = reportRefundedFilter;
 
-        const res = await api.getAllRegistrations(params);
+        const res = await reportsApi.getAllRegistrations(params);
         setReportRegistrants((res.data || []).map(mapRegistrant));
         setReportTotal(res.meta?.total ?? 0);
         setReportStats(res.stats ?? null);
@@ -1386,7 +1391,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
       if (reportCourseFilter) params.course_id = reportCourseFilter;
       if (reportYear) params.year = reportYear;
       params.refunded = reportRefundedFilter;
-      await api.exportRegistrations(params);
+      await reportsApi.exportRegistrations(params);
       showToast('خروجی اکسل با موفقیت دانلود شد.', 'success');
     } catch (err) {
       console.error('Export error:', err);
@@ -1449,7 +1454,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     if (!reg) return;
 
     try {
-      await api.refundRegistration(id);
+      await receiptsApi.refundRegistration(id);
       // Update local state: mark as refunded
       setReportRegistrants(prev => prev.map(r =>
         r.id === id ? { ...r, status: 'refunded' as const } : r
@@ -1473,7 +1478,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     if (!reg) return;
 
     try {
-      await api.undoRefundRegistration(id);
+      await receiptsApi.undoRefundRegistration(id);
       setReportRegistrants(prev => prev.map(r =>
         r.id === id ? { ...r, status: 'verified' as const } : r
       ));
@@ -1511,7 +1516,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
 
   const handleApproveCertificate = async (registerId: string) => {
     try {
-      const res = await api.approveCertificate(registerId);
+      const res = await certificatesApi.approveCertificate(registerId);
       setRegistrants(prev => prev.map(r =>
         r.id === registerId ? { ...r, certificateApproved: true } : r
       ));
@@ -1524,7 +1529,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
 
   const handleRejectCertificate = async (registerId: string) => {
     try {
-      const res = await api.rejectCertificate(registerId);
+      const res = await certificatesApi.rejectCertificate(registerId);
       setRegistrants(prev => prev.map(r =>
         r.id === registerId ? { ...r, certificateApproved: false, certificateNumber: undefined, hasCertificate: false } : r
       ));
@@ -1540,7 +1545,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
       // Open the public certificate URL in a new tab — browser handles the download natively
       window.open(`${BACKEND_API_URL}/certificate/${registerId}`, '_blank');
       // Refresh registrants to get updated certificate info
-      const res = await api.getAllRegistrations({ per_page: 1000 });
+      const res = await reportsApi.getAllRegistrations({ per_page: 1000 });
       setRegistrants((res.data || []).map(mapRegistrant));
       showToast('گواهی با موفقیت صادر شد.');
     } catch (err: any) {
@@ -1594,7 +1599,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     }
     if (!confirm('آیا از تایید همه ثبت‌نام‌های این دوره برای صدور گواهی مطمئن هستید؟')) return;
     try {
-      const res = await api.approveAllCertificates(Number(courseId));
+      const res = await certificatesApi.approveAllCertificates(Number(courseId));
       setRegistrants(prev => prev.map(r =>
         r.courseId === courseId ? { ...r, certificateApproved: true } : r
       ));
@@ -1607,7 +1612,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
   const handleDownloadAllCertificates = async () => {
     try {
       const courseId = selectedCourseReport?.id ? Number(selectedCourseReport.id) : undefined;
-      const blob = await api.downloadAllCertificates(courseId);
+      const blob = await certificatesApi.downloadAllCertificates(courseId);
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;

@@ -15,7 +15,8 @@ import type {
 } from '../shared/types';
 import { toPersianDigits, formatCurrency, toEnglishDigits } from '../shared/utils';
 import { JalaliDatepicker, ToastNotification } from '@/src/shared-components';
-import api from '@/src/shared-api';
+import { vouchersApi } from './api';
+import { coursesApi } from '../courses/api';
 import { mapVoucher, mapCourse } from '../shared/utils';
 import { SandboxDialog, DeleteVoucherDialog } from './dialogs';
 
@@ -909,20 +910,20 @@ export function StandaloneTutsVouchers() {
         if (!fetchedRef.current.vouchers) {
             fetchedRef.current.vouchers = true;
             setLoadingVouchers(true);
-            api.getCoupons({ per_page: 1000 })
+            vouchersApi.getCoupons({ per_page: 1000 })
                 .then(res => setVouchers((res.data || []).map(mapVoucher)))
                 .catch(err => { console.error('Error fetching coupons:', err); fetchedRef.current.vouchers = false; })
                 .finally(() => setLoadingVouchers(false));
         }
         if (!fetchedRef.current.courses) {
             fetchedRef.current.courses = true;
-            api.getCourses({ per_page: 1000 })
+            coursesApi.getCourses({ per_page: 1000 })
                 .then(res => setCourses((res.data || []).map(mapCourse)))
                 .catch(err => { console.error('Error fetching courses:', err); fetchedRef.current.courses = false; });
         }
         if (!fetchedRef.current.groups) {
             fetchedRef.current.groups = true;
-            api.getCourseGroups()
+            coursesApi.getCourseGroups()
                 .then(groups => {
                     setCourseGroups(groups);
                     const groupTitles = groups.map((g: any) => g.title);
@@ -1007,7 +1008,7 @@ export function StandaloneTutsVouchers() {
                 max_discount: newVoucher.maxDiscount > 0 ? newVoucher.maxDiscount : null,
                 national_code: newVoucher.nationalCodes?.length ? newVoucher.nationalCodes.join(',') : null,
             };
-            const res = await api.createCoupon(payload);
+            const res = await vouchersApi.createCoupon(payload);
             const created = mapVoucher(res);
             setVouchers([created, ...vouchers]);
             showToast(`بن خرید جدید "${title}" با کد "${code}" با موفقیت ایجاد گردید.`);
@@ -1048,7 +1049,7 @@ export function StandaloneTutsVouchers() {
             if (data.maxDiscount !== undefined) payload.max_discount = data.maxDiscount > 0 ? data.maxDiscount : null;
             if (data.nationalCodes !== undefined) payload.national_code = data.nationalCodes.length > 0 ? data.nationalCodes.join(',') : null;
 
-            await api.updateCoupon(Number(id), payload);
+            await vouchersApi.updateCoupon(Number(id), payload);
             setVouchers(prev => prev.map(v => {
                 if (v.id !== id) return v;
                 const updated = { ...v, ...data };
@@ -1070,7 +1071,7 @@ export function StandaloneTutsVouchers() {
 
     const handleDeleteVoucher = async (id: string) => {
         try {
-            await api.deleteCoupon(Number(id));
+            await vouchersApi.deleteCoupon(Number(id));
             setVouchers(prev => prev.filter(v => v.id !== id));
             setShowDeleteModal(false);
             setDeletingVoucher(null);

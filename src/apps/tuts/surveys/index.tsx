@@ -10,7 +10,7 @@
 import { useState, useMemo } from 'react';
 import { Eye, Phone, Clock, Star, X, MessageCircle, Lightbulb, Globe, MessageSquare, Calendar, FileDown } from 'lucide-react';
 import { toPersianDigits, toPersianDateString, toJalaliYearMonth } from '../shared/utils';
-import api from '@/src/shared-api';
+import { surveysApi } from './api';
 
 // --- Local interface matching the mapped survey data from TutsModule ---
 interface SurveyItem {
@@ -87,7 +87,7 @@ export default function TutsSurveys(props: TutsSurveysProps) {
     const handleExport = async () => {
         setExporting(true);
         try {
-            await api.exportSurveys();
+            await surveysApi.exportSurveys();
         } catch (err) {
             console.error('Export failed:', err);
         } finally {

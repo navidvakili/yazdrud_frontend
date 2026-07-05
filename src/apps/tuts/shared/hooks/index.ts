@@ -6,13 +6,9 @@
 // ============================================================
 
 export { useToast } from './useToast';
-export { useTutsData } from './useTutsData';
 export { usePagination } from './usePagination';
-export { useCertificateOps } from './useCertificateOps';
 
 // Tab-specific hooks — re-exported from their new tab directories
-export { useCourseCRUD } from '../../courses/hooks/useCourseCRUD';
-export { useInstructorManagement } from '../../courses/hooks/useInstructorManagement';
 export { usePreRegistration } from '../../courses/hooks/usePreRegistration';
 export { useReceiptOps } from '../../receipts/hooks/useReceiptOps';
 export { useVoucherOps } from '../../vouchers/hooks/useVoucherOps';

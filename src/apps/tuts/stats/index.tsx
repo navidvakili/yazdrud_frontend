@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
-import api from '@/src/shared-api';
+import { statsApi } from './api';
 import type { TutCourse } from '../shared/types';
 import { toPersianDigits, formatCurrency } from '../shared/utils';
 import type { DetailedCourseStats } from '@/src/shared-types';
@@ -66,7 +66,7 @@ export default function TutsStats(props: TutsStatsProps) {
         if (statAppliedCourse !== 'all') {
             params.course_id = statAppliedCourse;
         }
-        api.getDetailedCourseStatistics(params)
+        statsApi.getDetailedCourseStatistics(params)
             .then(data => setDetailedStats(data))
             .catch(err => { console.error('Error fetching detailed stats:', err); showToast('خطا در دریافت آمار', 'error'); })
             .finally(() => setStatsLoading(false));
