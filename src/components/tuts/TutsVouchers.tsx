@@ -90,11 +90,18 @@ export default function TutsVouchers(props: TutsVouchersProps) {
         handleUpdateVoucher, handleDeleteVoucher, openDeleteConfirm,
     } = props;
 
+    // ===== Local Toast =====
+    const [localToast, setLocalToast] = useState<{ text: string; type: 'success' | 'error' | 'info' } | null>(null);
+    const showLocalToast = useCallback((text: string, type: 'success' | 'error' | 'info' = 'success') => {
+        setLocalToast({ text, type });
+        setTimeout(() => setLocalToast(null), 4000);
+    }, []);
+
     const totalVoucherPages = Math.max(1, Math.ceil(vouchers.length / voucherPerPage));
     const paginatedVouchers = vouchers.slice((voucherPage - 1) * voucherPerPage, voucherPage * voucherPerPage);
 
     const handleCopyCode = async (code: string) => {
-        try { await navigator.clipboard.writeText(code); } catch { /* ignore */ }
+        try { await navigator.clipboard.writeText(code); showLocalToast(`کد "${code}" کپی شد.`); } catch { showLocalToast('خطا در کپی کد', 'error'); }
     };
 
     // --- Auto-generate code (frontend) ---
@@ -763,6 +770,8 @@ export default function TutsVouchers(props: TutsVouchersProps) {
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            <ToastNotification toast={localToast} />
         </div>
     );
 }
