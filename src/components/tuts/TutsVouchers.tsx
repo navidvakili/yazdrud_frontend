@@ -64,12 +64,11 @@ interface TutsVouchersProps {
 }
 
 const VOUCHER_CONDITIONS = [
-    { key: 'timeLimit', icon: Clock, label: 'محدودیت زمانی' },
-    { key: 'geoLimit', icon: MapPin, label: 'محدودیت جغرافیایی' },
-    { key: 'deviceLimit', icon: Smartphone, label: 'محدودیت دستگاه' },
-    { key: 'firstPurchaseOnly', icon: Gift, label: 'اولین خرید' },
-    { key: 'installmentsAllowed', icon: CreditCard, label: 'قسط‌بندی' },
-    { key: 'budgetCap', icon: DollarSign, label: 'سقف بودجه' },
+    { key: 'timeLimit', icon: Clock, label: 'محدودیت زمانی', check: (v: TutVoucher) => !!v.validFrom || !!v.validTo },
+    { key: 'courseLimit', icon: Tag, label: 'محدودیت دوره', check: (v: TutVoucher) => !!v.courseId && v.courseId !== 'all' },
+    { key: 'groupLimit', icon: MapPin, label: 'محدودیت گروه', check: (v: TutVoucher) => !!v.group_id },
+    { key: 'nationalCodeLimit', icon: Gift, label: 'محدودیت کد ملی', check: (v: TutVoucher) => !!(v.nationalCodes?.length) },
+    { key: 'maxDiscountCap', icon: DollarSign, label: 'سقف تخفیف', check: (v: TutVoucher) => !!v.maxDiscount && v.maxDiscount > 0 },
 ];
 
 export default function TutsVouchers(props: TutsVouchersProps) {
@@ -114,6 +113,9 @@ export default function TutsVouchers(props: TutsVouchersProps) {
     const courseRef = useRef<HTMLDivElement>(null);
 
     // --- Group autocomplete (Create form) ---
+    const [sandboxOpen, setSandboxOpen] = useState(false);
+    const [nationalCodeInput, setNationalCodeInput] = useState('');
+
     const [newGroupSearch, setNewGroupSearch] = useState('');
     const [newGroupTitle, setNewGroupTitle] = useState('');
     const [newGroupDropdownOpen, setNewGroupDropdownOpen] = useState(false);
@@ -148,8 +150,8 @@ export default function TutsVouchers(props: TutsVouchersProps) {
 
     return (
         <div className="space-y-6">
-            {/* Tab Switcher */}
-            <div className="flex gap-2 bg-gray-100/50 dark:bg-gray-950/20 p-1.5 rounded-2xl border border-gray-100 dark:border-gray-850 w-fit">
+            {/* Tab Switcher + Sandbox Button */}
+            <div className="flex gap-2 bg-gray-100/50 dark:bg-gray-950/20 p-1.5 rounded-2xl border border-gray-100 dark:border-gray-850 w-fit items-center">
                 {[
                     { id: 'list' as const, label: 'لیست بن‌های تخفیف', icon: List },
                     { id: 'create' as const, label: 'ایجاد بن جدید', icon: Plus },
@@ -162,6 +164,12 @@ export default function TutsVouchers(props: TutsVouchersProps) {
                         {tab.label}
                     </button>
                 ))}
+                <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1"></div>
+                <button onClick={() => { setSandboxOpen(true); setSandboxResult(null); }}
+                    className="px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer text-purple-500 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-950/30">
+                    <Beaker className="w-4 h-4" />
+                    سندباکس
+                </button>
             </div>
 
             {voucherActiveTab === 'list' ? (
@@ -254,16 +262,18 @@ export default function TutsVouchers(props: TutsVouchersProps) {
                                         </div>
                                         {/* Condition Tags */}
                                         <div className="flex flex-wrap gap-1.5 mt-2.5 mr-12">
-                                            {VOUCHER_CONDITIONS.filter(c => (v as any)[c.key]).map(c => (
+                                            {VOUCHER_CONDITIONS.filter(c => c.check(v)).map(c => (
                                                 <span key={c.key} className="px-2 py-0.5 bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 rounded-full text-[9px] font-bold flex items-center gap-1">
                                                     <c.icon className="w-2.5 h-2.5" />
                                                     {c.label}
                                                 </span>
                                             ))}
                                             <span className="px-2 py-0.5 bg-gray-50 dark:bg-gray-950 text-gray-400 rounded-full text-[9px]">
-                                                {v.applicableProductIds?.length || v.applicableCategoryIds?.length
-                                                    ? `${toPersianDigits((v.applicableProductIds?.length || 0) + (v.applicableCategoryIds?.length || 0))} محدودیت`
-                                                    : 'همه محصولات'}
+                                                {v.courseId && v.courseId !== 'all'
+                                                    ? 'محدود به دوره'
+                                                    : v.group_id
+                                                        ? 'محدود به گروه'
+                                                        : 'همه محصولات'}
                                             </span>
                                         </div>
                                     </div>
@@ -290,120 +300,6 @@ export default function TutsVouchers(props: TutsVouchersProps) {
                         )}
                     </div>
 
-                    {/* ===== Sandbox Simulator ===== */}
-                    <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-850 rounded-3xl shadow-xs overflow-hidden">
-                        <div className="p-4 sm:p-5">
-                            <h5 className="text-xs font-black text-gray-900 dark:text-white flex items-center gap-1.5 mb-4">
-                                <Beaker className="w-4 h-4 text-purple-500" />
-                                سندباکس شبیه‌ساز بن تخفیف (۶ تست اعتبارسنجی)
-                            </h5>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                                <div className="space-y-1">
-                                    <label className="text-[10px] font-bold text-gray-500 block">کد بن</label>
-                                    <input type="text" value={sandboxCode} onChange={(e) => setSandboxCode(e.target.value)}
-                                        placeholder="مثال: WELCOME10"
-                                        className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none font-mono" />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-[10px] font-bold text-gray-500 block">دوره</label>
-                                    <select value={sandboxCourseId} onChange={(e) => setSandboxCourseId(e.target.value)}
-                                        className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none cursor-pointer">
-                                        <option value="">انتخاب کنید...</option>
-                                        {courses.map(c => (<option key={c.id} value={c.id}>{c.title}</option>))}
-                                    </select>
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-[10px] font-bold text-gray-500 block">شناسه کاربر (کد ملی/دانشجویی)</label>
-                                    <input type="text" value={sandboxUserId} onChange={(e) => setSandboxUserId(e.target.value)}
-                                        placeholder="کد ملی یا دانشجویی"
-                                        className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none" />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-[10px] font-bold text-gray-500 block">موبایل (بررسی خرید اول)</label>
-                                    <input type="text" value={sandboxPhone} onChange={(e) => setSandboxPhone(e.target.value)}
-                                        placeholder="مثال: ۰۹۱۲۳۴۵۶۷۸۹"
-                                        className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none" />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-[10px] font-bold text-gray-500 block">ایمیل (بررسی خرید اول)</label>
-                                    <input type="text" value={sandboxEmail} onChange={(e) => setSandboxEmail(e.target.value)}
-                                        placeholder="مثال: student@example.com"
-                                        className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none" />
-                                </div>
-                            </div>
-                            <div className="mt-4 flex flex-wrap gap-3">
-                                <button onClick={handleRunSandboxTest}
-                                    disabled={!sandboxCode || !sandboxCourseId}
-                                    className="px-5 py-2.5 bg-purple-600 hover:bg-purple-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-2xl text-xs font-black transition-all cursor-pointer shadow-xs flex items-center justify-center gap-1.5">
-                                    <Flame className="w-4 h-4" />
-                                    اجرای ۶ تست اعتبارسنجی
-                                </button>
-                                {sandboxResult && (
-                                    <button onClick={() => setSandboxResult(null)}
-                                        className="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 rounded-2xl text-[11px] text-gray-500 font-bold cursor-pointer">
-                                        پاک کردن نتیجه
-                                    </button>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Sandbox Result */}
-                        {sandboxResult && (
-                            <div className="border-t border-gray-100 dark:border-gray-850">
-                                <div className="p-4 sm:p-5 space-y-4">
-                                    <div className="flex items-center justify-between">
-                                        <h5 className="text-xs font-black text-gray-900 dark:text-white flex items-center gap-1.5">
-                                            <Beaker className="w-4 h-4 text-purple-500" />
-                                            نتیجه سندباکس
-                                        </h5>
-                                        {sandboxResult.isValid ? (
-                                            <span className="text-[10px] px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 font-extrabold border border-emerald-500/15">
-                                                ✅ معتبر
-                                            </span>
-                                        ) : (
-                                            <span className="text-[10px] px-2.5 py-1 rounded-full bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 font-extrabold border border-rose-500/15">
-                                                ❌ نامعتبر
-                                            </span>
-                                        )}
-                                    </div>
-
-                                    {/* Discount info */}
-                                    {sandboxResult.isValid && sandboxResult.discountAmount ? (
-                                        <div className="p-3 bg-emerald-50/50 dark:bg-emerald-950/20 rounded-2xl border border-emerald-500/10 text-center">
-                                            <span className="text-xs text-gray-500 font-bold block mb-1">مبلغ تخفیف اعمال شده</span>
-                                            <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
-                                                {formatCurrency(sandboxResult.discountAmount)}
-                                            </span>
-                                        </div>
-                                    ) : null}
-
-                                    {/* Error message */}
-                                    {sandboxResult.error && (
-                                        <div className="p-3 bg-rose-50/50 dark:bg-rose-950/20 rounded-2xl border border-rose-500/10 flex items-start gap-2">
-                                            <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
-                                            <span className="text-[11px] text-rose-700 dark:text-rose-400">{sandboxResult.error}</span>
-                                        </div>
-                                    )}
-
-                                    {/* Trace logs */}
-                                    <div className="space-y-1.5">
-                                        <span className="text-[10px] font-black text-gray-400 flex items-center gap-1"><Info className="w-3 h-3" />گزارش تراکنش (Trace Logs)</span>
-                                        {sandboxResult.checks?.map((log, i) => (
-                                            <div key={i} className={`p-2 rounded-lg text-[10px] font-mono border ${log.passed
-                                                ? 'bg-emerald-50/30 dark:bg-emerald-950/20 border-emerald-500/10 text-emerald-700 dark:text-emerald-400'
-                                                : 'bg-rose-50/30 dark:bg-rose-950/20 border-rose-500/10 text-rose-700 dark:text-rose-400'}`}>
-                                                <div className="flex items-center gap-1.5">
-                                                    <span>{log.passed ? '✅' : '❌'}</span>
-                                                    <span className="font-bold">{log.title}</span>
-                                                </div>
-                                                <span className="block mr-4 text-gray-500">{log.desc}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                    </div>
                 </div>
             ) : (
                 /* ===== CREATE TAB ===== */
@@ -546,29 +442,51 @@ export default function TutsVouchers(props: TutsVouchersProps) {
                                     </div>
                                 </div>
 
-                                {/* Section 4: Budget / Installments (disabled) */}
-                                <div className="p-4 bg-gray-55/50 dark:bg-gray-950/30 rounded-2xl border border-gray-100/50 dark:border-gray-850 space-y-3 pointer-events-none opacity-30 select-none relative">
-                                    <div className="absolute -top-2 -left-2 z-10">
-                                        <span className="px-2 py-0.5 bg-amber-500 text-white text-[8px] font-black rounded-full shadow-sm">به زودی</span>
-                                    </div>
-                                    <h6 className="text-[10px] font-black text-gray-400 flex items-center gap-1.5"><CreditCard className="w-3 h-3" />بودجه و اقساط</h6>
-                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                {/* Section 4: Advanced Settings (Max Discount + National Codes) */}
+                                <div className="p-4 bg-gray-55/50 dark:bg-gray-950/30 rounded-2xl border border-gray-100/50 dark:border-gray-850 space-y-3">
+                                    <h6 className="text-[10px] font-black text-gray-400 flex items-center gap-1.5"><DollarSign className="w-3 h-3" />تنظیمات پیشرفته</h6>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                         <div className="space-y-1">
-                                            <label className="text-[10px] font-bold text-gray-500 block">سقف بودجه (ریال)</label>
-                                            <input type="number" value={newVoucher.budgetCap || ''} onChange={(e) => setNewVoucher(f => ({ ...f, budgetCap: Number(e.target.value) }))}
-                                                className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none" />
+                                            <label className="text-[10px] font-bold text-gray-500 block">حداکثر مبلغ تخفیف (سقف)</label>
+                                            <input type="text" value={newVoucher.maxDiscount > 0 ? newVoucher.maxDiscount.toLocaleString('en-US') : ''} onChange={(e) => {
+                                                const raw = e.target.value.replace(/[^\d]/g, '');
+                                                setNewVoucher(f => ({ ...f, maxDiscount: raw ? Number(raw) : 0 }));
+                                            }}
+                                                placeholder="مثال: 1,000,000"
+                                                className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none ltr text-left" />
+                                            <span className="text-[9px] text-gray-400 block mt-0.5">در صورت درصدی بودن تخفیف، مبلغ نهایی از این مقدار بیشتر نخواهد شد</span>
                                         </div>
                                         <div className="space-y-1">
-                                            <label className="text-[10px] font-bold text-gray-500 block">حداقل قسط</label>
-                                            <input type="number" value={newVoucher.minInstallment || ''} onChange={(e) => setNewVoucher(f => ({ ...f, minInstallment: Number(e.target.value) }))}
-                                                className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none" />
-                                        </div>
-                                        <div className="space-y-1 flex items-end pb-1">
-                                            <label className="flex items-center gap-2 text-[11px] text-gray-600 dark:text-gray-400 cursor-pointer">
-                                                <input type="checkbox" checked={newVoucher.installmentsAllowed || false} onChange={(e) => setNewVoucher(f => ({ ...f, installmentsAllowed: e.target.checked }))}
-                                                    className="rounded accent-teal-600" />
-                                                قسط‌بندی مجاز باشد
-                                            </label>
+                                            <label className="text-[10px] font-bold text-gray-500 block">کد ملی مجاز</label>
+                                            <div className="flex gap-2">
+                                                <input type="text" value={nationalCodeInput} onChange={(e) => setNationalCodeInput(e.target.value)}
+                                                    placeholder="کد ملی"
+                                                    className="flex-1 text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none ltr text-left" />
+                                                <button type="button" onClick={() => {
+                                                    const code = nationalCodeInput.trim();
+                                                    if (code && !newVoucher.nationalCodes.includes(code)) {
+                                                        setNewVoucher(f => ({ ...f, nationalCodes: [...f.nationalCodes, code] }));
+                                                        setNationalCodeInput('');
+                                                    }
+                                                }}
+                                                    className="px-3 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer">
+                                                    ثبت
+                                                </button>
+                                            </div>
+                                            {(newVoucher.nationalCodes?.length || 0) > 0 && (
+                                                <div className="flex flex-wrap gap-1.5 mt-2">
+                                                    {newVoucher.nationalCodes.map((code, i) => (
+                                                        <span key={i} className="px-2 py-1 bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 rounded-lg text-[10px] font-bold flex items-center gap-1.5 border border-indigo-200/50 dark:border-indigo-800/50">
+                                                            {code}
+                                                            <button type="button" onClick={() => setNewVoucher(f => ({ ...f, nationalCodes: f.nationalCodes.filter((_, j) => j !== i) }))}
+                                                                className="hover:text-red-500 cursor-pointer">
+                                                                <X className="w-3 h-3" />
+                                                            </button>
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
+                                            <span className="text-[9px] text-gray-400 block mt-0.5">فقط کاربران با این کدهای ملی می‌توانند از بن استفاده کنند</span>
                                         </div>
                                     </div>
                                 </div>
@@ -585,6 +503,152 @@ export default function TutsVouchers(props: TutsVouchersProps) {
                     </div>
                 </div>
             )}
+
+            {/* ===== SANDBOX MODAL ===== */}
+            <AnimatePresence>
+                {sandboxOpen && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+                        onClick={() => { setSandboxOpen(false); setSandboxResult(null); }}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.95, opacity: 0 }}
+                            onClick={e => e.stopPropagation()}
+                            className="bg-white dark:bg-gray-900 rounded-3xl shadow-2xl border border-gray-100 dark:border-gray-850 w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6"
+                        >
+                            <div className="flex items-center justify-between mb-5">
+                                <h3 className="text-sm font-black text-gray-900 dark:text-white flex items-center gap-2">
+                                    <Beaker className="w-5 h-5 text-purple-500" />
+                                    سندباکس شبیه‌ساز بن تخفیف
+                                    <span className="text-[10px] font-bold text-gray-400 mr-2">(۶ تست اعتبارسنجی)</span>
+                                </h3>
+                                <button onClick={() => { setSandboxOpen(false); setSandboxResult(null); }}
+                                    className="p-2 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer">
+                                    <X className="w-4 h-4" />
+                                </button>
+                            </div>
+
+                            <div className="space-y-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-bold text-gray-500 block">کد بن</label>
+                                        <input type="text" value={sandboxCode} onChange={(e) => setSandboxCode(e.target.value)}
+                                            placeholder="مثال: WELCOME10"
+                                            className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none font-mono" />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-bold text-gray-500 block">دوره</label>
+                                        <select value={sandboxCourseId} onChange={(e) => setSandboxCourseId(e.target.value)}
+                                            className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none cursor-pointer">
+                                            <option value="">انتخاب کنید...</option>
+                                            {courses.map(c => (<option key={c.id} value={c.id}>{c.title}</option>))}
+                                        </select>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-bold text-gray-500 block">شناسه کاربر (کد ملی/دانشجویی)</label>
+                                        <input type="text" value={sandboxUserId} onChange={(e) => setSandboxUserId(e.target.value)}
+                                            placeholder="کد ملی یا دانشجویی"
+                                            className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none" />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-bold text-gray-500 block">موبایل (بررسی خرید اول)</label>
+                                        <input type="text" value={sandboxPhone} onChange={(e) => setSandboxPhone(e.target.value)}
+                                            placeholder="مثال: ۰۹۱۲۳۴۵۶۷۸۹"
+                                            className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none" />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-bold text-gray-500 block">ایمیل (بررسی خرید اول)</label>
+                                        <input type="text" value={sandboxEmail} onChange={(e) => setSandboxEmail(e.target.value)}
+                                            placeholder="مثال: student@example.com"
+                                            className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none" />
+                                    </div>
+                                </div>
+
+                                <div className="flex flex-wrap gap-3">
+                                    <button onClick={handleRunSandboxTest}
+                                        disabled={!sandboxCode || !sandboxCourseId}
+                                        className="px-5 py-2.5 bg-purple-600 hover:bg-purple-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-2xl text-xs font-black transition-all cursor-pointer shadow-xs flex items-center justify-center gap-1.5">
+                                        <Flame className="w-4 h-4" />
+                                        اجرای ۶ تست اعتبارسنجی
+                                    </button>
+                                    {sandboxResult && (
+                                        <button onClick={() => setSandboxResult(null)}
+                                            className="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 rounded-2xl text-[11px] text-gray-500 font-bold cursor-pointer">
+                                            پاک کردن نتیجه
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Sandbox Result */}
+                            {sandboxResult && (
+                                <div className="mt-5 border-t border-gray-100 dark:border-gray-850 pt-5 space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <h5 className="text-xs font-black text-gray-900 dark:text-white flex items-center gap-1.5">
+                                            <Beaker className="w-4 h-4 text-purple-500" />
+                                            نتیجه سندباکس
+                                        </h5>
+                                        {sandboxResult.isValid ? (
+                                            <span className="text-[10px] px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 font-extrabold border border-emerald-500/15">
+                                                ✅ معتبر
+                                            </span>
+                                        ) : (
+                                            <span className="text-[10px] px-2.5 py-1 rounded-full bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 font-extrabold border border-rose-500/15">
+                                                ❌ نامعتبر
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    {/* Discount info */}
+                                    {sandboxResult.isValid && sandboxResult.discountAmount ? (
+                                        <div className="p-3 bg-emerald-50/50 dark:bg-emerald-950/20 rounded-2xl border border-emerald-500/10 text-center">
+                                            <span className="text-xs text-gray-500 font-bold block mb-1">مبلغ تخفیف اعمال شده</span>
+                                            <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
+                                                {formatCurrency(sandboxResult.discountAmount)}
+                                            </span>
+                                        </div>
+                                    ) : null}
+
+                                    {/* Error message */}
+                                    {sandboxResult.error && (
+                                        <div className="p-3 bg-rose-50/50 dark:bg-rose-950/20 rounded-2xl border border-rose-500/10 flex items-start gap-2">
+                                            <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
+                                            <span className="text-[11px] text-rose-700 dark:text-rose-400">{sandboxResult.error}</span>
+                                        </div>
+                                    )}
+
+                                    {/* Trace logs */}
+                                    <div className="space-y-1.5">
+                                        <span className="text-[10px] font-black text-gray-400 flex items-center gap-1"><Info className="w-3 h-3" />گزارش تراکنش (Trace Logs)</span>
+                                        {sandboxResult.checks?.map((log, i) => (
+                                            <div key={i} className={`p-2 rounded-lg text-[10px] font-mono border ${log.passed
+                                                ? 'bg-emerald-50/30 dark:bg-emerald-950/20 border-emerald-500/10 text-emerald-700 dark:text-emerald-400'
+                                                : 'bg-rose-50/30 dark:bg-rose-950/20 border-rose-500/10 text-rose-700 dark:text-rose-400'}`}>
+                                                <div className="flex items-center gap-1.5">
+                                                    <span>{log.passed ? '✅' : '❌'}</span>
+                                                    <span className="font-bold">{log.title}</span>
+                                                </div>
+                                                <span className="block mr-4 text-gray-500">{log.desc}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Close button */}
+                            <button onClick={() => { setSandboxOpen(false); setSandboxResult(null); }}
+                                className="w-full mt-5 py-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 rounded-2xl text-xs font-bold text-gray-500 cursor-pointer">
+                                بستن
+                            </button>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* ===== EDIT MODAL ===== */}
             <AnimatePresence>
@@ -618,6 +682,7 @@ export default function TutsVouchers(props: TutsVouchersProps) {
                             </div>
 
                             <EditForm
+                                key={editingVoucher.id}
                                 voucher={editingVoucher}
                                 courses={courses}
                                 courseGroups={courseGroups}
@@ -717,6 +782,9 @@ function EditForm({ voucher, courses, courseGroups, onSave, onCancel }: {
     const [maxUses, setMaxUses] = useState(voucher.maxUses || 100);
     const [validFrom, setValidFrom] = useState(voucher.validFrom || '');
     const [validTo, setValidTo] = useState(voucher.validTo || '');
+    const [maxDiscount, setMaxDiscount] = useState(voucher.maxDiscount || 0);
+    const [nationalCodesList, setNationalCodesList] = useState<string[]>(voucher.nationalCodes || []);
+    const [nationalCodeInput, setNationalCodeInput] = useState('');
     const [saving, setSaving] = useState(false);
     const [validationError, setValidationError] = useState('');
 
@@ -785,6 +853,8 @@ function EditForm({ voucher, courses, courseGroups, onSave, onCancel }: {
                 validTo,
                 courseId: courseId || 'all',
                 group_id: groupId || null,
+                maxDiscount,
+                nationalCodes: nationalCodesList,
             });
         } finally {
             setSaving(false);
@@ -917,6 +987,49 @@ function EditForm({ voucher, courses, courseGroups, onSave, onCancel }: {
                 <div className="space-y-1">
                     <label className="text-[10px] font-bold text-gray-500 block">فعال تا تاریخ</label>
                     <JalaliDatepicker value={validTo} onChange={setValidTo} />
+                </div>
+            </div>
+            {/* ===== Row 4: Advanced Settings ===== */}
+            <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-500 block">حداکثر مبلغ تخفیف (سقف)</label>
+                    <input type="text" value={maxDiscount > 0 ? maxDiscount.toLocaleString('en-US') : ''} onChange={(e) => {
+                        const raw = e.target.value.replace(/[^\d]/g, '');
+                        setMaxDiscount(raw ? Number(raw) : 0);
+                    }}
+                        placeholder="مثال: 1,000,000"
+                        className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none ltr text-left" />
+                </div>
+                <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-500 block">کد ملی مجاز</label>
+                    <div className="flex gap-2">
+                        <input type="text" value={nationalCodeInput} onChange={(e) => setNationalCodeInput(e.target.value)}
+                            placeholder="کد ملی"
+                            className="flex-1 text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none ltr text-left" />
+                        <button type="button" onClick={() => {
+                            const code = nationalCodeInput.trim();
+                            if (code && !nationalCodesList.includes(code)) {
+                                setNationalCodesList([...nationalCodesList, code]);
+                                setNationalCodeInput('');
+                            }
+                        }}
+                            className="px-3 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer">
+                            ثبت
+                        </button>
+                    </div>
+                    {nationalCodesList.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mt-2">
+                            {nationalCodesList.map((code, i) => (
+                                <span key={i} className="px-2 py-1 bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 rounded-lg text-[10px] font-bold flex items-center gap-1.5 border border-indigo-200/50 dark:border-indigo-800/50">
+                                    {code}
+                                    <button type="button" onClick={() => setNationalCodesList(nationalCodesList.filter((_, j) => j !== i))}
+                                        className="hover:text-red-500 cursor-pointer">
+                                        <X className="w-3 h-3" />
+                                    </button>
+                                </span>
+                            ))}
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -1064,6 +1177,8 @@ export function StandaloneTutsVouchers() {
                 start_date: newVoucher.validFrom || '',
                 finish_date: newVoucher.validUntil || '',
                 is_active: true,
+                max_discount: newVoucher.maxDiscount > 0 ? newVoucher.maxDiscount : null,
+                national_code: newVoucher.nationalCodes?.length ? newVoucher.nationalCodes.join(',') : null,
             };
             const res = await api.createCoupon(payload);
             const created = mapVoucher(res);
@@ -1103,6 +1218,8 @@ export function StandaloneTutsVouchers() {
             }
             if (data.courseId !== undefined) payload.course_id = data.courseId === 'all' ? null : Number(data.courseId);
             if (data.group_id !== undefined) payload.group_id = data.group_id ? Number(data.group_id) : null;
+            if (data.maxDiscount !== undefined) payload.max_discount = data.maxDiscount > 0 ? data.maxDiscount : null;
+            if (data.nationalCodes !== undefined) payload.national_code = data.nationalCodes.length > 0 ? data.nationalCodes.join(',') : null;
 
             await api.updateCoupon(Number(id), payload);
             setVouchers(prev => prev.map(v => {

@@ -381,6 +381,8 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
         start_date: newVoucher.validFrom || '',
         finish_date: newVoucher.validUntil || '',
         is_active: true,
+        max_discount: newVoucher.maxDiscount > 0 ? newVoucher.maxDiscount : null,
+        national_code: newVoucher.nationalCodes?.length ? newVoucher.nationalCodes.join(',') : null,
       };
 
       const res = await api.createCoupon(payload);
@@ -438,6 +440,8 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
       }
       if (data.courseId !== undefined) payload.course_id = data.courseId === 'all' ? null : Number(data.courseId);
       if (data.group_id !== undefined) payload.group_id = data.group_id ? Number(data.group_id) : null;
+      if (data.maxDiscount !== undefined) payload.max_discount = data.maxDiscount > 0 ? data.maxDiscount : null;
+      if (data.nationalCodes !== undefined) payload.national_code = data.nationalCodes.length > 0 ? data.nationalCodes.join(',') : null;
 
       const res = await api.updateCoupon(Number(id), payload);
 
@@ -557,35 +561,41 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     }
     checks.push({ title: 'انطباق دوره و محصول', passed: productPassed, desc: productDesc });
 
-    // Check 4: Category/Department Match
-    let catPassed = true;
-    let catDesc = 'برای تمامی دپارتمان‌ها مجاز است.';
-    if (vouch.category && vouch.category !== 'all') {
-      if (vouch.category !== course.category) {
-        catPassed = false;
+    // Check 4: Group Restriction
+    let groupPassed = true;
+    let groupDesc = 'برای تمامی گروه‌ها مجاز است.';
+    if (vouch.group_id) {
+      if (Number(vouch.group_id) !== course.group_id) {
+        groupPassed = false;
         isValid = false;
-        failReason = `این بن فقط برای کارگاه‌های دپارتمان ${vouch.category} معتبر است.`;
-        catDesc = `غیرمجاز (دپارتمان این دوره "${course.category}" است)`;
+        failReason = 'این بن تخفیف فقط برای گروه دوره خاصی معتبر است.';
+        groupDesc = `غیرمجاز (مختص گروه ${vouch.group_title || vouch.group_id})`;
       } else {
-        catDesc = `مجاز (دپارتمان منطبق)`;
+        groupDesc = `مجاز (هم‌گروه با این دوره)`;
       }
     }
-    checks.push({ title: 'دپارتمان آموزشی', passed: catPassed, desc: catDesc });
+    checks.push({ title: 'گروه دوره', passed: groupPassed, desc: groupDesc });
 
-    // Check 5: Minimum Base Price
-    let pricePassed = true;
-    let priceDesc = 'حداقل مبلغ شهریه ندارد.';
-    if (vouch.minCoursePrice && course.cost < vouch.minCoursePrice) {
-      pricePassed = false;
-      isValid = false;
-      failReason = `شهریه دوره از حداقل مبلغ مجاز بن کمتر است.`;
-      priceDesc = `غیرمجاز (شهریه دوره ${formatCurrency(course.cost)} کمتر از حداقل مجاز ${formatCurrency(vouch.minCoursePrice)})`;
-    } else {
-      if (vouch.minCoursePrice) {
-        priceDesc = `مجاز (بیشتر از حداقل ${formatCurrency(vouch.minCoursePrice)})`;
+    // Check 5: Maximum Discount Cap
+    let maxDiscPassed = true;
+    let maxDiscDesc = 'بدون سقف تخفیف.';
+    if (vouch.maxDiscount && vouch.maxDiscount > 0) {
+      let calculatedDiscount = 0;
+      if (vouch.discountPercent) {
+        calculatedDiscount = Math.round((course.cost * vouch.discountPercent) / 100);
+      } else if (vouch.discountAmount) {
+        calculatedDiscount = Math.min(course.cost, vouch.discountAmount);
+      }
+      if (calculatedDiscount > vouch.maxDiscount) {
+        maxDiscPassed = false;
+        isValid = false;
+        failReason = `تخفیف محاسبه شده (${formatCurrency(calculatedDiscount)}) از سقف مجاز (${formatCurrency(vouch.maxDiscount)}) بیشتر است.`;
+        maxDiscDesc = `غیرمجاز (${formatCurrency(calculatedDiscount)} > ${formatCurrency(vouch.maxDiscount)})`;
+      } else {
+        maxDiscDesc = `مجاز (${formatCurrency(calculatedDiscount)} ≤ ${formatCurrency(vouch.maxDiscount)})`;
       }
     }
-    checks.push({ title: 'حداقل مبلغ شهریه دوره', passed: pricePassed, desc: priceDesc });
+    checks.push({ title: 'سقف تخفیف (Max Discount)', passed: maxDiscPassed, desc: maxDiscDesc });
 
     // Check 6: Global Usage Cap
     let capPassed = true;
@@ -602,24 +612,26 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     }
     checks.push({ title: 'ظرفیت کل بن (Usage Cap)', passed: capPassed, desc: capDesc });
 
-    // Check 11: First Purchase Only
-    let firstPassed = true;
-    let firstDesc = 'برای همه ثبت‌نام کنندگان مجاز است.';
-    if (vouch.firstPurchaseOnly) {
-      const hasPurchased = registrants.some(r =>
-        r.status === 'verified' &&
-        (r.studentCode === sandboxPhone || r.studentCode === sandboxEmail)
-      );
-      if (hasPurchased) {
-        firstPassed = false;
+    // Check 7: National Code Restriction
+    let ncPassed = true;
+    let ncDesc = 'برای همه کاربران مجاز است.';
+    if (vouch.nationalCodes?.length) {
+      const userNationalCode = sandboxUserId.trim();
+      if (!userNationalCode) {
+        ncPassed = false;
         isValid = false;
-        failReason = 'این بن تخفیف فقط برای «اولین خرید» فراگیران معتبر است.';
-        firstDesc = `غیرمجاز (سوابق خرید با این مشخصات در سیستم یافت شد)`;
+        failReason = 'لطفاً کد ملی خود را وارد کنید.';
+        ncDesc = `غیرمجاز (کد ملی وارد نشده)`;
+      } else if (!vouch.nationalCodes.includes(userNationalCode)) {
+        ncPassed = false;
+        isValid = false;
+        failReason = 'این بن تخفیف فقط برای کد ملی مشخص‌شده قابل استفاده است.';
+        ncDesc = `غیرمجاز (کد "${userNationalCode}" مجاز نیست)`;
       } else {
-        firstDesc = `مجاز (اولین بار خرید فراگیر)`;
+        ncDesc = `مجاز (کد ملی ${userNationalCode} در لیست)`;
       }
     }
-    checks.push({ title: 'تشخیص فراگیر جدید (اولین خرید)', passed: firstPassed, desc: firstDesc });
+    checks.push({ title: 'محدودیت کد ملی', passed: ncPassed, desc: ncDesc });
 
     // Final calculation
     let discount = 0;
@@ -629,11 +641,15 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
       } else if (vouch.discountAmount) {
         discount = Math.min(course.cost, vouch.discountAmount);
       }
+      // Apply max discount cap
+      if (vouch.maxDiscount && vouch.maxDiscount > 0 && discount > vouch.maxDiscount) {
+        discount = vouch.maxDiscount;
+      }
     }
 
     const finalPrice = Math.max(0, course.cost - discount);
-    const allowInst = vouch.allowInstallments ?? false;
-    const instCount = vouch.installmentCount || 1;
+    const allowInst = false;
+    const instCount = 1;
 
     setSandboxResult({
       isValid,
