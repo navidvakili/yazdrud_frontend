@@ -14,10 +14,9 @@ import type {
     VoucherFormData, SandboxResult,
 } from '../shared/types';
 import { toPersianDigits, formatCurrency, toEnglishDigits } from '../shared/utils';
-import { JalaliDatepicker } from '../shared/JalaliDatepicker';
+import { JalaliDatepicker, ToastNotification } from '@/src/shared-components';
 import api from '@/src/shared-api';
 import { mapVoucher, mapCourse } from '../shared/utils';
-import ToastNotification from '../shared/ToastNotification';
 import { SandboxDialog, DeleteVoucherDialog } from './dialogs';
 
 interface TutsVouchersProps {

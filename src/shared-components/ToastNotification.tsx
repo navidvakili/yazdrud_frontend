@@ -1,5 +1,5 @@
 // ============================================================
-// TutsModule — Toast Notification Component
+// ToastNotification — Global toast notification component
 // ============================================================
 
 import { motion, AnimatePresence } from 'motion/react';

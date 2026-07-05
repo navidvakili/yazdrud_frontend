@@ -1,5 +1,6 @@
 // ============================================================
-// JalaliDatepicker — استفاده از react-multi-date-picker با تقویم شمسی
+// JalaliDatepicker — Global Jalali (Persian) date picker
+// Uses react-multi-date-picker with Persian calendar.
 // ============================================================
 
 import DatePicker, { DateObject } from "react-multi-date-picker";
@@ -7,7 +8,7 @@ import "react-multi-date-picker/styles/colors/teal.css";
 import persian from "react-date-object/calendars/persian"
 import persian_fa from "react-date-object/locales/persian_fa"
 import { Calendar, X } from 'lucide-react';
-import { toPersianDigits, toEnglishDigits } from './utils';
+import { toPersianDigits, toEnglishDigits } from '@/src/shared-utils';
 
 interface JalaliDatepickerProps {
     value: string;
@@ -15,7 +16,7 @@ interface JalaliDatepickerProps {
 }
 
 export function JalaliDatepicker({ value, onChange }: JalaliDatepickerProps) {
-    // تبدیل مقدار ورودی (با ارقام فارسی) به DateObject شمسی
+    // Convert input value (with Persian digits) to a Persian DateObject
     const engValue = value ? toEnglishDigits(value) : '';
     const dateValue = engValue
         ? new DateObject({
@@ -36,10 +37,8 @@ export function JalaliDatepicker({ value, onChange }: JalaliDatepickerProps) {
             value={dateValue}
             onChange={(date: DateObject | null) => {
                 if (date) {
-                    // برگرداندن تاریخ با ارقام فارسی (مشابه قبل)
                     onChange(toPersianDigits(date.format("YYYY/MM/DD")));
                 } else {
-                    // پاک کردن مقدار تاریخ
                     onChange('');
                 }
             }}
@@ -65,7 +64,7 @@ export function JalaliDatepicker({ value, onChange }: JalaliDatepickerProps) {
 }
 
 /**
- * رندر دکمه سفارشی به جای input پیش‌فرض
+ * Custom button renderer instead of default input
  */
 function CustomInput({ openCalendar, value, onClear }: any) {
     return (

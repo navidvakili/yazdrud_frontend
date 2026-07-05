@@ -8,7 +8,7 @@ import type { VoucherFormData, SandboxResult, TutCourse, TutRegistrant, TutVouch
 
 // Configure PDF.js worker — served from /public/ to avoid CSP issues with CDN
 pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
-import ToastNotification from './shared/ToastNotification';
+import { ToastNotification } from '@/src/shared-components';
 import { formatCostInput, mapCourse, mapVoucher, mapRegistrant, toPersianDigits, formatCurrency, toEnglishDigits, normalizePersian as normalizePersianSearch } from './shared/utils';
 import { useToast } from './shared/hooks';
 import {

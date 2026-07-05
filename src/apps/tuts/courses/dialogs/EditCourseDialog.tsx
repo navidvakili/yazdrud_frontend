@@ -4,7 +4,7 @@
 
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Edit2, Upload } from 'lucide-react';
-import { JalaliDatepicker } from '../../shared/JalaliDatepicker';
+import { JalaliDatepicker } from '@/src/shared-components';
 import type { Instructor } from '../../shared/types';
 
 interface EditCourseDialogProps {
