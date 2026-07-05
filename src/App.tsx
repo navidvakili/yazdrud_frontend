@@ -13,11 +13,12 @@ import api from '@/src/shared-api';
 import { THEME_STRING, USER_STRING, MAX_TABS, STANDBY_TIMEOUT } from '@/src/shared-constants';
 import { AppModules, resolveApp, LoadingFallback } from '@/src/apps';
 import LoginForm from '@/src/components/LoginForm';
-import DashboardModule from '@/src/components/DashboardModule';
+import DashboardModule from '@/src/dashboard';
 import ThesisManagement from '@/src/components/ThesisManagement';
 import FloatingPanels from '@/src/components/FloatingPanels';
 import { Header, Sidebar, TabsBar, Footer, NetworkStatus, defaultNotifications, urlToTargetId, resolveIcon, faToLucideName } from '@/src/layouts';
 import type { MenuCategory } from '@/src/layouts';
+import { dashboardApi } from '@/src/dashboard';
 import { LogoutModal, StandbyModal, TabLimitAlert, SessionWarningModal } from '@/src/shared-components';
 
 export default function App() {
@@ -160,7 +161,7 @@ export default function App() {
   // Fetch pinned menus from backend
   const fetchPinnedMenus = useCallback(async () => {
     try {
-      const menus = await api.getPinnedMenus();
+      const menus = await dashboardApi.getPinnedMenus();
       setPinnedMenus(Array.isArray(menus) ? menus : []);
     } catch {
       // ignore
@@ -171,7 +172,7 @@ export default function App() {
   const handlePinMenu = useCallback(async (menuId: string) => {
     setPinnedMenus(prev => prev.includes(menuId) ? prev : [...prev, menuId]);
     try {
-      await api.pinMenu(menuId);
+      await dashboardApi.pinMenu(menuId);
     } catch {
       // Rollback on error
       setPinnedMenus(prev => prev.filter(id => id !== menuId));
@@ -181,7 +182,7 @@ export default function App() {
   const handleUnpinMenu = useCallback(async (menuId: string) => {
     setPinnedMenus(prev => prev.filter(id => id !== menuId));
     try {
-      await api.unpinMenu(menuId);
+      await dashboardApi.unpinMenu(menuId);
     } catch {
       // Rollback — re-add
       setPinnedMenus(prev => prev.includes(menuId) ? prev : [...prev, menuId]);
