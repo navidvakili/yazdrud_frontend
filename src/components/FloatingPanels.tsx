@@ -16,7 +16,7 @@ import {
   AlertTriangle,
   CheckCircle,
 } from 'lucide-react';
-import type { PortalNotification } from '@/src/types';
+import type { PortalNotification } from '@/src/shared-types';
 
 interface FloatingPanelsProps {
   activePanel: string | null;

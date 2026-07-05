@@ -10,7 +10,7 @@ import {
   Search, X, LogOut, Plus, LayoutDashboard, ChevronLeft, Globe,
   type LucideIcon,
 } from 'lucide-react';
-import type { PortalNotification } from '@/src/types';
+import type { PortalNotification } from '@/src/shared-types';
 
 // ========== Types ==========
 

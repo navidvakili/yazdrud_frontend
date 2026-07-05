@@ -18,9 +18,9 @@ import {
   Send,
   Clock,
 } from 'lucide-react';
-import api from '@/src/api';
-import { getBrowserFingerprint } from '@/src/lib/functions';
-import type { User as UserType } from '@/src/types';
+import api from '@/src/shared-api';
+import { getBrowserFingerprint } from '@/src/shared-utils';
+import type { User as UserType } from '@/src/shared-types';
 
 interface LoginFormProps {
   onLoginSuccess: (user: UserType) => void;

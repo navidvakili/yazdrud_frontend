@@ -2,38 +2,26 @@
 // App — کامپوننت اصلی برنامه
 // ============================================================
 
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef, Suspense } from 'react';
 import { AnimatePresence } from 'motion/react';
 import {
   Bell, HelpCircle, MessageSquare, LogOut,
   type LucideIcon,
 } from 'lucide-react';
-import type { User as UserType, Tab, PortalNotification, NavItem, RoleInfo } from '@/src/types';
-import api from '@/src/api';
-import { THEME_STRING, USER_STRING, MAX_TABS, STANDBY_TIMEOUT } from '@/src/lib/constants';
+import type { User as UserType, Tab, PortalNotification, NavItem, RoleInfo } from '@/src/shared-types';
+import api from '@/src/shared-api';
+import { THEME_STRING, USER_STRING, MAX_TABS, STANDBY_TIMEOUT } from '@/src/shared-constants';
 import { defaultNotifications, urlToTargetId, resolveIcon, faToLucideName } from '@/src/lib/menuConfig';
 import type { MenuCategory } from '@/src/lib/menuConfig';
+import { AppModules, resolveApp, LoadingFallback } from '@/src/apps';
 import LoginForm from '@/src/components/LoginForm';
 import DashboardModule from '@/src/components/DashboardModule';
-import ProfileModule from '@/src/components/ProfileModule';
-import ChangePasswordModule from '@/src/components/ChangePasswordModule';
-import StudentManagement from '@/src/components/StudentManagement';
-import ProfessorManagement from '@/src/components/ProfessorManagement';
-import FinancialManagement from '@/src/components/FinancialManagement';
 import ThesisManagement from '@/src/components/ThesisManagement';
-import LegacyModules from '@/src/components/LegacyModules';
-import TutsModule from '@/src/components/TutsModule';
-import AdminSessionsPanel from '@/src/components/AdminSessionsPanel';
 import FloatingPanels from '@/src/components/FloatingPanels';
 import Header from '@/src/components/Header';
 import Sidebar from '@/src/components/Sidebar';
 import TabsBar from '@/src/components/TabsBar';
-import Footer from '@/src/components/Footer';
-import LogoutModal from '@/src/components/LogoutModal';
-import StandbyModal from '@/src/components/StandbyModal';
-import TabLimitAlert from '@/src/components/TabLimitAlert';
-import SessionWarningModal from '@/src/components/SessionWarningModal';
-import NetworkStatus from '@/src/components/NetworkStatus';
+import { Footer, LogoutModal, StandbyModal, TabLimitAlert, SessionWarningModal, NetworkStatus } from '@/src/shared-components';
 
 export default function App() {
   // ========== Core State ==========
@@ -482,67 +470,47 @@ export default function App() {
     const tab = tabs.find(t => t.id === tabId);
     const moduleType = tab?.moduleType || tabId;
 
-    switch (moduleType) {
-      case 'profile':
-        return user ? (
-          <ProfileModule
-            user={user}
-            userRoles={userRoles}
-            onUpdateUser={(updated) => {
-              setUser(updated);
-              localStorage.setItem(USER_STRING, JSON.stringify(updated));
-            }}
-          />
-        ) : null;
-      case 'change-password':
-        return <ChangePasswordModule />;
-      case 'students':
-        return <StudentManagement />;
-      case 'professors':
-        return <ProfessorManagement />;
-      // ===== TutsModule (دوره‌های آموزشی) — from database menu URLs =====
-      case 'tuts':
-      case 'tuts-list':
-      case 'tuts-reports':
-      case 'tuts-receipts':
-      case 'tuts-stats':
-      case 'tuts-surveys':
-      case 'tuts-vouchers':
-      case 'tuts/vouchers':
-      // Map actual DB menu URLs to TutsModule sub-views
-      case 'tuts/reports':
-      case 'tuts/bank-receipts':
-      case 'tuts/statistics':
-      case 'course-surveys':
-        return user ? (
-          <TutsModule
-            user={user}
-            activeTabId={tabId}
-            moduleId={moduleType === 'tuts' || moduleType === 'tuts-list' ? 'tuts-list'
-              : moduleType === 'tuts/reports' ? 'tuts-reports'
-                : moduleType === 'tuts/bank-receipts' ? 'tuts-receipts'
-                  : moduleType === 'tuts/statistics' ? 'tuts-stats'
-                    : moduleType === 'course-surveys' ? 'tuts-surveys'
-                      : moduleType === 'tuts/vouchers' ? 'tuts-vouchers'
-                        : moduleType}
-            onOpenTab={handleOpenTab}
-          />
-        ) : null;
-      case 'finance':
-        return <FinancialManagement />;
-      case 'theses':
-      case 'theses-scientific':
-      case 'theses-permits':
-        return <ThesisManagement userRole={user?.role || 'student'} initialView={moduleType} />;
-      case 'admin-sessions':
-        return <AdminSessionsPanel />;
-      default:
+    // Dynamic app resolution via moduleToAppMap
+    const appName = resolveApp(moduleType);
+    const AppComponent = AppModules[appName];
+
+    // Special case: theses (not yet migrated to app system)
+    if (moduleType === 'theses' || moduleType === 'theses-scientific' || moduleType === 'theses-permits') {
+      return <ThesisManagement userRole={user?.role || 'student'} initialView={moduleType} />;
+    }
+
+    if (AppComponent) {
+      // Build common props — each app ignores what it doesn't need
+      const appProps: Record<string, any> = {
+        user,
+        activeTabId: tabId,
+        moduleId: moduleType,
+        onOpenTab: handleOpenTab,
+        userRoles,
+        onUpdateUser: (updated: UserType) => {
+          setUser(updated);
+          localStorage.setItem(USER_STRING, JSON.stringify(updated));
+        },
+      };
+
+      // Library app needs the module label for display
+      if (appName === 'library') {
         const activeSub = menuCategories
           .flatMap(cat => cat.submenus || [])
           .find(sub => sub.targetId === moduleType);
-        const label = activeSub ? activeSub.label : 'خدمات الکترونیکی پورتال';
-        return <LegacyModules moduleId={tabId} moduleIdLabel={label} />;
+        appProps.moduleIdLabel = activeSub ? activeSub.label : 'خدمات الکترونیکی پورتال';
+        appProps.moduleId = tabId || moduleType;
+      }
+
+      return user ? (
+        <Suspense fallback={<LoadingFallback />}>
+          <AppComponent {...appProps} />
+        </Suspense>
+      ) : null;
     }
+
+    // Fallback: should never reach here since resolveApp always returns at least 'library'
+    return null;
   };
 
   // ========== View Routing ==========

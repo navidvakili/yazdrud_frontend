@@ -13,7 +13,7 @@ import {
   Eye,
   EyeOff,
 } from 'lucide-react';
-import api from '@/src/api';
+import api from '@/src/shared-api';
 
 export default function ChangePasswordModule() {
   const [currentPassword, setCurrentPassword] = useState('');

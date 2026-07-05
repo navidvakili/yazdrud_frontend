@@ -17,8 +17,8 @@ import {
     Clock,
     CheckCircle2,
 } from 'lucide-react';
-import type { AdminSession } from '@/src/types';
-import api from '@/src/api';
+import type { AdminSession } from '@/src/shared-types';
+import api from '@/src/shared-api';
 
 export default function AdminSessionsPanel() {
     const [sessions, setSessions] = useState<AdminSession[]>([]);

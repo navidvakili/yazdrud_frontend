@@ -12,8 +12,8 @@ import {
   Pin,
   type LucideIcon,
 } from 'lucide-react';
-import type { User as UserType, RoleInfo } from '@/src/types';
-import { MAX_TABS } from '@/src/lib/constants';
+import type { User as UserType, RoleInfo } from '@/src/shared-types';
+import { MAX_TABS } from '@/src/shared-constants';
 
 interface MenuAction {
   id: string;

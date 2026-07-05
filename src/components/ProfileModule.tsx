@@ -18,9 +18,9 @@ import {
   LogOut,
   Trash2,
 } from 'lucide-react';
-import type { User as UserType, ActiveSession } from '@/src/types';
-import api from '@/src/api';
-import type { RoleInfo } from '@/src/types';
+import type { User as UserType, ActiveSession } from '@/src/shared-types';
+import api from '@/src/shared-api';
+import type { RoleInfo } from '@/src/shared-types';
 
 interface ProfileModuleProps {
   user: UserType;

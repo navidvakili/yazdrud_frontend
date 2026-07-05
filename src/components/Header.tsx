@@ -7,9 +7,9 @@ import {
   Search, X, User, Check, LogOut, Menu,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import type { User as UserType, Tab, RoleInfo } from '@/src/types';
+import type { User as UserType, Tab, RoleInfo } from '@/src/shared-types';
 import type { MenuCategory, SubmenuItem } from '@/src/lib/menuConfig';
-import ThemeToggle from '@/src/components/ThemeToggle';
+import { ThemeToggle } from '@/src/shared-components';
 
 interface HeaderProps {
   user: UserType | null;
