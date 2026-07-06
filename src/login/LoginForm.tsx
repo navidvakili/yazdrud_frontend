@@ -13,12 +13,10 @@ import {
   Loader2,
   AlertCircle,
   AlertTriangle,
-  X,
   GraduationCap,
-  Send,
   Clock,
 } from 'lucide-react';
-import api from '@/src/shared-api';
+import { loginApi } from './api';
 import { getBrowserFingerprint } from '@/src/shared-utils';
 import type { User as UserType } from '@/src/shared-types';
 
@@ -56,7 +54,7 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
     setIsLoading(true);
     setConcurrentSession(null);
     try {
-      const response = await api.login({ username: concurrentSession.username, password: concurrentSession.password, force: true });
+      const response = await loginApi.login({ username: concurrentSession.username, password: concurrentSession.password, force: true });
       onLoginSuccess(response.user);
     } catch (err: any) {
       if (err.status === 422 && err.errors) {
@@ -81,7 +79,7 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
     setIsLoading(true);
     const fingerprint = getBrowserFingerprint();
     try {
-      const response = await api.sessionWarningLogin(acceptedState.warningId, acceptedState.pollToken, fingerprint);
+      const response = await loginApi.sessionWarningLogin(acceptedState.warningId, acceptedState.pollToken, fingerprint);
       setAcceptedState(null);
       onLoginSuccess(response.user);
     } catch (err: any) {
@@ -105,7 +103,7 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
     setWarningError(null);
     const fingerprint = getBrowserFingerprint();
     try {
-      const result = await api.createSessionWarning(username, password, fingerprint);
+      const result = await loginApi.createSessionWarning(username, password, fingerprint);
       setWarningState({
         warningId: result.warning_id,
         pollToken: result.poll_token,
@@ -119,7 +117,7 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
       } else if (err.status === 400 && err.errors?.no_active_session) {
         // No active session anymore — just do force login
         try {
-          const response = await api.login({ username, password, force: true });
+          const response = await loginApi.login({ username, password, force: true });
           onLoginSuccess(response.user);
         } catch {
           setWarningError('خطا در ورود. لطفاً دوباره تلاش کنید.');
@@ -142,7 +140,7 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
 
     pollingRef.current = setInterval(async () => {
       try {
-        const result = await api.checkSessionWarningStatus(warningState.warningId, warningState.pollToken);
+        const result = await loginApi.checkSessionWarningStatus(warningState.warningId, warningState.pollToken);
         if (result.status === 'accepted') {
           // Old session accepted — stop polling and show the proceed button
           if (pollingRef.current) {
@@ -189,7 +187,7 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
 
     setIsLoading(true);
     try {
-      const response = await api.login({ username: username.trim(), password });
+      const response = await loginApi.login({ username: username.trim(), password });
       onLoginSuccess(response.user);
     } catch (err: any) {
       // Concurrent session detection — user already logged in elsewhere

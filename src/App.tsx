@@ -12,14 +12,14 @@ import type { User as UserType, Tab, PortalNotification, NavItem, RoleInfo } fro
 import api from '@/src/shared-api';
 import { THEME_STRING, USER_STRING, MAX_TABS, STANDBY_TIMEOUT } from '@/src/shared-constants';
 import { AppModules, resolveApp, LoadingFallback } from '@/src/apps';
-import LoginForm from '@/src/components/LoginForm';
+import { LoginForm, SessionWarningModal, useSessionWarning } from '@/src/login';
 import DashboardModule from '@/src/dashboard';
 import ThesisManagement from '@/src/components/ThesisManagement';
 import FloatingPanels from '@/src/components/FloatingPanels';
 import { Header, Sidebar, TabsBar, Footer, NetworkStatus, defaultNotifications, urlToTargetId, resolveIcon, faToLucideName } from '@/src/layouts';
 import type { MenuCategory } from '@/src/layouts';
 import { dashboardApi } from '@/src/dashboard';
-import { LogoutModal, StandbyModal, TabLimitAlert, SessionWarningModal } from '@/src/shared-components';
+import { LogoutModal, StandbyModal, TabLimitAlert } from '@/src/shared-components';
 
 export default function App() {
   // ========== Core State ==========
@@ -57,14 +57,12 @@ export default function App() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Session warning (concurrent login) state
-  const [pendingWarning, setPendingWarning] = useState<{
-    id: number;
-    ip_address: string | null;
-    user_agent: string | null;
-    browser_fingerprint: string | null;
-  } | null>(null);
-  const [warningRespondLoading, setWarningRespondLoading] = useState(false);
-  const warningPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const {
+    pendingWarning,
+    setPendingWarning,
+    isLoading: warningRespondLoading,
+    respondToWarning: handleWarningRespond,
+  } = useSessionWarning(viewState === 'authenticated');
 
   // ========== Effects ==========
 
@@ -195,65 +193,6 @@ export default function App() {
       fetchPinnedMenus();
     }
   }, [viewState, fetchNavigation, fetchPinnedMenus]);
-
-  // ========== Session Warning Polling (Concurrent Login Detection) ==========
-  useEffect(() => {
-    if (viewState !== 'authenticated') {
-      // Clear any pending warning and stop polling
-      setPendingWarning(null);
-      if (warningPollRef.current) {
-        clearInterval(warningPollRef.current);
-        warningPollRef.current = null;
-      }
-      return;
-    }
-
-    // Poll every 5 seconds for pending warnings
-    warningPollRef.current = setInterval(async () => {
-      try {
-        const warnings = await api.getPendingWarnings();
-        if (warnings && warnings.length > 0) {
-          const w = warnings[0];
-          setPendingWarning({
-            id: w.id,
-            ip_address: w.ip_address,
-            user_agent: w.user_agent,
-            browser_fingerprint: w.browser_fingerprint,
-          });
-        } else {
-          // No pending warnings, but don't clear if modal is showing
-          // (avoid flicker — user might be reading it)
-        }
-      } catch {
-        // Ignore polling errors
-      }
-    }, 5000);
-
-    return () => {
-      if (warningPollRef.current) {
-        clearInterval(warningPollRef.current);
-        warningPollRef.current = null;
-      }
-    };
-  }, [viewState]);
-
-  // Handle responding to a warning
-  const handleWarningRespond = useCallback(async (warningId: number, status: 'accepted' | 'rejected') => {
-    setWarningRespondLoading(true);
-    try {
-      await api.respondToWarning(warningId, status);
-      setPendingWarning(null);
-      if (status === 'accepted') {
-        // Permission granted — new session can proceed with force login.
-        // Current session stays active until the new session actually logs in.
-      }
-    } catch {
-      // Error handling
-    } finally {
-      setWarningRespondLoading(false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   // Derive MenuCategory[] from NavItem[] (dynamic API data)
   const menuCategories = useMemo<MenuCategory[]>(() => {
