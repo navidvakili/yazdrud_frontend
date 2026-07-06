@@ -43,6 +43,7 @@ export interface TutRegistrant {
     nationalCode: string;
     studentCode: string;
     mobile: string;
+    type?: string;
     typeText: string;
     courseId: string;
     courseTitle: string;

@@ -19,6 +19,7 @@ import { useToast } from './shared/hooks';
 import CertificatePreviewDialog from './certificates/dialogs/CertificatePreviewDialog';
 import RefundConfirmDialog from './receipts/dialogs/RefundConfirmDialog';
 import UndoRefundConfirmDialog from './receipts/dialogs/UndoRefundConfirmDialog';
+import EditRegistrationDialog from './reports/dialogs/EditRegistrationDialog';
 import CoursesTab from './courses';
 import ReportsTab from './reports';
 import ReceiptsTab from './receipts';
@@ -748,6 +749,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
   const [undoRefundTarget, setUndoRefundTarget] = useState<TutRegistrant | null>(null);
   const [undoRefundConfirmWord, setUndoRefundConfirmWord] = useState('');
   const [undoRefundConfirmInput, setUndoRefundConfirmInput] = useState('');
+  const [editTarget, setEditTarget] = useState<TutRegistrant | null>(null);
 
   const handleCopyCourseUrl = (course: TutCourse) => {
     const url = `https://terms.sau.ac.ir/course/${course.id}`;
@@ -1509,6 +1511,46 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     }
   }, [undoRefundTarget]);
 
+  // ========== Edit Registration Handler ==========
+  const handleEditRegistration = async (id: string, data: Record<string, string>) => {
+    const reg = reportRegistrants.find(r => r.id === id);
+    if (!reg) return;
+
+    try {
+      // Map frontend field names to backend field names (مطابق terms_frontend)
+      const payload: Record<string, string> = {};
+      if (data.name !== undefined) payload.fullname = data.name;
+      if (data.nationalCode !== undefined) payload.kodmeli = data.nationalCode;
+      if (data.studentCode !== undefined) payload.id_edu = data.studentCode;
+      if (data.mobile !== undefined) payload.mobile = data.mobile;
+      if (data.universityRelation !== undefined) {
+        payload.type = data.universityRelation === 'student' ? '1' : '2';
+      }
+      if (data.skills !== undefined) payload.skills = data.skills;
+      if (data.motivation !== undefined) payload.motivation = data.motivation;
+
+      await reportsApi.updateRegistration(id, payload);
+
+      // Update local state with fields that are visible in the table
+      setReportRegistrants(prev => prev.map(r =>
+        r.id === id ? {
+          ...r,
+          ...(data.name !== undefined && { name: data.name }),
+          ...(data.nationalCode !== undefined && { nationalCode: data.nationalCode }),
+          ...(data.studentCode !== undefined && { studentCode: data.studentCode }),
+          ...(data.mobile !== undefined && { mobile: data.mobile }),
+          ...(data.universityRelation !== undefined && { type: data.universityRelation === 'student' ? '1' : '2' }),
+        } : r
+      ));
+
+      setEditTarget(null);
+      showToast(`اطلاعات ثبت‌نام ${reg.name} با موفقیت به‌روزرسانی شد.`);
+    } catch (err: any) {
+      const msg = err?.errors?.[0] || err?.message || 'خطا در ویرایش اطلاعات ثبت‌نام';
+      showToast(msg, 'error');
+    }
+  };
+
   // ========== Certificate Handlers ==========
   const [certificateNotif, setCertificateNotif] = useState<string | null>(null);
 
@@ -1863,6 +1905,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
           handleExportExcel={handleExportExcel}
           onRefundRequest={(reg) => setRefundTarget(reg)}
           onUndoRefund={(reg) => setUndoRefundTarget(reg)}
+          onEditRequest={(reg) => setEditTarget(reg)}
         />
       )}
 
@@ -1993,6 +2036,13 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
         onInputChange={setUndoRefundConfirmInput}
         onConfirm={confirmUndoRefund}
         onClose={() => setUndoRefundTarget(null)}
+      />
+
+      {/* ===== EDIT REGISTRATION MODAL ===== */}
+      <EditRegistrationDialog
+        target={editTarget}
+        onSave={handleEditRegistration}
+        onClose={() => setEditTarget(null)}
       />
     </div >
   );

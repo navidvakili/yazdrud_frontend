@@ -25,6 +25,19 @@ export const reportsApi = {
     return API<any>(url);
   },
 
+  async updateRegistration(id: string, data: {
+    fullname?: string;
+    kodmeli?: string;
+    id_edu?: string;
+    mobile?: string;
+    type?: string;
+    skills?: string;
+    motivation?: string;
+  }): Promise<CourseRegistration> {
+    const result = await API<any>(`courses/registrations/${id}`, data, 'PUT');
+    return result.data;
+  },
+
   async exportRegistrations(params?: {
     course_id?: string; search?: string; year?: string;
     status?: string; payment_method?: string; refunded?: string;
