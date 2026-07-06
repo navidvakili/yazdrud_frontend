@@ -2,31 +2,26 @@
 // App — کامپوننت اصلی برنامه
 // ============================================================
 
-import { useState, useEffect, useCallback, useMemo, useRef, Suspense } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { AnimatePresence } from 'motion/react';
-import {
-  Bell, HelpCircle, MessageSquare, LogOut,
-  type LucideIcon,
-} from 'lucide-react';
+import { type LucideIcon } from 'lucide-react';
 import type { User as UserType, Tab, PortalNotification, NavItem, RoleInfo } from '@/src/shared-types';
-import { layoutsApi } from '@/src/layouts';
-import { THEME_STRING, USER_STRING, MAX_TABS, STANDBY_TIMEOUT } from '@/src/shared-constants';
-import { AppModules, resolveApp, LoadingFallback } from '@/src/apps';
-import { loginApi, LoginForm, SessionWarningModal, useSessionWarning } from '@/src/login';
-import DashboardModule from '@/src/dashboard';
-import ThesisManagement from '@/src/apps/library/ThesisManagement';
-import { FloatingPanels } from '@/src/layouts';
-import { Header, Sidebar, TabsBar, Footer, NetworkStatus, defaultNotifications, urlToTargetId, resolveIcon, faToLucideName } from '@/src/layouts';
+import {
+  layoutsApi, Header, Sidebar, TabsBar, Footer, NetworkStatus,
+  FloatingPanels, AuxiliaryTools, useTheme, useStandby,
+  defaultNotifications, urlToTargetId, resolveIcon, faToLucideName,
+} from '@/src/layouts';
 import type { MenuCategory } from '@/src/layouts';
+import { USER_STRING, MAX_TABS } from '@/src/shared-constants';
+import { ModuleRenderer } from '@/src/apps';
+import { loginApi, LoginForm, SessionWarningModal, useSessionWarning } from '@/src/login';
 import { dashboardApi } from '@/src/dashboard';
 import { LogoutModal, StandbyModal, TabLimitAlert } from '@/src/shared-components';
 
 export default function App() {
   // ========== Core State ==========
   const [viewState, setViewState] = useState<'login' | 'authenticated'>('login');
-  const [theme, setTheme] = useState<'light' | 'dark'>(
-    () => (localStorage.getItem(THEME_STRING) as 'light' | 'dark') || 'light'
-  );
+  const { theme, setTheme, handleToggleTheme } = useTheme(viewState);
   const [user, setUser] = useState<UserType | null>(null);
   const [tabs, setTabs] = useState<Tab[]>([]);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
@@ -40,10 +35,7 @@ export default function App() {
   const [tabRefreshKeys, setTabRefreshKeys] = useState<Record<string, number>>({});
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
-  // Standby (auto-lock) state
-  const [isStandby, setIsStandby] = useState(false);
-  const lastActivityRef = useRef<number>(Date.now());
-  const standbyCheckIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const { isStandby, setIsStandby, handleUnlock } = useStandby(viewState);
 
   // Navigation state — fetched dynamically from API
   const [navItems, setNavItems] = useState<NavItem[]>([]);
@@ -66,21 +58,6 @@ export default function App() {
 
   // ========== Effects ==========
 
-  // Apply theme to DOM + persist to localStorage + save to backend profile
-  useEffect(() => {
-    const root = window.document.documentElement;
-    if (theme === 'dark') {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
-    }
-    localStorage.setItem(THEME_STRING, theme);
-    // Persist theme to backend profile (silently, only when authenticated)
-    if (viewState === 'authenticated') {
-      loginApi.updateTheme(theme).catch(() => { /* ignore */ });
-    }
-  }, [theme, viewState]);
-
   // Restore session on cold start — default to dashboard (no tab)
   useEffect(() => {
     const storedUser = loginApi.getStoredUser();
@@ -98,45 +75,6 @@ export default function App() {
       fetchPinnedMenus();
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ========== Standby (Auto-Lock) — track activity, lock after timeout ==========
-  useEffect(() => {
-    if (viewState !== 'authenticated') {
-      // Not logged in — no standby tracking
-      setIsStandby(false);
-      return;
-    }
-
-    // Reset activity timestamp on any user interaction
-    const updateActivity = () => {
-      lastActivityRef.current = Date.now();
-      // If was in standby, do NOT auto-exit — must use password
-    };
-
-    // Also reset activity when we start tracking (fresh login)
-    lastActivityRef.current = Date.now();
-    setIsStandby(false);
-
-    // Periodic check: if inactive beyond timeout → enter standby
-    standbyCheckIntervalRef.current = setInterval(() => {
-      const elapsed = Date.now() - lastActivityRef.current;
-      if (elapsed >= STANDBY_TIMEOUT && !isStandby) {
-        setIsStandby(true);
-      }
-    }, 5000); // Check every 5 seconds
-
-    // Bind activity events
-    const events = ['mousedown', 'mousemove', 'keydown', 'click', 'touchstart', 'scroll', 'wheel'];
-    events.forEach(ev => window.addEventListener(ev, updateActivity, { passive: true }));
-
-    return () => {
-      if (standbyCheckIntervalRef.current) {
-        clearInterval(standbyCheckIntervalRef.current);
-        standbyCheckIntervalRef.current = null;
-      }
-      events.forEach(ev => window.removeEventListener(ev, updateActivity));
-    };
-  }, [viewState]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fetch navigation and roles when user is authenticated
   const fetchNavigation = useCallback(async () => {
@@ -279,20 +217,6 @@ export default function App() {
     setPinnedMenus([]);
   };
 
-  /** Verify password and exit standby mode */
-  const handleUnlock = async (password: string): Promise<boolean> => {
-    const ok = await loginApi.verifyPassword(password);
-    if (ok) {
-      setIsStandby(false);
-      lastActivityRef.current = Date.now();
-    }
-    return ok;
-  };
-
-  const handleToggleTheme = () => {
-    setTheme(prev => (prev === 'light' ? 'dark' : 'light'));
-  };
-
   const handleChangeRole = async (newRole: string) => {
     if (!user) return;
     try {
@@ -385,71 +309,6 @@ export default function App() {
   const handleClearNotifications = () => setNotifications([]);
   const unreadNotifCount = notifications.filter(n => !n.read).length;
 
-  // ========== Module Renderer ==========
-
-  /**
-   * Render content for a specific tab (or dashboard if tabId is null).
-   * Extracted so each tab's content can be kept alive when switching.
-   */
-  const renderModuleForTab = (tabId: string | null) => {
-    if (!tabId) {
-      return (
-        <DashboardModule
-          user={user}
-          userRoles={userRoles}
-          onNavigate={handleOpenTab}
-          openTabsCount={tabs.length}
-          pinnedMenus={pinnedMenus}
-          allMenuItems={allMenuItems}
-        />
-      );
-    }
-    const tab = tabs.find(t => t.id === tabId);
-    const moduleType = tab?.moduleType || tabId;
-
-    // Dynamic app resolution via moduleToAppMap
-    const appName = resolveApp(moduleType);
-    const AppComponent = AppModules[appName];
-
-    // Special case: theses (not yet migrated to app system)
-    if (moduleType === 'theses' || moduleType === 'theses-scientific' || moduleType === 'theses-permits') {
-      return <ThesisManagement userRole={user?.role || 'student'} initialView={moduleType} />;
-    }
-
-    if (AppComponent) {
-      // Build common props — each app ignores what it doesn't need
-      const appProps: Record<string, any> = {
-        user,
-        activeTabId: tabId,
-        moduleId: moduleType,
-        onOpenTab: handleOpenTab,
-        userRoles,
-        onUpdateUser: (updated: UserType) => {
-          setUser(updated);
-          localStorage.setItem(USER_STRING, JSON.stringify(updated));
-        },
-      };
-
-      // Library app needs the module label for display
-      if (appName === 'library') {
-        const activeSub = menuCategories
-          .flatMap(cat => cat.submenus || [])
-          .find(sub => sub.targetId === moduleType);
-        appProps.moduleIdLabel = activeSub ? activeSub.label : 'خدمات الکترونیکی پورتال';
-        appProps.moduleId = tabId || moduleType;
-      }
-
-      return user ? (
-        <Suspense fallback={<LoadingFallback />}>
-          <AppComponent {...appProps} />
-        </Suspense>
-      ) : null;
-    }
-
-    // Fallback: should never reach here since resolveApp always returns at least 'library'
-    return null;
-  };
-
   // ========== View Routing ==========
   if (viewState === 'login') {
     return (
@@ -460,9 +319,6 @@ export default function App() {
   }
 
   // ========== Authenticated Layout ==========
-
-  // Menu categories — already filtered by role from the API
-  const filteredCategories = menuCategories;
 
   return (
     <div className={`${theme} h-screen overflow-hidden bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100 flex flex-col transition-colors duration-300`}>
@@ -516,7 +372,23 @@ export default function App() {
           <main className="flex-1 overflow-y-auto p-4 sm:p-6 pb-20 custom-scrollbar">
             <div>
               {/* Dashboard — only when no active tab */}
-              {activeTabId === null && renderModuleForTab(null)}
+              {activeTabId === null && (
+                <ModuleRenderer
+                  tabId={null}
+                  tabs={tabs}
+                  user={user}
+                  userRoles={userRoles}
+                  menuCategories={menuCategories}
+                  pinnedMenus={pinnedMenus}
+                  allMenuItems={allMenuItems}
+                  onOpenTab={handleOpenTab}
+                  openTabsCount={tabs.length}
+                  onUpdateUser={(updated: UserType) => {
+                    setUser(updated);
+                    localStorage.setItem(USER_STRING, JSON.stringify(updated));
+                  }}
+                />
+              )}
 
               {/* All opened tabs kept alive to preserve state on switch */}
               {tabs.map(tab => (
@@ -524,7 +396,21 @@ export default function App() {
                   key={`${tab.id}_${tabRefreshKeys[tab.id] || 0}`}
                   className={activeTabId === tab.id ? '' : 'hidden'}
                 >
-                  {renderModuleForTab(tab.id)}
+                  <ModuleRenderer
+                    tabId={tab.id}
+                    tabs={tabs}
+                    user={user}
+                    userRoles={userRoles}
+                    menuCategories={menuCategories}
+                    pinnedMenus={pinnedMenus}
+                    allMenuItems={allMenuItems}
+                    onOpenTab={handleOpenTab}
+                    openTabsCount={tabs.length}
+                    onUpdateUser={(updated: UserType) => {
+                      setUser(updated);
+                      localStorage.setItem(USER_STRING, JSON.stringify(updated));
+                    }}
+                  />
                 </div>
               ))}
             </div>
@@ -532,49 +418,12 @@ export default function App() {
         </div>
 
         {/* ===== Column C: Auxiliary Tools ===== */}
-        <div className="hidden lg:flex border-r border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shrink-0 flex-col justify-between items-center py-4 z-45">
-          <div className="space-y-4 px-2">
-            <button
-              onClick={() => setActivePanel(activePanel === 'chat' ? null : 'chat')}
-              className={`w-11 h-11 rounded-xl transition-all duration-200 hover:scale-105 flex items-center justify-center cursor-pointer relative ${activePanel === 'chat' ? 'bg-teal-600 text-white' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-850'
-                }`}
-              title="چت پشتیبانی"
-            >
-              <MessageSquare className="w-5 h-5" />
-              <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-teal-500 animate-pulse"></span>
-            </button>
-            <button
-              onClick={() => setActivePanel(activePanel === 'notifications' ? null : 'notifications')}
-              className={`w-11 h-11 rounded-xl transition-all duration-200 hover:scale-105 flex items-center justify-center cursor-pointer relative ${activePanel === 'notifications' ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-850'
-                }`}
-              title="اعلان‌های سیستم"
-            >
-              <Bell className="w-5 h-5" />
-              {unreadNotifCount > 0 && (
-                <span className="absolute -top-1 -left-1  font-bold bg-rose-500 text-white text-[9px] h-4.5 min-w-4.5 px-1 rounded-full flex items-center justify-center">
-                  {unreadNotifCount}
-                </span>
-              )}
-            </button>
-            <button
-              onClick={() => setActivePanel(activePanel === 'help' ? null : 'help')}
-              className={`w-11 h-11 rounded-xl transition-all duration-200 hover:scale-105 flex items-center justify-center cursor-pointer relative ${activePanel === 'help' ? 'bg-amber-500 text-white' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-850'
-                }`}
-              title="راهنمای کاربر"
-            >
-              <HelpCircle className="w-5 h-5" />
-            </button>
-          </div>
-          <div className="px-2">
-            <button
-              onClick={() => setShowLogoutModal(true)}
-              className="w-11 h-11 rounded-xl text-rose-500 hover:bg-rose-500/10 transition-colors flex items-center justify-center cursor-pointer"
-              title="خروج از حساب"
-            >
-              <LogOut className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
+        <AuxiliaryTools
+          activePanel={activePanel}
+          onTogglePanel={(panel) => setActivePanel(activePanel === panel ? null : panel)}
+          unreadNotifCount={unreadNotifCount}
+          onLogoutClick={() => setShowLogoutModal(true)}
+        />
 
         {/* ===== Floating Panels ===== */}
         <AnimatePresence>

@@ -61,6 +61,8 @@ export function resolveApp(moduleType: string): string {
 /**
  * کامپوننت نمایش در هنگام بارگذاری (Fallback)
  */
+export { default as ModuleRenderer } from './ModuleRenderer';
+
 export function LoadingFallback() {
   return (
     <div className="flex items-center justify-center py-20">
