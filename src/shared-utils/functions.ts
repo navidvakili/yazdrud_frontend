@@ -203,17 +203,6 @@ export const getFileViewUrl = async (URL: string): Promise<{ url: string; conten
 // ========== Utility Functions ==========
 
 /**
- * نرمال‌سازی متن فارسی/عربی
- * تبدیل حروف عربی به فارسی برای جستجوی بهتر
- */
-export const normalizePersianText = (text: string): string => {
-  if (!text) return '';
-  return text
-    .replace(/ي/g, 'ی')  // Arabic ya -> Persian ya
-    .replace(/ك/g, 'ک'); // Arabic kaf -> Persian kaf
-};
-
-/**
  * ساخت آدرس کامل آواتار کاربر از روی فایل امضا
  */
 export const getAvatarUrl = (sign: string | null | undefined): string => {

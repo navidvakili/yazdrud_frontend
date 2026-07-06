@@ -24,18 +24,30 @@ export function toEnglishDigits(str: string): string {
 /**
  * Normalize a Persian/Arabic string for search/comparison:
  * - Arabic ي → Persian ی, Arabic ك → Persian ک
+ * - Arabic أ/إ → ا, Arabic ؤ → و, Arabic ة → ه
  * - Persian/Arabic digits → Latin digits (0-9)
+ * - Zero-width characters → space, collapse spaces, trim
  * - Lowercase
  */
 export function normalizePersian(str: string): string {
   if (!str) return '';
   let s = str.toLowerCase();
-  s = s.replace(/ي/g, 'ی').replace(/ك/g, 'ک');
+  s = s
+    .replace(/ي/g, 'ی')   // Arabic Yeh → Persian Yeh
+    .replace(/ك/g, 'ک')   // Arabic Kaf → Persian Kaf
+    .replace(/أ/g, 'ا')   // Arabic Alef with Hamza → Alef
+    .replace(/إ/g, 'ا')   // Arabic Alef with Hamza below → Alef
+    .replace(/ؤ/g, 'و')   // Arabic Waw with Hamza → Waw
+    .replace(/ة/g, 'ه');  // Arabic Taa Marbuta → Heh
   s = s.replace(/[٠-۹]/g, function (d) {
     const allDigits = '٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹';
     const idx = allDigits.indexOf(d);
     return idx >= 0 ? String(idx % 10) : d;
   });
+  s = s
+    .replace(/[\u200B-\u200F\u202F\u2060\uFEFF\u200C\u200D]/g, ' ') // zero-width chars → space
+    .replace(/\s+/g, ' ') // collapse multiple spaces
+    .trim();
   return s;
 }
 
