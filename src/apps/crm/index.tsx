@@ -4,9 +4,9 @@
 // شامل مدیریت دانشجویان، اساتید و نشست‌های ادمین
 // ============================================================
 
-import StudentManagement from '@/src/components/StudentManagement';
-import ProfessorManagement from '@/src/components/ProfessorManagement';
-import AdminSessionsPanel from '@/src/components/AdminSessionsPanel';
+import StudentManagement from './StudentManagement';
+import ProfessorManagement from './ProfessorManagement';
+import { AdminSessionsPanel } from '@/src/login';
 
 interface CRMModuleProps {
   user: any;

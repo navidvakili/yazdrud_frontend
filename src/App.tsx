@@ -14,8 +14,8 @@ import { THEME_STRING, USER_STRING, MAX_TABS, STANDBY_TIMEOUT } from '@/src/shar
 import { AppModules, resolveApp, LoadingFallback } from '@/src/apps';
 import { loginApi, LoginForm, SessionWarningModal, useSessionWarning } from '@/src/login';
 import DashboardModule from '@/src/dashboard';
-import ThesisManagement from '@/src/components/ThesisManagement';
-import FloatingPanels from '@/src/components/FloatingPanels';
+import ThesisManagement from '@/src/apps/library/ThesisManagement';
+import { FloatingPanels } from '@/src/layouts';
 import { Header, Sidebar, TabsBar, Footer, NetworkStatus, defaultNotifications, urlToTargetId, resolveIcon, faToLucideName } from '@/src/layouts';
 import type { MenuCategory } from '@/src/layouts';
 import { dashboardApi } from '@/src/dashboard';

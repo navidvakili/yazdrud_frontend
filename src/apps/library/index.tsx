@@ -5,7 +5,7 @@
 // به صورت اختصاصی در App دیگری تعریف نشده‌اند استفاده می‌شود.
 // ============================================================
 
-import LegacyModules from '@/src/components/LegacyModules';
+import LegacyModules from './LegacyModules';
 
 interface LibraryModuleProps {
   user: any;

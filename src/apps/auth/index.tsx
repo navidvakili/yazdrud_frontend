@@ -4,8 +4,7 @@
 // شامل پروفایل کاربری، تغییر رمز عبور و داشبورد کاربر
 // ============================================================
 
-import ProfileModule from '@/src/components/ProfileModule';
-import ChangePasswordModule from '@/src/components/ChangePasswordModule';
+import { ProfileModule, ChangePasswordModule } from '@/src/login';
 import type { User as UserType, RoleInfo } from '@/src/shared-types';
 
 interface AuthModuleProps {

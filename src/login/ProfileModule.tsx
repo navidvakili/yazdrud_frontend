@@ -378,9 +378,10 @@ export default function ProfileModule({ user, userRoles, onUpdateUser }: Profile
               )}
 
               {/* No sessions message */}
-              {!currentSession && otherSessions.length === 0 && !sessionsLoading && (
-                <div className="text-center py-8 text-gray-400 dark:text-gray-500 text-xs">
-                  هیچ نشست فعالی یافت نشد
+              {!sessionsLoading && !currentSession && otherSessions.length === 0 && (
+                <div className="text-center py-8">
+                  <Globe className="w-8 h-8 mx-auto text-gray-300 dark:text-gray-600 mb-2" />
+                  <p className="text-xs text-gray-400 dark:text-gray-500">هیچ نشست فعالی یافت نشد</p>
                 </div>
               )}
             </div>

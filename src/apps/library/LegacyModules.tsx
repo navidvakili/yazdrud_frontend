@@ -27,7 +27,7 @@ export default function LegacyModules({ moduleId, moduleIdLabel }: LegacyModules
         <div className="text-center py-12 text-gray-400">
           <Folder className="w-12 h-12 mx-auto mb-3 opacity-40" />
           <p className="text-sm font-medium">ماژول {moduleIdLabel}</p>
-          <p className="text-[11px] mt-1">این ماژول در حال انتقال به معماری جدید است.</p>
+          <p className="text[11px] mt-1">این ماژول در حال انتقال به معماری جدید است.</p>
         </div>
       </motion.div>
     </div>
