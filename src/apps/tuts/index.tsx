@@ -16,11 +16,9 @@ pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 import { ToastNotification } from '@/src/shared-components';
 import { formatCostInput, mapCourse, mapVoucher, mapRegistrant, toPersianDigits, formatCurrency, toEnglishDigits, normalizePersian as normalizePersianSearch } from './shared/utils';
 import { useToast } from './shared/hooks';
-import {
-  CertificatePreviewDialog,
-  RefundConfirmDialog,
-  UndoRefundConfirmDialog,
-} from './shared/dialogs';
+import CertificatePreviewDialog from './certificates/dialogs/CertificatePreviewDialog';
+import RefundConfirmDialog from './receipts/dialogs/RefundConfirmDialog';
+import UndoRefundConfirmDialog from './receipts/dialogs/UndoRefundConfirmDialog';
 import CoursesTab from './courses';
 import ReportsTab from './reports';
 import ReceiptsTab from './receipts';

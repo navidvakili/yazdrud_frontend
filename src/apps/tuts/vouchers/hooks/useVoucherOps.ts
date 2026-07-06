@@ -5,7 +5,7 @@
 import { useState } from 'react';
 import type { TutVoucher, TutCourse, TutRegistrant, SandboxResult } from '../../shared/types';
 import { toPersianDigits, formatCurrency } from '../../shared/utils';
-import { runSandboxChecks, calculateFinalPrice } from '../../shared/validators/voucher.validator';
+import { runSandboxChecks, calculateFinalPrice } from '../validators/voucher.validator';
 
 export function useVoucherOps(
   vouchers: TutVoucher[],

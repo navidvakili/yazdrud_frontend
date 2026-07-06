@@ -6,7 +6,7 @@ import { useMemo } from 'react';
 import { Search, FileText, RotateCcw, CheckCircle2, CreditCard, Landmark, PiggyBank } from 'lucide-react';
 import type { TutCourse, TutRegistrant } from '../shared/types';
 import { toPersianDigits, formatCurrency } from '../shared/utils';
-import { LoadingSpinner } from '../shared/components/tuts-components';
+import { LoadingSpinner } from './components/LoadingSpinner';
 import { Pagination } from '@/src/shared-components';
 
 interface TutsReportsProps {

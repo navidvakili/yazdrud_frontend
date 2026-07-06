@@ -2,7 +2,7 @@
 // VoucherValidator — Validation logic for vouchers (sandbox)
 // ============================================================
 
-import type { TutVoucher, TutCourse, SandboxResult } from '../types';
+import type { TutVoucher, TutCourse, SandboxResult } from '../../shared/types';
 
 export interface SandboxTestInput {
   code: string;
