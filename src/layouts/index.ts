@@ -2,7 +2,6 @@ export { default as Header } from './Header';
 export { default as Sidebar } from './Sidebar';
 export { default as TabsBar } from './TabsBar';
 export { default as Footer } from './Footer';
-export { default as NetworkStatus } from './NetworkStatus';
 export { default as ThemeToggle } from './ThemeToggle';
 export { default as FloatingPanels } from './FloatingPanels';
 export { default as AuxiliaryTools } from './AuxiliaryTools';

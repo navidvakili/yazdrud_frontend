@@ -3,7 +3,7 @@
 // ============================================================
 
 import { API_BASE_URL, BACKEND_API_URL, TOKEN_STRING, USER_STRING, SIGNS_STORAGE_PATH } from '../shared-constants';
-import { networkStatus } from './networkStatus';
+import { networkObserver } from './networkObserver';
 
 // ========== Core API Function ==========
 
@@ -40,12 +40,12 @@ export const API = async <T = any>(URL: string, params: any = {}, method: string
   try {
     response = await fetch(url, options);
   } catch (error) {
-    networkStatus.reportApiFailure();
+    networkObserver.reportApiFailure();
     throw error;
   }
   // Only report success for actual network success — 4xx/5xx are not network failures
   if (response.status >= 200 && response.status < 300) {
-    networkStatus.reportApiSuccess();
+    networkObserver.reportApiSuccess();
   }
 
   // Handle 401 Unauthorized — اما نه برای لاگین (اجازه بده LoginForm مدیریت کند)
@@ -95,10 +95,10 @@ export const APISendFiles = async <T = any>(URL: string, formData: FormData): Pr
       body: formData,
     });
   } catch (error) {
-    networkStatus.reportApiFailure();
+    networkObserver.reportApiFailure();
     throw error;
   }
-  networkStatus.reportApiSuccess();
+  networkObserver.reportApiSuccess();
 
   if (!response.ok) {
     let errorBody: any;
@@ -141,10 +141,10 @@ export const downloadFile = async (URL: string, filename: string | null = null):
   try {
     response = await fetch(url, { method: 'GET', headers });
   } catch (error) {
-    networkStatus.reportApiFailure();
+    networkObserver.reportApiFailure();
     throw error;
   }
-  networkStatus.reportApiSuccess();
+  networkObserver.reportApiSuccess();
 
   if (!response.ok) {
     throw new Error('Failed to download file');

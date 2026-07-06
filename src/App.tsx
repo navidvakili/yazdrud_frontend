@@ -7,10 +7,11 @@ import { AnimatePresence } from 'motion/react';
 import { type LucideIcon } from 'lucide-react';
 import type { User as UserType, Tab, PortalNotification, NavItem, RoleInfo } from '@/src/shared-types';
 import {
-  layoutsApi, Header, Sidebar, TabsBar, Footer, NetworkStatus,
+  layoutsApi, Header, Sidebar, TabsBar, Footer,
   FloatingPanels, AuxiliaryTools, useTheme, useStandby,
   defaultNotifications, urlToTargetId, resolveIcon, faToLucideName,
 } from '@/src/layouts';
+import { NetworkStatus } from '@/src/shared-components';
 import type { MenuCategory } from '@/src/layouts';
 import { USER_STRING, MAX_TABS } from '@/src/shared-constants';
 import { ModuleRenderer } from '@/src/apps';

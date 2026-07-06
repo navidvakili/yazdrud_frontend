@@ -1,5 +1,5 @@
 // ============================================================
-// Network Status — ردیابی وضعیت اتصال به سرور
+// Network Observer — ردیابی وضعیت اتصال به سرور
 // ============================================================
 
 type Listener = (status: { online: boolean; apiFailing: boolean }) => void;
@@ -26,7 +26,7 @@ if (typeof window !== 'undefined') {
   });
 }
 
-export const networkStatus = {
+export const networkObserver = {
   /** Subscribe to network status changes. Returns unsubscribe function. */
   subscribe(fn: Listener) {
     listeners.push(fn);

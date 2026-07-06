@@ -4,13 +4,13 @@
 
 import { useState, useEffect } from 'react';
 import { Wifi, WifiOff, CloudOff } from 'lucide-react';
-import { networkStatus } from '@/src/shared-utils';
+import { networkObserver } from '@/src/shared-utils';
 
 export default function NetworkStatus() {
-  const [status, setStatus] = useState(networkStatus.getStatus());
+  const [status, setStatus] = useState(networkObserver.getStatus());
 
   useEffect(() => {
-    const unsub = networkStatus.subscribe(setStatus);
+    const unsub = networkObserver.subscribe(setStatus);
     return unsub;
   }, []);
 
