@@ -24,7 +24,7 @@ export default function TabsBar({
     <div className="px-4 py-2 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 select-none flex items-center gap-1.5 overflow-x-auto min-h-[46px]">
 
       {/* ===== RIGHT SIDE: همه تب‌ها (پیشخوان + تب‌های باز) ===== */}
-      <div className="flex-1 flex items-center gap-1.5 overflow-hidden">
+      <div className="flex-1 flex items-center gap-1.5 overflow-x-auto touch-pan-x">
         {/* Dashboard tab */}
         <button
           onClick={() => setActiveTabId(null)}
