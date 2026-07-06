@@ -3,7 +3,7 @@
 // ============================================================
 
 import { API } from '@/src/shared-utils';
-import type { CourseRegistration } from '@/src/shared-types';
+import type { CourseRegistration } from '../courses/types';
 
 export const receiptsApi = {
   async refundRegistration(encryptedId: string): Promise<CourseRegistration> {

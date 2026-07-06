@@ -4,7 +4,7 @@
 
 import { API, APISendFiles, getAvatarUrl, getBrowserFingerprint } from '@/src/shared-utils';
 import { API_BASE_URL, TOKEN_STRING, USER_STRING } from '@/src/shared-constants';
-import type { AuthResponse, LoginCredentials, User, UserRole, NavItem, NavResponse, UserRolesResponse, PermissionsResponse, RoleInfo, PermissionItem, Course, CourseGroup, CourseRegistration, CourseStats, DetailedCourseStats, CourseSurvey, CourseSurveyStats, CourseCoupon, Instructor, ActiveSession, AdminSession, UserSessionsResponse, AdminSessionsResponse } from '@/src/shared-types';
+import type { AuthResponse, LoginCredentials, User, UserRole, NavItem, NavResponse, UserRolesResponse, PermissionsResponse, RoleInfo, PermissionItem, ActiveSession, AdminSession, UserSessionsResponse, AdminSessionsResponse } from '@/src/shared-types';
 
 class ApiService {
   /**

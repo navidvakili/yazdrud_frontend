@@ -3,7 +3,7 @@
 // ============================================================
 
 import { API } from '@/src/shared-utils';
-import type { DetailedCourseStats } from '@/src/shared-types';
+import type { DetailedCourseStats } from './types';
 
 export const statsApi = {
   async getDetailedCourseStatistics(params?: { year?: string; course_id?: string }): Promise<DetailedCourseStats> {

@@ -3,7 +3,7 @@
 // ============================================================
 
 import { API, APISendFiles } from '@/src/shared-utils';
-import type { Course, CourseGroup, Instructor } from '@/src/shared-types';
+import type { Course, CourseGroup, Instructor } from './types';
 
 export const coursesApi = {
   // ========== Courses (دوره‌های آموزشی) ==========

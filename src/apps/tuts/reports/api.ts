@@ -4,7 +4,7 @@
 
 import { API } from '@/src/shared-utils';
 import { API_BASE_URL, TOKEN_STRING } from '@/src/shared-constants';
-import type { CourseRegistration } from '@/src/shared-types';
+import type { CourseRegistration } from '../courses/types';
 
 export const reportsApi = {
   async getAllRegistrations(params?: {

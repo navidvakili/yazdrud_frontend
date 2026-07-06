@@ -12,7 +12,7 @@ import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tool
 import { statsApi } from './api';
 import type { TutCourse } from '../shared/types';
 import { toPersianDigits, formatCurrency } from '../shared/utils';
-import type { DetailedCourseStats } from '@/src/shared-types';
+import type { DetailedCourseStats } from './types';
 
 interface MonthlyData {
     month: string; count: number; amount: number; online: number; bankSlip: number; percentage: number;

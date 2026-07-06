@@ -4,7 +4,7 @@
 
 import { API } from '@/src/shared-utils';
 import { API_BASE_URL, TOKEN_STRING } from '@/src/shared-constants';
-import type { CourseSurvey, CourseSurveyStats } from '@/src/shared-types';
+import type { CourseSurvey, CourseSurveyStats } from './types';
 
 export const surveysApi = {
   async getSurveys(params?: { course_id?: number; search?: string; page?: number; per_page?: number }): Promise<{ data: CourseSurvey[]; meta: any }> {

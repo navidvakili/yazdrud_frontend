@@ -3,7 +3,7 @@
 // ============================================================
 
 import { API } from '@/src/shared-utils';
-import type { CourseCoupon } from '@/src/shared-types';
+import type { CourseCoupon } from './types';
 
 export const vouchersApi = {
   // ========== Coupons / Vouchers (بن‌های تخفیف) ==========
