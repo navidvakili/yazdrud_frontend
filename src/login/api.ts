@@ -4,6 +4,7 @@
 
 import { API, getAvatarUrl, getBrowserFingerprint } from '@/src/shared-utils';
 import { TOKEN_STRING, USER_STRING } from '@/src/shared-constants';
+import type { ActiveSession, AdminSession, UserSessionsResponse, AdminSessionsResponse } from '@/src/shared-types';
 import type { User, LoginCredentials, AuthResponse, CreateWarningResponse, WarningStatusResponse, WarningInfo } from './types';
 
 /**
@@ -59,6 +60,120 @@ export const loginApi = {
       localStorage.removeItem(TOKEN_STRING);
       localStorage.removeItem(USER_STRING);
     }
+  },
+
+  /**
+   * Fetch the current user's profile from the backend.
+   */
+  async getUser(): Promise<User> {
+    const data = await API<any>('user');
+    return mapBackendUser(data.data);
+  },
+
+  /**
+   * Update the user's profile.
+   */
+  async updateProfile(profileData: Partial<User>): Promise<User> {
+    const data = await API<any>('user/profile', profileData, 'PUT');
+    return mapBackendUser(data.data);
+  },
+
+  /**
+   * Change the user's password.
+   */
+  async changePassword(currentPassword: string, newPassword: string): Promise<{ message: string }> {
+    const data = await API<any>('user/password', {
+      current_password: currentPassword,
+      password: newPassword,
+      password_confirmation: newPassword,
+    }, 'PUT');
+    return data;
+  },
+
+  /**
+   * Verify user's current password (for standby unlock).
+   * Returns true if password is correct, false otherwise.
+   */
+  async verifyPassword(password: string): Promise<boolean> {
+    try {
+      await API<any>('user/verify-password', { password }, 'POST');
+      return true;
+    } catch {
+      return false;
+    }
+  },
+
+  /**
+   * Switch the user's active (primary) role.
+   */
+  async switchRole(role: string): Promise<User> {
+    const data = await API<any>('user/switch-role', { role }, 'PUT');
+    const updatedUser = mapBackendUser(data.data);
+    localStorage.setItem(USER_STRING, JSON.stringify(updatedUser));
+    return updatedUser;
+  },
+
+  /**
+   * Save the user's theme preference to the backend.
+   */
+  async updateTheme(theme: 'light' | 'dark'): Promise<void> {
+    await API('user/theme', { theme }, 'PUT');
+  },
+
+  // ========== Session Management (localStorage) ==========
+
+  getStoredUser(): User | null {
+    const stored = localStorage.getItem(USER_STRING);
+    if (stored) {
+      try {
+        return JSON.parse(stored) as User;
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  },
+
+  getStoredToken(): string | null {
+    return localStorage.getItem(TOKEN_STRING);
+  },
+
+  isAuthenticated(): boolean {
+    return !!this.getStoredToken() && !!this.getStoredUser();
+  },
+
+  // ========== Active Sessions Management ==========
+
+  /**
+   * Get current user's active sessions.
+   */
+  async getActiveSessions(): Promise<UserSessionsResponse> {
+    const data = await API<any>('user/sessions');
+    return data;
+  },
+
+  /**
+   * Revoke a specific session (token) for the current user.
+   */
+  async revokeSession(tokenId: string): Promise<{ message: string }> {
+    const data = await API<any>(`user/sessions/${tokenId}/revoke`, {}, 'POST');
+    return data;
+  },
+
+  /**
+   * Admin: Get all active sessions across all users.
+   */
+  async getAllActiveSessions(): Promise<AdminSessionsResponse> {
+    const data = await API<any>('admin/sessions');
+    return data;
+  },
+
+  /**
+   * Admin: Revoke any user's session.
+   */
+  async adminRevokeSession(tokenId: string): Promise<{ message: string }> {
+    const data = await API<any>(`admin/sessions/${tokenId}/revoke`, {}, 'POST');
+    return data;
   },
 
   // ========== Session Warnings (Concurrent Login) ==========

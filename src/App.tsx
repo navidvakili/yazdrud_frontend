@@ -9,10 +9,10 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { User as UserType, Tab, PortalNotification, NavItem, RoleInfo } from '@/src/shared-types';
-import api from '@/src/shared-api';
+import { layoutsApi } from '@/src/layouts';
 import { THEME_STRING, USER_STRING, MAX_TABS, STANDBY_TIMEOUT } from '@/src/shared-constants';
 import { AppModules, resolveApp, LoadingFallback } from '@/src/apps';
-import { LoginForm, SessionWarningModal, useSessionWarning } from '@/src/login';
+import { loginApi, LoginForm, SessionWarningModal, useSessionWarning } from '@/src/login';
 import DashboardModule from '@/src/dashboard';
 import ThesisManagement from '@/src/components/ThesisManagement';
 import FloatingPanels from '@/src/components/FloatingPanels';
@@ -77,18 +77,18 @@ export default function App() {
     localStorage.setItem(THEME_STRING, theme);
     // Persist theme to backend profile (silently, only when authenticated)
     if (viewState === 'authenticated') {
-      api.updateTheme(theme).catch(() => { /* ignore */ });
+      loginApi.updateTheme(theme).catch(() => { /* ignore */ });
     }
   }, [theme, viewState]);
 
   // Restore session on cold start — default to dashboard (no tab)
   useEffect(() => {
-    const storedUser = api.getStoredUser();
+    const storedUser = loginApi.getStoredUser();
     if (storedUser) {
       setUser(storedUser);
       setViewState('authenticated');
       // Attempt to fetch the user's saved theme from backend (silent)
-      api.getUser().then(profile => {
+      loginApi.getUser().then(profile => {
         // If backend returns a theme field, apply it
         if ((profile as any).theme) {
           setTheme((profile as any).theme as 'light' | 'dark');
@@ -140,12 +140,12 @@ export default function App() {
 
   // Fetch navigation and roles when user is authenticated
   const fetchNavigation = useCallback(async () => {
-    if (!api.isAuthenticated()) return;
+    if (!loginApi.isAuthenticated()) return;
     setNavLoading(true);
     try {
       const [navData, rolesData] = await Promise.all([
-        api.getNavigation(),
-        api.getUserRoles(),
+        layoutsApi.getNavigation(),
+        layoutsApi.getUserRoles(),
       ]);
       setNavItems(navData);
       setUserRoles(rolesData.all_roles);
@@ -267,7 +267,7 @@ export default function App() {
 
   const handleLogout = async () => {
     try {
-      await api.logout();
+      await loginApi.logout();
     } catch { /* ignore */ }
     setUser(null);
     setTabs([]);
@@ -281,7 +281,7 @@ export default function App() {
 
   /** Verify password and exit standby mode */
   const handleUnlock = async (password: string): Promise<boolean> => {
-    const ok = await api.verifyPassword(password);
+    const ok = await loginApi.verifyPassword(password);
     if (ok) {
       setIsStandby(false);
       lastActivityRef.current = Date.now();
@@ -296,7 +296,7 @@ export default function App() {
   const handleChangeRole = async (newRole: string) => {
     if (!user) return;
     try {
-      const updatedUser = await api.switchRole(newRole);
+      const updatedUser = await loginApi.switchRole(newRole);
       setUser(updatedUser);
       // Clear all tabs so the new role's navigation is shown without stale tabs
       setTabs([]);

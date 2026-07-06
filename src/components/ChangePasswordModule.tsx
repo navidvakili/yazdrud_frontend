@@ -13,7 +13,7 @@ import {
   Eye,
   EyeOff,
 } from 'lucide-react';
-import api from '@/src/shared-api';
+import { loginApi } from '@/src/login';
 
 export default function ChangePasswordModule() {
   const [currentPassword, setCurrentPassword] = useState('');
@@ -44,7 +44,7 @@ export default function ChangePasswordModule() {
 
     setIsSaving(true);
     try {
-      const result = await api.changePassword(currentPassword, newPassword);
+      const result = await loginApi.changePassword(currentPassword, newPassword);
       setMessage({ type: 'success', text: result.message || 'گذرواژه با موفقیت تغییر یافت.' });
       setCurrentPassword('');
       setNewPassword('');

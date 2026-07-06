@@ -19,7 +19,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import type { User as UserType, ActiveSession } from '@/src/shared-types';
-import api from '@/src/shared-api';
+import { loginApi } from '@/src/login';
 import type { RoleInfo } from '@/src/shared-types';
 
 interface ProfileModuleProps {
@@ -46,7 +46,7 @@ export default function ProfileModule({ user, userRoles, onUpdateUser }: Profile
     setSessionsLoading(true);
     setSessionsError(null);
     try {
-      const data = await api.getActiveSessions();
+      const data = await loginApi.getActiveSessions();
       setCurrentSession(data.data.current_session);
       setOtherSessions(data.data.other_sessions);
     } catch (err: any) {
@@ -63,7 +63,7 @@ export default function ProfileModule({ user, userRoles, onUpdateUser }: Profile
   const handleRevokeSession = async (tokenId: string) => {
     setRevokingId(tokenId);
     try {
-      await api.revokeSession(tokenId);
+      await loginApi.revokeSession(tokenId);
       // Remove from list
       setOtherSessions(prev => prev.filter(s => s.token_id !== tokenId));
     } catch (err: any) {
@@ -78,7 +78,7 @@ export default function ProfileModule({ user, userRoles, onUpdateUser }: Profile
     try {
       const tokens = otherSessions.map(s => s.token_id);
       for (const tokenId of tokens) {
-        await api.revokeSession(tokenId);
+        await loginApi.revokeSession(tokenId);
       }
       setOtherSessions([]);
     } catch (err: any) {
@@ -92,7 +92,7 @@ export default function ProfileModule({ user, userRoles, onUpdateUser }: Profile
     setMessage(null);
     setIsSaving(true);
     try {
-      const updated = await api.updateProfile({ fname, lname, mobile });
+      const updated = await loginApi.updateProfile({ fname, lname, mobile });
       onUpdateUser(updated);
       setMessage({ type: 'success', text: 'پروفایل با موفقیت به‌روزرسانی شد.' });
     } catch (err: any) {

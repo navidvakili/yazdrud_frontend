@@ -18,7 +18,7 @@ import {
     CheckCircle2,
 } from 'lucide-react';
 import type { AdminSession } from '@/src/shared-types';
-import api from '@/src/shared-api';
+import { loginApi } from '@/src/login';
 
 export default function AdminSessionsPanel() {
     const [sessions, setSessions] = useState<AdminSession[]>([]);
@@ -32,7 +32,7 @@ export default function AdminSessionsPanel() {
         setLoading(true);
         setError(null);
         try {
-            const data = await api.getAllActiveSessions();
+            const data = await loginApi.getAllActiveSessions();
             setSessions(data.data);
         } catch (err: any) {
             setError(err.message || 'خطا در دریافت اطلاعات نشست‌ها');
@@ -49,7 +49,7 @@ export default function AdminSessionsPanel() {
         setRevokingId(tokenId);
         setSuccessMessage(null);
         try {
-            await api.adminRevokeSession(tokenId);
+            await loginApi.adminRevokeSession(tokenId);
             setSessions(prev => prev.filter(s => s.token_id !== tokenId));
             setSuccessMessage('نشست مورد نظر با موفقیت باطل شد');
             setTimeout(() => setSuccessMessage(null), 3000);
