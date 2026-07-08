@@ -3,7 +3,7 @@
 // ============================================================
 
 import { useMemo } from 'react';
-import { Search, FileText, RotateCcw, CheckCircle2, CreditCard, Landmark, PiggyBank, Edit2 } from 'lucide-react';
+import { Search, FileText, RotateCcw, CheckCircle2, CreditCard, Landmark, PiggyBank, Edit2, UserPlus } from 'lucide-react';
 import type { TutCourse, TutRegistrant } from '../shared/types';
 import { toPersianDigits, formatCurrency } from '../shared/utils';
 import { LoadingSpinner } from './components/LoadingSpinner';
@@ -27,6 +27,7 @@ interface TutsReportsProps {
     reportStats: { total_confirmed: number; online_paid: number; bank_verified: number; total_amount: number } | null;
     filteredRegistrants: TutRegistrant[];
     handleExportExcel: () => void;
+    onNewRegistration: () => void;
     onRefundRequest: (reg: TutRegistrant) => void;
     onUndoRefund: (reg: TutRegistrant) => void;
     onEditRequest: (reg: TutRegistrant) => void;
@@ -42,7 +43,7 @@ export default function TutsReports(props: TutsReportsProps) {
         reportPage, setReportPage, reportPerPage, reportTotal = 0,
         reportStats,
         filteredRegistrants,
-        handleExportExcel, onRefundRequest, onUndoRefund, onEditRequest,
+        handleExportExcel, onNewRegistration, onRefundRequest, onUndoRefund, onEditRequest,
     } = props;
 
     // Generate year options dynamically: from 1400 to current Jalali year
@@ -129,6 +130,13 @@ export default function TutsReports(props: TutsReportsProps) {
                         </button>
                     </div>
 
+                    <button
+                        onClick={onNewRegistration}
+                        className="px-4 py-3 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100/50 dark:hover:bg-emerald-900/40 border border-emerald-500/15 text-emerald-700 dark:text-emerald-400 font-extrabold text-xs rounded-xl flex items-center justify-center gap-1.5 shrink-0 transition-all cursor-pointer w-full sm:w-auto"
+                    >
+                        <UserPlus className="w-4 h-4" />
+                        ثبت‌نام دستی
+                    </button>
                     <button
                         onClick={handleExportExcel}
                         className="px-4 py-3 bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100/50 dark:hover:bg-indigo-900/40 border border-indigo-500/15 text-indigo-700 dark:text-indigo-400 font-extrabold text-xs rounded-xl flex items-center justify-center gap-1.5 shrink-0 transition-all cursor-pointer w-full sm:w-auto"

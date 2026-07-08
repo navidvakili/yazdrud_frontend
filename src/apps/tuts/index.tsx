@@ -20,6 +20,7 @@ import CertificatePreviewDialog from './certificates/dialogs/CertificatePreviewD
 import RefundConfirmDialog from './receipts/dialogs/RefundConfirmDialog';
 import UndoRefundConfirmDialog from './receipts/dialogs/UndoRefundConfirmDialog';
 import EditRegistrationDialog from './reports/dialogs/EditRegistrationDialog';
+import NewRegistrationDialog from './reports/dialogs/NewRegistrationDialog';
 import CoursesTab from './courses';
 import ReportsTab from './reports';
 import ReceiptsTab from './receipts';
@@ -750,6 +751,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
   const [undoRefundConfirmWord, setUndoRefundConfirmWord] = useState('');
   const [undoRefundConfirmInput, setUndoRefundConfirmInput] = useState('');
   const [editTarget, setEditTarget] = useState<TutRegistrant | null>(null);
+  const [showNewRegistration, setShowNewRegistration] = useState(false);
 
   const handleCopyCourseUrl = (course: TutCourse) => {
     const url = `https://terms.sau.ac.ir/course/${course.id}`;
@@ -1551,6 +1553,31 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     }
   };
 
+  // ========== Manual New Registration Handler ==========
+  const handleNewRegistration = async (data: {
+    course_id: number;
+    fullname: string;
+    kodmeli: string;
+    mobile: string;
+    type: string;
+    id_edu?: string;
+    skills?: string;
+    motivation?: string;
+  }) => {
+    try {
+      const newReg = await reportsApi.createRegistration(data);
+      // Close dialog and refresh the registrations list
+      setShowNewRegistration(false);
+      // Trigger re-fetch by slightly changing the search or page
+      // The easiest: reset to page 1 and let the useEffect re-fetch
+      setReportPage(1);
+      showToast(`فراگیر ${data.fullname} با موفقیت به دوره اضافه شد.`);
+    } catch (err: any) {
+      const msg = err?.errors?.[0] || err?.message || 'خطا در ثبت‌نام دستی فراگیر';
+      showToast(msg, 'error');
+    }
+  };
+
   // ========== Certificate Handlers ==========
   const [certificateNotif, setCertificateNotif] = useState<string | null>(null);
 
@@ -1903,6 +1930,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
           reportStats={reportStats}
           filteredRegistrants={filteredRegistrants}
           handleExportExcel={handleExportExcel}
+          onNewRegistration={() => setShowNewRegistration(true)}
           onRefundRequest={(reg) => setRefundTarget(reg)}
           onUndoRefund={(reg) => setUndoRefundTarget(reg)}
           onEditRequest={(reg) => setEditTarget(reg)}
@@ -2043,6 +2071,14 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
         target={editTarget}
         onSave={handleEditRegistration}
         onClose={() => setEditTarget(null)}
+      />
+
+      {/* ===== NEW REGISTRATION MODAL ===== */}
+      <NewRegistrationDialog
+        open={showNewRegistration}
+        courses={courses}
+        onSave={handleNewRegistration}
+        onClose={() => setShowNewRegistration(false)}
       />
     </div >
   );

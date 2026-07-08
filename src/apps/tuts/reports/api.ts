@@ -25,6 +25,20 @@ export const reportsApi = {
     return API<any>(url);
   },
 
+  async createRegistration(data: {
+    course_id: number;
+    fullname: string;
+    kodmeli: string;
+    mobile: string;
+    type: string;
+    id_edu?: string;
+    skills?: string;
+    motivation?: string;
+  }): Promise<CourseRegistration> {
+    const result = await API<any>('courses/registrations', data, 'POST');
+    return result.data;
+  },
+
   async updateRegistration(id: string, data: {
     fullname?: string;
     kodmeli?: string;
