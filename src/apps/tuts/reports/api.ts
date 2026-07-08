@@ -72,10 +72,21 @@ export const reportsApi = {
     });
     if (!response.ok) throw new Error('Export failed');
     const blob = await response.blob();
+
+    // Try to extract filename from Content-Disposition header
+    const disposition = response.headers.get('Content-Disposition');
+    let filename = 'registrations-report.xlsx';
+    if (disposition) {
+      const match = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+      if (match && match[1]) {
+        filename = match[1].replace(/['"]/g, '');
+      }
+    }
+
     const downloadUrl = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = downloadUrl;
-    a.download = 'registrations-report.xlsx';
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

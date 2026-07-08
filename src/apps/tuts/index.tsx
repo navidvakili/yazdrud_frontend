@@ -1061,33 +1061,14 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     }
   };
 
-  const handleExportSingleCourseExcel = (course: TutCourse) => {
-    const courseRegs = registrants.filter(r => r.courseId === course.id);
-    if (courseRegs.length === 0) {
-      showToast('هیچ ثبت‌نامی برای این دوره یافت نشد تا خروجی گرفته شود.', 'error');
-      return;
+  const handleExportSingleCourseExcel = async (course: TutCourse) => {
+    try {
+      await reportsApi.exportRegistrations({ course_id: course.id });
+      showToast(`فایل اکسل ثبت‌نامی‌های دوره "${course.title}" با موفقیت صادر و دانلود شد.`);
+    } catch (err) {
+      console.error('Export error:', err);
+      showToast('خطا در دریافت خروجی اکسل. لطفاً دوباره تلاش کنید.', 'error');
     }
-
-    // Generate CSV content with UTF-8 BOM for proper Excel display of Persian text
-    let csvContent = '\uFEFF';
-    csvContent += 'ردیف,کد ملی,نام و نام خانوادگی,شماره دانشجویی,موبایل,نوع کاربر,دوره آموزشی,مبلغ (ریال),نوع پرداخت,شماره پیگیری,تاریخ ثبت نام,تاریخ تایید,وضعیت\n';
-
-    courseRegs.forEach((r, idx) => {
-      const statusText = r.status === 'verified' ? 'تایید شده' : r.status === 'rejected' ? 'رد شده' : 'در انتظار تایید';
-      const verifiedDate = r.verifiedAt ? r.verifiedAt.split(' ')[0].replace(/-/g, '/') : '';
-      csvContent += `"${idx + 1}","${r.nationalCode}","${r.name}","${r.studentCode}","${r.mobile}","${r.typeText}","${r.courseTitle}",${r.amount},"${r.paymentMethod}","${r.trackingCode}","${r.date}","${verifiedDate}","${statusText}"\n`;
-    });
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `گزارش_ثبت_نام_${course.title.replace(/\s+/g, '_')}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    showToast(`فایل اکسل (CSV) ثبت‌نامی‌های دوره "${course.title}" با موفقیت صادر و دانلود شد.`);
   };
 
   const handleSimulateUpload = (e: React.ChangeEvent<HTMLInputElement>) => {

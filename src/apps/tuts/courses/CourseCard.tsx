@@ -126,7 +126,7 @@ export default function CourseCard({
                                 </button>
                                 <button onClick={() => onExportExcel(course)}
                                     className="p-1.5 bg-white dark:bg-gray-900 border border-gray-150 dark:border-gray-800 rounded-lg text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950 transition-all cursor-pointer"
-                                    title="خروجی اکسل (CSV)">
+                                    title="خروجی اکسل">
                                     <Download className="w-3.5 h-3.5" />
                                 </button>
                                 <button onClick={() => onCopyUrl(course)}
@@ -247,7 +247,7 @@ export default function CourseCard({
                                 </button>
                                 <button onClick={() => onExportExcel(course)}
                                     className="p-1.5 bg-white dark:bg-gray-900 border border-gray-150 dark:border-gray-800 rounded-lg text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950 transition-all cursor-pointer"
-                                    title="خروجی اکسل (CSV)">
+                                    title="خروجی اکسل">
                                     <Download className="w-3.5 h-3.5" />
                                 </button>
                                 <button onClick={() => onCopyUrl(course)}
