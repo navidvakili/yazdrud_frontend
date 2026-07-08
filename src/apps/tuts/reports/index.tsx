@@ -60,7 +60,7 @@ export default function TutsReports(props: TutsReportsProps) {
         <div className="space-y-5">
             {/* Filters Area */}
             <div className="flex flex-col xl:flex-row gap-4 justify-between items-center bg-gray-50 dark:bg-gray-900/40 p-4 rounded-2xl border border-gray-100 dark:border-gray-800/80">
-                <div className="relative flex-1 w-full">
+                <div className="relative flex-[3] w-full">
                     <span className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-gray-400">
                         <Search className="w-4 h-4" />
                     </span>
@@ -77,7 +77,7 @@ export default function TutsReports(props: TutsReportsProps) {
                     <select
                         value={reportYear}
                         onChange={(e) => { setReportYear(e.target.value); setReportPage(1); }}
-                        className="w-full text-xs px-3.5 py-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none"
+                        className="w-full xl:w-28 text-xs px-3.5 py-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none"
                     >
                         <option value="">همه سال‌ها</option>
                         {yearOptions.map(y => (
@@ -88,47 +88,13 @@ export default function TutsReports(props: TutsReportsProps) {
                     <select
                         value={reportCourseFilter}
                         onChange={(e) => { setReportCourseFilter(e.target.value); setReportPage(1); }}
-                        className="w-full text-xs px-3.5 py-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none"
+                        className="w-full xl:w-44 text-xs px-3.5 py-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none"
                     >
                         <option value="">فیلتر کارگاه‌های مهارتی</option>
                         {courses.map(c => (
                             <option key={c.id} value={c.id}>{c.title}</option>
                         ))}
                     </select>
-
-                    {/* Refunded filter toggle */}
-                    <div className="flex rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden shrink-0">
-                        <button
-                            onClick={() => { setReportRefundedFilter('show'); setReportPage(1); }}
-                            className={`px-3 py-3 text-[11px] font-extrabold transition-all cursor-pointer ${
-                                reportRefundedFilter === 'show'
-                                    ? 'bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-900'
-                                    : 'bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
-                            }`}
-                        >
-                            همه
-                        </button>
-                        <button
-                            onClick={() => { setReportRefundedFilter('hide'); setReportPage(1); }}
-                            className={`px-3 py-3 text-[11px] font-extrabold transition-all cursor-pointer ${
-                                reportRefundedFilter === 'hide'
-                                    ? 'bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-900'
-                                    : 'bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
-                            }`}
-                        >
-                            مستردد نشده
-                        </button>
-                        <button
-                            onClick={() => { setReportRefundedFilter('only'); setReportPage(1); }}
-                            className={`px-3 py-3 text-[11px] font-extrabold transition-all cursor-pointer ${
-                                reportRefundedFilter === 'only'
-                                    ? 'bg-rose-700 dark:bg-rose-400 text-white'
-                                    : 'bg-white dark:bg-gray-900 text-rose-500 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30'
-                            }`}
-                        >
-                            مستردد شده
-                        </button>
-                    </div>
 
                     <button
                         onClick={onNewRegistration}
@@ -213,24 +179,64 @@ export default function TutsReports(props: TutsReportsProps) {
                             );
                         return (
                             <>
-                            {/* Color legend */}
+                            {/* Color legend — clickable filters */}
                             <div className="flex flex-wrap gap-4 mb-3 px-1 text-[11px] font-bold">
-                                <span className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400">
+                                <button
+                                    onClick={() => {
+                                        setReportRefundedFilter(reportRefundedFilter === 'hide' ? 'show' : 'hide');
+                                        setReportPage(1);
+                                    }}
+                                    className={`flex items-center gap-1.5 cursor-pointer transition-all ${
+                                        reportRefundedFilter === 'hide'
+                                            ? 'text-amber-700 dark:text-amber-300'
+                                            : 'text-gray-600 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400'
+                                    }`}
+                                >
                                     <span className="inline-block w-3.5 h-3.5 rounded-sm bg-amber-50 border border-amber-300 dark:bg-amber-950/30 dark:border-amber-700"></span>
                                     فیش بانکی در انتظار تأیید
-                                </span>
-                                <span className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400">
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setReportRefundedFilter(reportRefundedFilter === 'hide' ? 'show' : 'hide');
+                                        setReportPage(1);
+                                    }}
+                                    className={`flex items-center gap-1.5 cursor-pointer transition-all ${
+                                        reportRefundedFilter === 'hide'
+                                            ? 'text-rose-700 dark:text-rose-300'
+                                            : 'text-gray-600 dark:text-gray-400 hover:text-rose-600 dark:hover:text-rose-400'
+                                    }`}
+                                >
                                     <span className="inline-block w-3.5 h-3.5 rounded-sm bg-rose-50 border border-rose-300 dark:bg-rose-950/30 dark:border-rose-700"></span>
                                     فیش بانکی رد شده
-                                </span>
-                                <span className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400">
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setReportRefundedFilter(reportRefundedFilter === 'hide' ? 'show' : 'hide');
+                                        setReportPage(1);
+                                    }}
+                                    className={`flex items-center gap-1.5 cursor-pointer transition-all ${
+                                        reportRefundedFilter === 'hide'
+                                            ? 'text-gray-800 dark:text-gray-200'
+                                            : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300'
+                                    }`}
+                                >
                                     <span className="inline-block w-3.5 h-3.5 rounded-sm bg-white border border-gray-300 dark:bg-gray-800 dark:border-gray-600"></span>
                                     تأیید شده / پرداخت آنلاین
-                                </span>
-                                <span className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400">
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setReportRefundedFilter(reportRefundedFilter === 'only' ? 'show' : 'only');
+                                        setReportPage(1);
+                                    }}
+                                    className={`flex items-center gap-1.5 cursor-pointer transition-all ${
+                                        reportRefundedFilter === 'only'
+                                            ? 'text-rose-600 dark:text-rose-300'
+                                            : 'text-gray-600 dark:text-gray-400 hover:text-rose-500 dark:hover:text-rose-400'
+                                    }`}
+                                >
                                     <span className="inline-block w-6 h-0.5 bg-gray-400 dark:bg-gray-500"></span>
-                                    <span className="line-through">مستردد شده</span>
-                                </span>
+                                    <span className={reportRefundedFilter === 'only' ? 'line-through' : ''}>مستردد شده</span>
+                                </button>
                             </div>
                             <div className="overflow-x-auto rounded-3xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-xs">
                                 <table className="w-full text-right text-xs">
