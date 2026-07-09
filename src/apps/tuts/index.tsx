@@ -263,6 +263,9 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     isActive: true,
     maxDiscount: 0,
     nationalCodes: [],
+    enableInstallment: false,
+    paymentMethod: 'online',
+    installmentItems: [],
   });
 
   const [sandboxUserId, setSandboxUserId] = useState('');
@@ -384,6 +387,17 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
         is_active: true,
         max_discount: newVoucher.maxDiscount > 0 ? newVoucher.maxDiscount : null,
         national_code: newVoucher.nationalCodes?.length ? newVoucher.nationalCodes.join(',') : null,
+        enable_installment: newVoucher.enableInstallment ?? false,
+        payment_method: newVoucher.enableInstallment ? (newVoucher.paymentMethod || 'online') : null,
+        prepayment_amount: null,
+        installment_items: newVoucher.enableInstallment
+          ? (newVoucher.installmentItems || []).map((item, idx) => ({
+              title: item.title || `قسط ${idx + 1}`,
+              amount: item.amount || 0,
+              due_date: item.due_date || '',
+              sort_order: idx + 1,
+            }))
+          : [],
       };
 
       const res = await vouchersApi.createCoupon(payload);
@@ -420,6 +434,9 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
       isActive: true,
       maxDiscount: 0,
       nationalCodes: [],
+      enableInstallment: false,
+      paymentMethod: 'online',
+      installmentItems: [],
     });
     setVoucherActiveTab('list');
   };
@@ -443,6 +460,19 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
       if (data.group_id !== undefined) payload.group_id = data.group_id ? Number(data.group_id) : null;
       if (data.maxDiscount !== undefined) payload.max_discount = data.maxDiscount > 0 ? data.maxDiscount : null;
       if (data.nationalCodes !== undefined) payload.national_code = data.nationalCodes.length > 0 ? data.nationalCodes.join(',') : null;
+      if (data.enableInstallment !== undefined) payload.enable_installment = data.enableInstallment;
+      if (data.paymentMethod !== undefined) payload.payment_method = data.enableInstallment ? data.paymentMethod : null;
+      if (data.prepaymentAmount !== undefined) payload.prepayment_amount = data.prepaymentAmount;
+      if (data.installmentItems !== undefined) {
+        payload.installment_items = data.enableInstallment
+          ? data.installmentItems.map((item, idx) => ({
+              title: item.title || `قسط ${idx + 1}`,
+              amount: item.amount || 0,
+              due_date: item.due_date || '',
+              sort_order: idx + 1,
+            }))
+          : [];
+      }
 
       const res = await vouchersApi.updateCoupon(Number(id), payload);
 
