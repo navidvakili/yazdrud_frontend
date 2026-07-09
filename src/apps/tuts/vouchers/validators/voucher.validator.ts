@@ -3,6 +3,7 @@
 // ============================================================
 
 import type { TutVoucher, TutCourse, SandboxResult } from '../../shared/types';
+import { getTodayJalali } from '../../shared/utils';
 
 export interface SandboxTestInput {
   code: string;
@@ -29,7 +30,7 @@ export function runSandboxChecks(input: SandboxTestInput): {
   discount: number;
 } {
   const { code, course, vouchers, userNationalCode, province, device, referrer } = input;
-  const todayStr = input.todayStr || '1405/03/23';
+  const todayStr = input.todayStr || getTodayJalali();
 
   const checks: CheckResult[] = [];
   let isValid = true;

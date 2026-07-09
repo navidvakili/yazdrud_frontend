@@ -14,7 +14,7 @@ import type { VoucherFormData, SandboxResult, TutCourse, TutRegistrant, TutVouch
 // Configure PDF.js worker — served from /public/ to avoid CSP issues with CDN
 pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 import { ToastNotification } from '@/src/shared-components';
-import { formatCostInput, mapCourse, mapVoucher, mapRegistrant, toPersianDigits, formatCurrency, toEnglishDigits, normalizePersian as normalizePersianSearch } from './shared/utils';
+import { formatCostInput, mapCourse, mapVoucher, mapRegistrant, toPersianDigits, formatCurrency, toEnglishDigits, getTodayJalali, normalizePersian as normalizePersianSearch } from './shared/utils';
 import { useToast } from './shared/hooks';
 import CertificatePreviewDialog from './certificates/dialogs/CertificatePreviewDialog';
 import RefundConfirmDialog from './receipts/dialogs/RefundConfirmDialog';
@@ -27,6 +27,7 @@ import ReceiptsTab from './receipts';
 import StatsTab from './stats';
 import SurveysTab from './surveys';
 import VouchersTab from './vouchers';
+import InstallmentManagement from './installments/InstallmentManagement';
 
 export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: TutsModuleProps) {
   // Normalize backend URL-style moduleIds to internal dash format
@@ -39,6 +40,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     'tuts/statistics': 'tuts-stats',
     'course-surveys': 'tuts-surveys',
     'course-surveys/statistics': 'tuts-surveys-stats',
+    'tuts-installments': 'tuts-installments',
   };
   const normModuleId = moduleIdNorm[moduleId] || moduleId;
 
@@ -525,7 +527,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     let failReason = '';
 
     // Check 1: Validity Dates
-    const todayStr = '1405/03/23';
+    const todayStr = getTodayJalali();
     let datePassed = true;
     let dateDesc = 'بازه زمانی آزاد است.';
     if (vouch.validFrom && todayStr < vouch.validFrom) {
@@ -1116,7 +1118,7 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
     }
 
     // 1. Time-based validations
-    const todayStr = '1405/03/23'; // current date in our app context
+    const todayStr = getTodayJalali(); // current date in our app context
     if (foundVoucher.validFrom && todayStr < foundVoucher.validFrom) {
       setVoucherError(`این بن هنوز فعال نشده است. شروع اعتبار از ${foundVoucher.validFrom}`);
       setAppliedVoucher(null);
@@ -1963,6 +1965,10 @@ export default function TutsModule({ user, activeTabId, moduleId, onOpenTab }: T
           selectedSurveyDetails={selectedSurveyDetails}
           setSelectedSurveyDetails={setSelectedSurveyDetails}
         />
+      )}
+
+      {normModuleId === 'tuts-installments' && (
+        <InstallmentManagement />
       )}
 
       {normModuleId === 'tuts-vouchers' && (

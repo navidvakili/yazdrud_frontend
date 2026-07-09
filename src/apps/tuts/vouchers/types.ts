@@ -22,6 +22,19 @@ export interface CourseCoupon {
   is_active: boolean;
   max_discount: number | null;
   national_code: string | null;
+  enable_installment?: boolean;
+  prepayment_amount?: number | null;
+  payment_method?: 'online' | 'offline' | null;
+  installment_items?: InstallmentItem[];
   created_at: string;
   updated_at: string;
+}
+
+/** Installment item template attached to a voucher */
+export interface InstallmentItem {
+  id: number;
+  title: string;
+  amount: number;
+  due_date: string;
+  sort_order?: number;
 }

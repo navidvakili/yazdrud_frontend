@@ -13,7 +13,7 @@ import type {
     TutCourse, TutCategory, TutVoucher,
     VoucherFormData, SandboxResult,
 } from '../shared/types';
-import { toPersianDigits, formatCurrency, toEnglishDigits } from '../shared/utils';
+import { toPersianDigits, formatCurrency, toEnglishDigits, getTodayJalali } from '../shared/utils';
 import { JalaliDatepicker, ToastNotification } from '@/src/shared-components';
 import { vouchersApi } from './api';
 import { coursesApi } from '../courses/api';
@@ -70,6 +70,7 @@ const VOUCHER_CONDITIONS = [
     { key: 'groupLimit', icon: MapPin, label: 'محدودیت گروه', check: (v: TutVoucher) => !!v.group_id },
     { key: 'nationalCodeLimit', icon: Gift, label: 'محدودیت کد ملی', check: (v: TutVoucher) => !!(v.nationalCodes?.length) },
     { key: 'maxDiscountCap', icon: DollarSign, label: 'سقف تخفیف', check: (v: TutVoucher) => !!v.maxDiscount && v.maxDiscount > 0 },
+    { key: 'installment', icon: CreditCard, label: 'قابل تقسیط', check: (v: TutVoucher) => !!v.enableInstallment },
 ];
 
 export default function TutsVouchers(props: TutsVouchersProps) {
@@ -173,6 +174,8 @@ export default function TutsVouchers(props: TutsVouchersProps) {
                                 budgetCap: 0, minInstallment: 0, installmentsAllowed: false, geoLimit: '',
                                 deviceLimit: '', firstPurchaseOnly: false, groupId: null, isActive: true,
                                 maxDiscount: 0, nationalCodes: [],
+                                enableInstallment: false, paymentMethod: 'online',
+                                installmentItems: [],
                             });
                         }
                     }}
@@ -521,6 +524,114 @@ export default function TutsVouchers(props: TutsVouchersProps) {
                                     </div>
                                 </div>
 
+                                {/* Section 5: Installment Settings */}
+                                <div className="p-4 bg-gray-55/50 dark:bg-gray-950/30 rounded-2xl border border-gray-100/50 dark:border-gray-850 space-y-3">
+                                    <h6 className="text-[10px] font-black text-gray-400 flex items-center gap-1.5"><CreditCard className="w-3 h-3" />تنظیمات تقسیط</h6>
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-xs font-bold text-gray-700 dark:text-gray-300">فعال‌سازی قابلیت تقسیط</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => setNewVoucher(f => ({ ...f, enableInstallment: !f.enableInstallment }))}
+                                            className={`relative w-12 h-6 rounded-full transition-colors cursor-pointer ${newVoucher.enableInstallment ? 'bg-teal-600' : 'bg-gray-300 dark:bg-gray-700'}`}
+                                        >
+                                            <span className={`absolute top-0.5 right-0.5 w-5 h-5 bg-white rounded-full shadow-xs transition-transform ${newVoucher.enableInstallment ? '-translate-x-6' : 'translate-x-0'}`} />
+                                        </button>
+                                    </div>
+
+                                    {newVoucher.enableInstallment && (
+                                        <div className="space-y-3 pt-2">
+                                            <div className="space-y-1">
+                                                <label className="text-[10px] font-bold text-gray-500 block">روش پرداخت</label>
+                                                <select value={newVoucher.paymentMethod || 'online'} onChange={(e) => setNewVoucher(f => ({ ...f, paymentMethod: e.target.value as 'online' | 'offline' }))}
+                                                    className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none cursor-pointer">
+                                                    <option value="online">آنلاین (درگاه)</option>
+                                                    <option value="offline">آفلاین (کارت به کارت / مراجعه)</option>
+                                                </select>
+                                            </div>
+
+                                            {/* Installment Items */}
+                                            <div className="space-y-2">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-[10px] font-bold text-gray-500">قسط‌های بن</span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const items = newVoucher.installmentItems || [];
+                                                            setNewVoucher(f => ({
+                                                                ...f,
+                                                                installmentItems: [...items, {
+                                                                    title: `قسط ${(items.length + 1).toLocaleString('fa')}`,
+                                                                    amount: 0,
+                                                                    due_date: '',
+                                                                    sort_order: items.length + 1,
+                                                                }],
+                                                            }));
+                                                        }}
+                                                        className="px-2.5 py-1 bg-teal-50 dark:bg-teal-950/30 hover:bg-teal-100 dark:hover:bg-teal-950/50 text-teal-600 dark:text-teal-400 rounded-lg text-[10px] font-bold transition-all cursor-pointer flex items-center gap-1 border border-teal-200/50 dark:border-teal-800/50"
+                                                    >
+                                                        + افزودن قسط
+                                                    </button>
+                                                </div>
+                                                {(newVoucher.installmentItems || []).length === 0 && (
+                                                    <p className="text-[9px] text-gray-400 py-2">هیچ قسطی تعریف نشده است. برای افزودن قسط کلیک کنید.</p>
+                                                )}
+                                                {(newVoucher.installmentItems || []).map((item, idx) => (
+                                                    <div key={idx} className="grid grid-cols-1 sm:grid-cols-12 gap-2 p-2.5 bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-850">
+                                                        <div className="sm:col-span-5 space-y-1">
+                                                            <label className="text-[9px] font-bold text-gray-400 block">عنوان</label>
+                                                            <input type="text" value={item.title} onChange={(e) => {
+                                                                const items = [...(newVoucher.installmentItems || [])];
+                                                                items[idx] = { ...items[idx], title: e.target.value };
+                                                                setNewVoucher(f => ({ ...f, installmentItems: items }));
+                                                            }}
+                                                                className="w-full text-xs px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none" />
+                                                        </div>
+                                                        <div className="sm:col-span-3 space-y-1">
+                                                            <label className="text-[9px] font-bold text-gray-400 block">مبلغ (ریال)</label>
+                                                            <input type="text" inputMode="numeric" value={item.amount > 0 ? item.amount.toLocaleString('en-US') : ''} onChange={(e) => {
+                                                                const raw = e.target.value.replace(/[^\d]/g, '');
+                                                                const items = [...(newVoucher.installmentItems || [])];
+                                                                items[idx] = { ...items[idx], amount: raw ? Number(raw) : 0 };
+                                                                setNewVoucher(f => ({ ...f, installmentItems: items }));
+                                                            }}
+                                                                className="w-full text-xs px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none ltr text-left" />
+                                                        </div>
+                                                        <div className="sm:col-span-3 space-y-1">
+                                                            <label className="text-[9px] font-bold text-gray-400 block">سررسید</label>
+                                                            <JalaliDatepicker
+                                                                value={item.due_date}
+                                                                onChange={(v) => {
+                                                                    const items = [...(newVoucher.installmentItems || [])];
+                                                                    items[idx] = { ...items[idx], due_date: v };
+                                                                    setNewVoucher(f => ({ ...f, installmentItems: items }));
+                                                                }}
+                                                            />
+                                                        </div>
+                                                        <div className="sm:col-span-1 flex items-end pb-1">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    const items = (newVoucher.installmentItems || []).filter((_, i) => i !== idx);
+                                                                    setNewVoucher(f => ({ ...f, installmentItems: items }));
+                                                                }}
+                                                                className="p-1.5 rounded-lg text-gray-300 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-colors cursor-pointer"
+                                                                title="حذف قسط"
+                                                            >
+                                                                <X className="w-4 h-4" />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                                {(newVoucher.installmentItems || []).length > 0 && (
+                                                    <div className="text-[9px] text-gray-400 pt-1 flex items-center gap-2">
+                                                        <span>مجموع اقساط: {formatCurrency((newVoucher.installmentItems || []).reduce((s, i) => s + (i.amount || 0), 0))}</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
                                 {/* Submit */}
                                 <button onClick={handleCreateVoucher}
                                     disabled={!newVoucher.code || !newVoucher.discountValue || !newVoucher.maxUses}
@@ -615,6 +726,16 @@ function EditForm({ voucher, courses, courseGroups, onSave, onCancel }: {
     const [nationalCodeInput, setNationalCodeInput] = useState('');
     const [saving, setSaving] = useState(false);
     const [validationError, setValidationError] = useState('');
+    const [enableInstallment, setEnableInstallment] = useState(voucher.enableInstallment || false);
+    const [paymentMethod, setPaymentMethod] = useState<'online' | 'offline'>(voucher.paymentMethod || 'online');
+    const [installmentItems, setInstallmentItems] = useState<{ title: string; amount: number; due_date: string; sort_order?: number }[]>(
+        voucher.installmentItems?.map(item => ({
+            title: item.title,
+            amount: item.amount,
+            due_date: item.due_date,
+            sort_order: item.sort_order,
+        })) || []
+    );
 
     // --- Course autocomplete ---
     const [courseId, setCourseId] = useState(voucher.courseId && voucher.courseId !== 'all' ? voucher.courseId : '');
@@ -683,6 +804,12 @@ function EditForm({ voucher, courses, courseGroups, onSave, onCancel }: {
                 group_id: groupId || null,
                 maxDiscount,
                 nationalCodes: nationalCodesList,
+                enableInstallment,
+                paymentMethod: enableInstallment ? paymentMethod : undefined,
+                installmentItems: enableInstallment ? installmentItems.map((item, idx) => ({
+                    ...item,
+                    sort_order: idx + 1,
+                })) : [],
             });
         } finally {
             setSaving(false);
@@ -861,6 +988,107 @@ function EditForm({ voucher, courses, courseGroups, onSave, onCancel }: {
                 </div>
             </div>
 
+            {/* Installment Settings */}
+            <div className="p-3 bg-gray-55/50 dark:bg-gray-950/30 rounded-2xl border border-gray-100/50 dark:border-gray-850 space-y-3">
+                <h6 className="text-[10px] font-black text-gray-400 flex items-center gap-1.5"><CreditCard className="w-3 h-3" />تنظیمات تقسیط</h6>
+                <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-gray-700 dark:text-gray-300">فعال‌سازی قابلیت تقسیط</span>
+                    <button
+                        type="button"
+                        onClick={() => setEnableInstallment(!enableInstallment)}
+                        className={`relative w-12 h-6 rounded-full transition-colors cursor-pointer ${enableInstallment ? 'bg-teal-600' : 'bg-gray-300 dark:bg-gray-700'}`}
+                    >
+                        <span className={`absolute top-0.5 right-0.5 w-5 h-5 bg-white rounded-full shadow-xs transition-transform ${enableInstallment ? '-translate-x-6' : 'translate-x-0'}`} />
+                    </button>
+                </div>
+
+                {enableInstallment && (
+                    <div className="space-y-3 pt-2">
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-gray-500 block">روش پرداخت</label>
+                            <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value as 'online' | 'offline')}
+                                className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none cursor-pointer">
+                                <option value="online">آنلاین (درگاه)</option>
+                                <option value="offline">آفلاین (کارت به کارت / مراجعه)</option>
+                            </select>
+                        </div>
+
+                        {/* Installment Items */}
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                                <span className="text-[10px] font-bold text-gray-500">قسط‌های بن</span>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setInstallmentItems(prev => [...prev, {
+                                            title: `قسط ${(prev.length + 1).toLocaleString('fa')}`,
+                                            amount: 0,
+                                            due_date: '',
+                                            sort_order: prev.length + 1,
+                                        }]);
+                                    }}
+                                    className="px-2.5 py-1 bg-teal-50 dark:bg-teal-950/30 hover:bg-teal-100 dark:hover:bg-teal-950/50 text-teal-600 dark:text-teal-400 rounded-lg text-[10px] font-bold transition-all cursor-pointer flex items-center gap-1 border border-teal-200/50 dark:border-teal-800/50"
+                                >
+                                    + افزودن قسط
+                                </button>
+                            </div>
+                            {installmentItems.length === 0 && (
+                                <p className="text-[9px] text-gray-400 py-2">هیچ قسطی تعریف نشده است.</p>
+                            )}
+                            {installmentItems.map((item, idx) => (
+                                <div key={idx} className="grid grid-cols-1 sm:grid-cols-12 gap-2 p-2.5 bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-850">
+                                    <div className="sm:col-span-5 space-y-1">
+                                        <label className="text-[9px] font-bold text-gray-400 block">عنوان</label>
+                                        <input type="text" value={item.title} onChange={(e) => {
+                                            const items = [...installmentItems];
+                                            items[idx] = { ...items[idx], title: e.target.value };
+                                            setInstallmentItems(items);
+                                        }}
+                                            className="w-full text-xs px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none" />
+                                    </div>
+                                    <div className="sm:col-span-3 space-y-1">
+                                        <label className="text-[9px] font-bold text-gray-400 block">مبلغ (ریال)</label>
+                                        <input type="text" inputMode="numeric" value={item.amount > 0 ? item.amount.toLocaleString('en-US') : ''} onChange={(e) => {
+                                            const raw = e.target.value.replace(/[^\d]/g, '');
+                                            const items = [...installmentItems];
+                                            items[idx] = { ...items[idx], amount: raw ? Number(raw) : 0 };
+                                            setInstallmentItems(items);
+                                        }}
+                                            className="w-full text-xs px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none ltr text-left" />
+                                    </div>
+                                    <div className="sm:col-span-3 space-y-1">
+                                        <label className="text-[9px] font-bold text-gray-400 block">سررسید</label>
+                                        <JalaliDatepicker
+                                            value={item.due_date}
+                                            onChange={(v) => {
+                                                const items = [...installmentItems];
+                                                items[idx] = { ...items[idx], due_date: v };
+                                                setInstallmentItems(items);
+                                            }}
+                                        />
+                                    </div>
+                                    <div className="sm:col-span-1 flex items-end pb-1">
+                                        <button
+                                            type="button"
+                                            onClick={() => setInstallmentItems(prev => prev.filter((_, i) => i !== idx))}
+                                            className="p-1.5 rounded-lg text-gray-300 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-colors cursor-pointer"
+                                            title="حذف قسط"
+                                        >
+                                            <X className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                            {installmentItems.length > 0 && (
+                                <div className="text-[9px] text-gray-400 pt-1 flex items-center gap-2">
+                                    <span>مجموع اقساط: {formatCurrency(installmentItems.reduce((s, i) => s + (i.amount || 0), 0))}</span>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+            </div>
+
             <div className="flex gap-2 pt-2">
                 <button type="button" onClick={onCancel}
                     className="flex-1 py-2.5 rounded-xl text-xs font-bold text-gray-500 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-750 transition-colors cursor-pointer">
@@ -954,6 +1182,9 @@ export function StandaloneTutsVouchers() {
         isActive: true,
         maxDiscount: 0,
         nationalCodes: [],
+        enableInstallment: false,
+        paymentMethod: 'online',
+        installmentItems: [],
     });
 
     // ===== Tab State =====
@@ -1007,6 +1238,15 @@ export function StandaloneTutsVouchers() {
                 is_active: true,
                 max_discount: newVoucher.maxDiscount > 0 ? newVoucher.maxDiscount : null,
                 national_code: newVoucher.nationalCodes?.length ? newVoucher.nationalCodes.join(',') : null,
+                enable_installment: newVoucher.enableInstallment ?? false,
+                payment_method: newVoucher.enableInstallment ? (newVoucher.paymentMethod || 'online') : null,
+                prepayment_amount: newVoucher.enableInstallment ? 0 : null,
+                installment_items: newVoucher.enableInstallment ? (newVoucher.installmentItems || []).map((item, idx) => ({
+                    title: item.title || `قسط ${idx + 1}`,
+                    amount: item.amount || 0,
+                    due_date: item.due_date || '',
+                    sort_order: idx + 1,
+                })) : [],
             };
             const res = await vouchersApi.createCoupon(payload);
             const created = mapVoucher(res);
@@ -1025,6 +1265,8 @@ export function StandaloneTutsVouchers() {
             budgetCap: 0, minInstallment: 0, installmentsAllowed: false, geoLimit: '',
             deviceLimit: '', firstPurchaseOnly: false, groupId: null, isActive: true,
             maxDiscount: 0, nationalCodes: [],
+            enableInstallment: false, paymentMethod: 'online',
+            installmentItems: [],
         });
         setVoucherActiveTab('list');
     };
@@ -1048,6 +1290,18 @@ export function StandaloneTutsVouchers() {
             if (data.group_id !== undefined) payload.group_id = data.group_id ? Number(data.group_id) : null;
             if (data.maxDiscount !== undefined) payload.max_discount = data.maxDiscount > 0 ? data.maxDiscount : null;
             if (data.nationalCodes !== undefined) payload.national_code = data.nationalCodes.length > 0 ? data.nationalCodes.join(',') : null;
+            if (data.enableInstallment !== undefined) payload.enable_installment = data.enableInstallment;
+            if (data.paymentMethod !== undefined) payload.payment_method = data.enableInstallment ? data.paymentMethod : null;
+            if (data.installmentItems !== undefined) {
+                payload.installment_items = data.enableInstallment
+                    ? data.installmentItems.map((item: any, idx: number) => ({
+                        title: item.title || `قسط ${idx + 1}`,
+                        amount: Number(item.amount) || 0,
+                        due_date: item.due_date || '',
+                        sort_order: idx + 1,
+                    }))
+                    : [];
+            }
 
             await vouchersApi.updateCoupon(Number(id), payload);
             setVouchers(prev => prev.map(v => {
@@ -1058,6 +1312,17 @@ export function StandaloneTutsVouchers() {
                 updated.remainingUses = Math.max(0, cap - used);
                 if (used >= cap && cap > 0) updated.status = 'used' as const;
                 else if (cap > used) updated.status = 'active' as const;
+                if (data.enableInstallment !== undefined) updated.enableInstallment = data.enableInstallment;
+                if (data.paymentMethod !== undefined) updated.paymentMethod = data.paymentMethod;
+                if (data.installmentItems !== undefined) {
+                    updated.installmentItems = data.installmentItems.map((item: any, idx: number) => ({
+                        id: item.id || idx + 1,
+                        title: item.title || `قسط ${idx + 1}`,
+                        amount: Number(item.amount) || 0,
+                        due_date: item.due_date || '',
+                        sort_order: idx + 1,
+                    }));
+                }
                 return updated;
             }));
             setShowEditModal(false);
@@ -1112,7 +1377,7 @@ export function StandaloneTutsVouchers() {
         const checks: { title: string; passed: boolean; desc: string }[] = [];
         let isValid = true;
         let failReason = '';
-        const todayStr = '1405/03/23';
+        const todayStr = getTodayJalali();
 
         // Check 1: Validity Dates
         let datePassed = true;

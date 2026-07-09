@@ -34,6 +34,7 @@ export const moduleToAppMap: Record<string, string> = {
   'tuts/bank-receipts': 'tuts',
   'tuts/statistics': 'tuts',
   'course-surveys': 'tuts',
+  'tuts-installments': 'tuts',
 
   // Accounting App
   'finance': 'accounting',

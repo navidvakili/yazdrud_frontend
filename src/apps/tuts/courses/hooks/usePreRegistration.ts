@@ -4,7 +4,7 @@
 
 import { useState } from 'react';
 import type { TutCourse, TutVoucher, TutRegistrant } from '../../shared/types';
-import { toPersianDigits, formatCurrency } from '../../shared/utils';
+import { toPersianDigits, formatCurrency, getTodayJalali } from '../../shared/utils';
 
 export function usePreRegistration(
   courses: TutCourse[],
@@ -52,7 +52,7 @@ export function usePreRegistration(
       return;
     }
 
-    const todayStr = '1405/03/23';
+    const todayStr = getTodayJalali();
     if (foundVoucher.validFrom && todayStr < foundVoucher.validFrom) {
       setVoucherError(`این بن هنوز فعال نشده است. شروع اعتبار از ${foundVoucher.validFrom}`);
       setAppliedVoucher(null); return;

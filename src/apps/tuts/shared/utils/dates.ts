@@ -42,15 +42,9 @@ export function toJalaliYearMonth(gregorianDate: string): { year: string; month:
   }
 }
 
-/** Get today's date as a Jalali string (e.g., "1405/04/10") */
+/** Get today's date as a Jalali string with Western digits (e.g., "1405/04/18") */
 export function getTodayJalali(): string {
-  const d = new Date();
-  const formatter = new Intl.DateTimeFormat('fa-IR-u-ca-persian', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  });
-  return formatter.format(d).replace(/\u200f/g, '').replace(/[/\\]/g, '/');
+  return new PersianDate(new Date()).toLocale('en').format('YYYY/MM/DD');
 }
 
 /** Get current hour and minute for sandbox time simulation */

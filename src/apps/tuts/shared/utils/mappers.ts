@@ -75,6 +75,18 @@ export function mapVoucher(c: any): TutVoucher {
     maxDiscount: c.max_discount ? Number(c.max_discount) : undefined,
     nationalCodes: c.national_code ? String(c.national_code).split(',').map(s => s.trim()).filter(Boolean) : undefined,
     isActive: c.is_active ?? true,
+    enableInstallment: c.enable_installment ?? false,
+    prepaymentAmount: c.prepayment_amount ?? null,
+    paymentMethod: c.payment_method ?? null,
+    installmentItems: Array.isArray(c.installment_items)
+      ? c.installment_items.map((item: any) => ({
+          id: item.id,
+          title: item.title,
+          amount: item.amount,
+          due_date: item.due_date,
+          sort_order: item.sort_order,
+        }))
+      : undefined,
   };
 }
 

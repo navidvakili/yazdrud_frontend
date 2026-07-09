@@ -140,9 +140,20 @@ export interface TutVoucher {
     discountAmount?: number;
     allowInstallments?: boolean;
     installmentCount?: number;
+    installmentValue?: number;
     maxDiscount?: number;
     nationalCodes?: string[];
     isActive?: boolean;
+    enableInstallment?: boolean;
+    prepaymentAmount?: number | null;
+    paymentMethod?: 'online' | 'offline' | null;
+    installmentItems?: {
+        id?: number;
+        title: string;
+        amount: number;
+        due_date: string;
+        sort_order?: number;
+    }[];
 }
 
 export interface StatMonthData {
@@ -229,6 +240,9 @@ export interface VoucherFormData {
     isActive: boolean;
     maxDiscount: number;
     nationalCodes: string[];
+    enableInstallment?: boolean;
+    paymentMethod?: 'online' | 'offline';
+    installmentItems?: { title: string; amount: number; due_date: string; sort_order?: number }[];
 }
 
 export interface PreRegFormData {
