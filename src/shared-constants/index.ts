@@ -29,7 +29,7 @@ export const SIGNS_STORAGE_PATH = `${BACKEND_API_URL}/storage/signs`;
 export const MAX_TABS = 6;
 
 /** مدت زمان غیرفعال بودن کاربر (بر حسب میلی‌ثانیه) قبل از فعال شدن حالت standby */
-export const STANDBY_TIMEOUT = 1 * 60 * 1000; // 10 دقیقه
+export const STANDBY_TIMEOUT = 10 * 60 * 1000; // 10 دقیقه
 
 /** کلید localStorage برای ذخیره وضعیت قفل صفحه (پایدار بعد از رفرش) */
 export const STANDBY_LOCKED_KEY = 'app_standby_locked';
