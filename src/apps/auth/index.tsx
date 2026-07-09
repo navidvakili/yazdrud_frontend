@@ -5,7 +5,8 @@
 // ============================================================
 
 import { ProfileModule, ChangePasswordModule } from '@/src/login';
-import type { User as UserType, RoleInfo } from '@/src/shared-types';
+import type { User as UserType } from '@/src/shared-types';
+import type { RoleInfo } from '@/src/login/types';
 
 interface AuthModuleProps {
   user: UserType | null;

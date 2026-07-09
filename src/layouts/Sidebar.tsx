@@ -4,7 +4,7 @@
 
 import { useState } from 'react';
 import { Search, ChevronLeft, Plus, X } from 'lucide-react';
-import type { Tab } from '@/src/shared-types';
+import type { Tab } from '@/src/layouts/types';
 import type { MenuCategory } from './menuConfig';
 
 interface SidebarProps {

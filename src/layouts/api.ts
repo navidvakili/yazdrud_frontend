@@ -3,7 +3,8 @@
 // ============================================================
 
 import { API } from '@/src/shared-utils';
-import type { NavItem, NavResponse, UserRolesResponse, PermissionsResponse, RoleInfo, PermissionItem } from '@/src/shared-types';
+import type { NavItem, NavResponse, PermissionsResponse, PermissionItem } from '@/src/layouts/types';
+import type { RoleInfo, UserRolesResponse } from '@/src/login/types';
 
 export const layoutsApi = {
   // ========== Navigation & Permissions ==========

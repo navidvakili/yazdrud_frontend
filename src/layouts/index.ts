@@ -10,3 +10,12 @@ export { useStandby } from './useStandby';
 export { layoutsApi } from './api';
 export { defaultNotifications, urlToTargetId, resolveIcon, faToLucideName } from './menuConfig';
 export type { MenuCategory, SubmenuItem } from './menuConfig';
+export type {
+  Tab,
+  NavChild,
+  NavItem,
+  NavResponse,
+  PermissionItem,
+  PermissionsResponse,
+  PortalNotification,
+} from './types';

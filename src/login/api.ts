@@ -4,7 +4,7 @@
 
 import { API, getAvatarUrl, getBrowserFingerprint } from '@/src/shared-utils';
 import { TOKEN_STRING, USER_STRING } from '@/src/shared-constants';
-import type { ActiveSession, AdminSession, UserSessionsResponse, AdminSessionsResponse } from '@/src/shared-types';
+import type { ActiveSession, AdminSession, UserSessionsResponse, AdminSessionsResponse } from '@/src/login/types';
 import type { User, LoginCredentials, AuthResponse, CreateWarningResponse, WarningStatusResponse, WarningInfo } from './types';
 
 /**

@@ -7,7 +7,9 @@
 
 import { Suspense } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import type { User as UserType, Tab, RoleInfo } from '@/src/shared-types';
+import type { User as UserType } from '@/src/shared-types';
+import type { Tab } from '@/src/layouts/types';
+import type { RoleInfo } from '@/src/login/types';
 import { USER_STRING } from '@/src/shared-constants';
 import { AppModules, resolveApp, LoadingFallback } from '@/src/apps';
 import DashboardModule from '@/src/dashboard';

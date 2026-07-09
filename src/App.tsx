@@ -5,7 +5,9 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { AnimatePresence } from 'motion/react';
 import { type LucideIcon } from 'lucide-react';
-import type { User as UserType, Tab, PortalNotification, NavItem, RoleInfo } from '@/src/shared-types';
+import type { User as UserType } from '@/src/shared-types';
+import type { Tab, PortalNotification, NavItem } from '@/src/layouts/types';
+import type { RoleInfo } from '@/src/login/types';
 import {
   layoutsApi, Header, Sidebar, TabsBar, Footer,
   FloatingPanels, AuxiliaryTools, useTheme, useStandby,
@@ -467,6 +469,7 @@ export default function App() {
         isStandby={isStandby}
         user={user}
         onUnlock={handleUnlock}
+        onExit={handleLogout}
       />
 
       {/* Session Warning Modal (concurrent login detection) */}

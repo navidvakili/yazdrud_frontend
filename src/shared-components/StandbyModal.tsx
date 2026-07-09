@@ -4,7 +4,7 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Lock, Eye, EyeOff, Loader2, AlertCircle, LogIn } from 'lucide-react';
+import { Lock, Eye, EyeOff, Loader2, AlertCircle, LogIn, X, LogOut } from 'lucide-react';
 import type { User as UserType } from '@/src/shared-types';
 import { COMPANY_NAME } from '@/src/shared-constants';
 
@@ -12,9 +12,9 @@ interface StandbyModalProps {
     isStandby: boolean;
     user: UserType | null;
     onUnlock: (password: string) => Promise<boolean>;
+    onExit?: () => void;
 }
-
-export default function StandbyModal({ isStandby, user, onUnlock }: StandbyModalProps) {
+export default function StandbyModal({ isStandby, user, onUnlock, onExit }: StandbyModalProps) {
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
@@ -61,7 +61,18 @@ export default function StandbyModal({ isStandby, user, onUnlock }: StandbyModal
                         transition={{ duration: 0.3, delay: 0.1 }}
                         className="w-full max-w-sm"
                     >
-                        <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-2xl border border-gray-100 dark:border-gray-800 p-8 sm:p-10 text-center">
+                        <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-2xl border border-gray-100 dark:border-gray-800 p-8 sm:p-10 text-center relative">
+                            {/* Close button */}
+                            {onExit && (
+                                <button
+                                    onClick={onExit}
+                                    className="absolute top-3 left-3 p-2 rounded-xl text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all cursor-pointer"
+                                    title="خروج از حالت قفل"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+                            )}
+
                             {/* Logo */}
                             <div className="flex justify-center mb-4">
                                 <img src="/logo_nika.png" alt="نیکا" className="h-14 w-auto" />
@@ -149,6 +160,18 @@ export default function StandbyModal({ isStandby, user, onUnlock }: StandbyModal
                                     )}
                                     {isLoading ? 'در حال بررسی...' : 'رفع قفل'}
                                 </button>
+
+                                {onExit && (
+                                    <button
+                                        type="button"
+                                        onClick={onExit}
+                                        disabled={isLoading}
+                                        className="w-full py-2 px-3 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:text-rose-600 dark:hover:text-rose-400 hover:border-rose-200 dark:hover:border-rose-900/50 text-xs font-bold transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+                                    >
+                                        <LogOut className="w-3.5 h-3.5" />
+                                        خروج از حساب کاربری
+                                    </button>
+                                )}
                             </form>
                         </div>
                     </motion.div>

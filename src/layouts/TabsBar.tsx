@@ -3,7 +3,7 @@
 // ============================================================
 
 import { LayoutDashboard, X, Pin, PinOff, RefreshCw } from 'lucide-react';
-import type { Tab } from '@/src/shared-types';
+import type { Tab } from '@/src/layouts/types';
 
 interface TabsBarProps {
   tabs: Tab[];
