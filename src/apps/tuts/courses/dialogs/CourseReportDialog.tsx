@@ -2,9 +2,10 @@
 // CourseReportDialog — نمایش آمار و جزئیات پیش‌ثبت‌نام دوره
 // ============================================================
 
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
-  X, BarChart2, Award, CheckCircle, Download, Eye, XCircle,
+  X, BarChart2, Award, CheckCircle, Download, Eye, XCircle, AlertTriangle,
 } from 'lucide-react';
 import type { TutCourse, TutRegistrant } from '../../shared/types';
 
@@ -38,6 +39,29 @@ export default function CourseReportDialog({
   onExportSingleCourseExcel,
 }: CourseReportDialogProps) {
   if (!course) return null;
+
+  // ===== Installment Warning State =====
+  const [pendingApprovalReg, setPendingApprovalReg] = useState<TutRegistrant | null>(null);
+
+  const handleCertificateClick = (reg: TutRegistrant) => {
+    // If registrant has installment with unpaid items, show warning
+    if (reg.hasInstallment && (reg.installmentPaidCount ?? 0) < (reg.installmentTotalCount ?? 0)) {
+      setPendingApprovalReg(reg);
+    } else {
+      onApproveCertificate(reg.id);
+    }
+  };
+
+  const confirmInstallmentApproval = () => {
+    if (pendingApprovalReg) {
+      onApproveCertificate(pendingApprovalReg.id);
+      setPendingApprovalReg(null);
+    }
+  };
+
+  const cancelInstallmentApproval = () => {
+    setPendingApprovalReg(null);
+  };
 
   const courseRegistrants = registrants.filter(r => r.courseId === course.id);
   const verifiedRegistrants = courseRegistrants.filter(r => r.status === 'verified');
@@ -176,7 +200,7 @@ export default function CourseReportDialog({
                                   <>
                                     {!reg.certificateApproved ? (
                                       <button
-                                        onClick={() => onApproveCertificate(reg.id)}
+                                        onClick={() => handleCertificateClick(reg)}
                                         className="px-2 py-1 text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-lg font-bold hover:bg-emerald-500/20 transition-all cursor-pointer"
                                         title="تایید برای صدور گواهی"
                                       >
@@ -234,6 +258,60 @@ export default function CourseReportDialog({
                 </table>
               </div>
             </div>
+
+            {/* Installment Warning Dialog */}
+            <AnimatePresence>
+              {pendingApprovalReg && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-gray-950/40 backdrop-blur-sm"
+                  onClick={cancelInstallmentApproval}
+                >
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: 15 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: 15 }}
+                    onClick={(e) => e.stopPropagation()}
+                    className="w-full max-w-md p-6 rounded-3xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-2xl"
+                  >
+                    <div className="flex items-start gap-3 mb-4">
+                      <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center shrink-0">
+                        <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-black text-gray-900 dark:text-white">
+                          دریافت‌نشده بخشی از اقساط
+                        </h4>
+                        <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+                          فراگیر <strong className="text-gray-800 dark:text-gray-200">{pendingApprovalReg.name}</strong> دارای برنامه قسط‌بندی است و همچنان{' '}
+                          <strong className="text-amber-600 dark:text-amber-400">
+                            {toPersianDigits(String((pendingApprovalReg.installmentTotalCount ?? 0) - (pendingApprovalReg.installmentPaidCount ?? 0)))}
+                          </strong>{' '}
+                          قسط پرداخت‌نشده دارد. آیا برای تأیید گواهی اطمینان دارید؟
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 justify-end">
+                      <button
+                        onClick={cancelInstallmentApproval}
+                        className="px-4 py-2.5 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-xs font-bold rounded-xl text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all cursor-pointer"
+                      >
+                        انصراف
+                      </button>
+                      <button
+                        onClick={confirmInstallmentApproval}
+                        className="px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-xs rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shadow-sm"
+                      >
+                        <CheckCircle className="w-4 h-4" />
+                        بله، تأیید کن
+                      </button>
+                    </div>
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             <div className="flex justify-between items-center pt-4 border-t border-gray-100 dark:border-gray-800">
               <button
