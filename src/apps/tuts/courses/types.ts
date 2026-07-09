@@ -69,6 +69,15 @@ export interface CourseRegistration {
   rejection_reason: string | null;
   certificate_approved: boolean;
   created_at: string;
+  coupon_code?: string | null;
+  coupon_title?: string | null;
+  discount_amount?: number | null;
+  prepayment_amount?: number | null;
+  has_installment?: boolean;
+  installment_total_count?: number;
+  installment_paid_count?: number;
+  installment_total_amount?: number;
+  installment_paid_amount?: number;
 }
 
 export interface CourseStats {

@@ -123,5 +123,13 @@ export function mapRegistrant(r: any): TutRegistrant {
     certificateNumber: r.certificate?.certificate_number || undefined,
     certificateIssuedAt: r.certificate?.issued_at || undefined,
     hasCertificate: !!r.certificate,
+    couponCode: r.coupon_code || null,
+    couponTitle: r.coupon_title || null,
+    discountAmount: r.discount_amount != null ? Number(r.discount_amount) : null,
+    hasInstallment: !!r.has_installment,
+    installmentTotalCount: r.installment_total_count ?? 0,
+    installmentPaidCount: r.installment_paid_count ?? 0,
+    installmentTotalAmount: r.installment_total_amount ?? 0,
+    installmentPaidAmount: r.installment_paid_amount ?? 0,
   };
 }

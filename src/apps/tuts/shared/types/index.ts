@@ -63,6 +63,14 @@ export interface TutRegistrant {
     certificateNumber?: string;
     certificateIssuedAt?: string;
     hasCertificate?: boolean;
+    couponCode?: string | null;
+    couponTitle?: string | null;
+    discountAmount?: number | null;
+    hasInstallment?: boolean;
+    installmentTotalCount?: number;
+    installmentPaidCount?: number;
+    installmentTotalAmount?: number;
+    installmentPaidAmount?: number;
 }
 
 export interface TutSurvey {
