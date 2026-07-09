@@ -1,20 +1,42 @@
 // ============================================================
-// useStandby — قفل خودکار پس از عدم فعالیت کاربر
+// useStandby — قفل خودکار پس از عدم فعالیت کاربر (پایدار با localStorage)
 // ============================================================
 
 import { useState, useEffect, useRef } from 'react';
-import { STANDBY_TIMEOUT } from '@/src/shared-constants';
+import { STANDBY_TIMEOUT, STANDBY_LOCKED_KEY } from '@/src/shared-constants';
 import { loginApi } from '@/src/login';
 
 export function useStandby(viewState: 'login' | 'authenticated') {
-  const [isStandby, setIsStandby] = useState(false);
+  // Restore persisted lock state on mount — survives page refresh
+  const [isStandby, _setIsStandby] = useState(() =>
+    localStorage.getItem(STANDBY_LOCKED_KEY) === 'true',
+  );
   const lastActivityRef = useRef<number>(Date.now());
   const standbyCheckIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Keep a ref to latest isStandby for interval callback (avoids stale closure)
+  const isStandbyRef = useRef(isStandby);
+  isStandbyRef.current = isStandby;
+
+  // Custom setter that syncs to localStorage
+  const setIsStandby = (value: boolean) => {
+    _setIsStandby(value);
+    if (value) {
+      localStorage.setItem(STANDBY_LOCKED_KEY, 'true');
+    } else {
+      localStorage.removeItem(STANDBY_LOCKED_KEY);
+    }
+  };
 
   useEffect(() => {
     if (viewState !== 'authenticated') {
-      // Not logged in — no standby tracking
-      setIsStandby(false);
+      // Only clear lock if user truly has no active session (logged out).
+      // If user IS authenticated but viewState is still 'login' (page refresh),
+      // keep the persisted lock — App.tsx will restore viewState momentarily.
+      if (!loginApi.isAuthenticated()) {
+        if (isStandbyRef.current) {
+          setIsStandby(false);
+        }
+      }
       return;
     }
 
@@ -24,14 +46,14 @@ export function useStandby(viewState: 'login' | 'authenticated') {
       // If was in standby, do NOT auto-exit — must use password
     };
 
-    // Also reset activity when we start tracking (fresh login)
+    // Don't reset isStandby here — the persisted lock from localStorage
+    // should survive a page refresh. Only reset the activity timer.
     lastActivityRef.current = Date.now();
-    setIsStandby(false);
 
     // Periodic check: if inactive beyond timeout → enter standby
     standbyCheckIntervalRef.current = setInterval(() => {
       const elapsed = Date.now() - lastActivityRef.current;
-      if (elapsed >= STANDBY_TIMEOUT && !isStandby) {
+      if (elapsed >= STANDBY_TIMEOUT && !isStandbyRef.current) {
         setIsStandby(true);
       }
     }, 5000); // Check every 5 seconds
