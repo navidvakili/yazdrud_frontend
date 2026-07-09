@@ -15,7 +15,7 @@ import type {
     RegistrationInstallment, InstallmentRegistrationDetail,
     VerifyInstallmentData,
 } from './types';
-import { toPersianDigits, formatCurrency } from '@/src/shared-utils';
+import { toPersianDigits, formatCurrency, formatNumberWithCommas } from '@/src/shared-utils';
 
 // ===== Utility formatters =====
 const statusBadge = (status: string) => {
@@ -462,7 +462,7 @@ export default function InstallmentManagement() {
                                                                 {statusBadge(inst.status)}
                                                             </div>
                                                             <div className="flex items-center gap-3 mt-1 text-[10px] text-gray-500">
-                                                                <span>مبلغ: {formatCurrency(inst.amount)} ریال</span>
+                                                                <span>مبلغ: {formatCurrency(inst.amount)}</span>
                                                                 <span>سررسید: {inst.due_date}</span>
                                                                 {inst.payment_method && (
                                                                     <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold ${inst.payment_method === 'online' ? 'bg-blue-50 dark:bg-blue-950/30 text-blue-600' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'}`}>
@@ -508,15 +508,15 @@ export default function InstallmentManagement() {
                                     <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
                                         <div className="flex items-center justify-between text-xs">
                                             <span className="text-gray-500 font-bold">جمع پرداخت شده:</span>
-                                            <span className="text-emerald-600 font-black">{formatCurrency(detailData.total_paid)} ریال</span>
+                                            <span className="text-emerald-600 font-black">{formatCurrency(detailData.total_paid)}</span>
                                         </div>
                                         <div className="flex items-center justify-between text-xs mt-1">
                                             <span className="text-gray-500 font-bold">در انتظار:</span>
-                                            <span className="text-amber-600 font-black">{formatCurrency(detailData.total_pending)} ریال</span>
+                                            <span className="text-amber-600 font-black">{formatCurrency(detailData.total_pending)}</span>
                                         </div>
                                         <div className="flex items-center justify-between text-xs mt-1">
                                             <span className="text-gray-500 font-bold">سررسید گذشته:</span>
-                                            <span className="text-rose-600 font-black">{formatCurrency(detailData.total_overdue)} ریال</span>
+                                            <span className="text-rose-600 font-black">{formatCurrency(detailData.total_overdue)}</span>
                                         </div>
                                     </div>
                                 </>
@@ -557,9 +557,14 @@ export default function InstallmentManagement() {
                             </div>
                             <div className="space-y-4 text-right">
                                 <div className="space-y-1">
-                                    <label className="text-[10px] font-bold text-gray-500 block">مبلغ پرداخت شده</label>
-                                    <input type="number" value={verifyData.paid_amount || ''}
-                                        onChange={e => setVerifyData(f => ({ ...f, paid_amount: Number(e.target.value) }))}
+                                    <label className="text-[10px] font-bold text-gray-500 block">مبلغ پرداخت شده (ریال)</label>
+                                    <input type="text" inputMode="numeric"
+                                        value={verifyData.paid_amount ? formatNumberWithCommas(verifyData.paid_amount) : ''}
+                                        onChange={e => {
+                                            const raw = e.target.value.replace(/[^\d]/g, '');
+                                            const num = raw ? parseInt(raw, 10) : 0;
+                                            setVerifyData(f => ({ ...f, paid_amount: num }));
+                                        }}
                                         placeholder="مبلغ را وارد کنید"
                                         className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none" />
                                 </div>
