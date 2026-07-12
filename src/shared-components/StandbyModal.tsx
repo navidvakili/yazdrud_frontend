@@ -2,7 +2,7 @@
 // StandbyModal — مودال قفل خودکار پس از عدم فعالیت کاربر
 // ============================================================
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Lock, Eye, EyeOff, Loader2, AlertCircle, LogIn, X, LogOut } from 'lucide-react';
 import type { User as UserType } from '@/src/shared-types';
@@ -19,6 +19,15 @@ export default function StandbyModal({ isStandby, user, onUnlock, onExit }: Stan
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    // Reset form fields whenever the standby modal becomes visible
+    useEffect(() => {
+        if (isStandby) {
+            setPassword('');
+            setShowPassword(false);
+            setError(null);
+        }
+    }, [isStandby]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -135,6 +144,7 @@ export default function StandbyModal({ isStandby, user, onUnlock, onExit }: Stan
                                         onChange={(e) => setPassword(e.target.value)}
                                         disabled={isLoading}
                                         autoFocus
+                                        autoComplete="off"
                                         className="w-full bg-gray-50 dark:bg-gray-800 text-right pr-10 pl-9 py-2.5 text-sm rounded-xl border border-gray-150 dark:border-gray-700/80 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 font-sans transition-all disabled:opacity-50"
                                     />
                                     <Lock className="w-4 h-4 text-gray-400 absolute right-3.5 top-1/2 -translate-y-1/2" />
