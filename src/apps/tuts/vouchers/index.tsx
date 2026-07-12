@@ -13,7 +13,7 @@ import type {
     TutCourse, TutCategory, TutVoucher,
     VoucherFormData, SandboxResult,
 } from '../shared/types';
-import { toPersianDigits, formatCurrency, toEnglishDigits, getTodayJalali } from '../shared/utils';
+import { toPersianDigits, formatCurrency, formatNumberWithCommas, toEnglishDigits, getTodayJalali } from '../shared/utils';
 import { JalaliDatepicker, ToastNotification } from '@/src/shared-components';
 import { vouchersApi } from './api';
 import { coursesApi } from '../courses/api';
@@ -380,8 +380,16 @@ export default function TutsVouchers(props: TutsVouchersProps) {
                                         </div>
                                         <div className="space-y-1">
                                             <label className="text-[10px] font-bold text-gray-500 block">مقدار تخفیف</label>
-                                            <input type="number" value={newVoucher.discountValue || ''} onChange={(e) => setNewVoucher(f => ({ ...f, discountValue: Number(e.target.value) }))}
-                                                className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none" />
+                                            <div className="relative">
+                                                <input type="text" value={newVoucher.discountType === 'fixed' && newVoucher.discountValue ? formatNumberWithCommas(newVoucher.discountValue) : newVoucher.discountValue || ''} onChange={(e) => {
+                                                        const raw = e.target.value.replace(/[^\d]/g, '');
+                                                        setNewVoucher(f => ({ ...f, discountValue: raw ? Number(raw) : 0 }));
+                                                    }}
+                                                    className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none" />
+                                                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[10px] text-gray-400 font-bold pointer-events-none">
+                                                    {newVoucher.discountType === 'percentage' ? '٪' : 'ریال'}
+                                                </span>
+                                            </div>
                                         </div>
                                         <div className="space-y-1">
                                             <label className="text-[10px] font-bold text-gray-500 block">تعداد دفعات استفاده</label>
@@ -852,9 +860,17 @@ function EditForm({ voucher, courses, courseGroups, onSave, onCancel }: {
                 </div>
                 <div className="space-y-1">
                     <label className="text-[10px] font-bold text-gray-500 block">مقدار تخفیف</label>
-                    <input type="number" value={discountValue} onChange={(e) => setDiscountValue(Number(e.target.value))}
-                        className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none"
-                        required />
+                    <div className="relative">
+                        <input type="text" value={discountType === 'fixed' && discountValue ? formatNumberWithCommas(discountValue) : discountValue} onChange={(e) => {
+                                const raw = e.target.value.replace(/[^\d]/g, '');
+                                setDiscountValue(raw ? Number(raw) : 0);
+                            }}
+                            className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-900 text-gray-950 dark:text-white focus:outline-none"
+                            required />
+                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[10px] text-gray-400 font-bold pointer-events-none">
+                            {discountType === 'percentage' ? '٪' : 'ریال'}
+                        </span>
+                    </div>
                 </div>
                 <div className="space-y-1">
                     <label className="text-[10px] font-bold text-gray-500 block">ظرفیت استفاده</label>
