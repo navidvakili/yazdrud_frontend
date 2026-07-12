@@ -245,11 +245,9 @@ export default function TutsReports(props: TutsReportsProps) {
                                             <th className="p-2 text-center w-10">ردیف</th>
                                             <th className="p-2">کد فراگیر</th>
                                             <th className="p-2">نام و نام خانوادگی</th>
-                                            <th className="p-2">موبایل</th>
                                             <th className="p-2">دوره آموزشی</th>
                                             <th className="p-2 text-center">مبلغ (ریال)</th>
                                             <th className="p-2">روش پرداخت</th>
-                                            <th className="p-2">شماره پیگیری</th>
                                             <th className="p-2">بن تخفیف</th>
                                             <th className="p-2 text-center">شرایط تقسیط</th>
                                             <th className="p-2 text-center">تاریخ ثبت نام</th>
@@ -259,7 +257,7 @@ export default function TutsReports(props: TutsReportsProps) {
                                     <tbody className="divide-y divide-gray-100 dark:divide-gray-800/40">
                                         {displayData.length === 0 ? (
                                             <tr>
-                                                <td colSpan={12} className="p-12 text-center text-gray-400">
+                                                <td colSpan={10} className="p-12 text-center text-gray-400">
                                                     هیچ پرونده ثبتی یا آماری مطابق با فیلتر شما ثبت نشده است.
                                                 </td>
                                             </tr>
@@ -283,17 +281,25 @@ export default function TutsReports(props: TutsReportsProps) {
                                                             <span className="block text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">
                                                                 <span className="font-medium">کد ملی:</span> {toPersianDigits(reg.nationalCode)}
                                                             </span>
+                                                            <span className="block text-[10px] text-gray-400 dark:text-gray-500">
+                                                                <span className="font-medium">موبایل:</span> {toPersianDigits(reg.mobile)}
+                                                            </span>
                                                             {reg.studentCode && (
                                                                 <span className="block text-[10px] text-gray-400 dark:text-gray-500">
                                                                     <span className="font-medium">شماره دانشجویی:</span> {toPersianDigits(reg.studentCode)}
                                                                 </span>
                                                             )}
                                                         </td>
-                                                        <td className="p-2 font-bold text-gray-600 dark:text-gray-400 whitespace-nowrap" dir="ltr">{toPersianDigits(reg.mobile)}</td>
-                                                        <td className="p-2 text-gray-700 dark:text-gray-300 font-medium max-w-[280px] truncate" title={reg.courseTitle}>{reg.courseTitle}</td>
+                                                        <td className="p-2 text-gray-700 dark:text-gray-300 font-medium max-w-[180px] truncate" title={reg.courseTitle}>{reg.courseTitle}</td>
                                                         <td className="p-2 font-bold text-center whitespace-nowrap">{reg.amount > 0 ? <span className="text-emerald-600 dark:text-emerald-400">{formatCurrency(reg.amount)}</span> : <span className="text-gray-400 dark:text-gray-500">رایگان</span>}</td>
-                                                        <td className="p-2 text-gray-600 dark:text-gray-400 whitespace-nowrap text-center">{reg.amount > 0 ? reg.paymentMethod : '—'}</td>
-                                                        <td className="p-2 font-bold text-gray-800 dark:text-gray-200 whitespace-nowrap max-w-[120px] truncate text-center" dir="ltr">{reg.amount > 0 && reg.trackingCode ? toPersianDigits(reg.trackingCode) : '—'}</td>
+                                                        <td className="p-2 text-gray-600 dark:text-gray-400 whitespace-nowrap text-center">
+                                                            {reg.amount > 0 ? reg.paymentMethod : '—'}
+                                                            {reg.amount > 0 && reg.trackingCode ? (
+                                                                <span className="block text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">
+                                                                    کد پیگیری: {toPersianDigits(reg.trackingCode)}
+                                                                </span>
+                                                            ) : null}
+                                                        </td>
                                                         <td className="p-2 text-gray-700 dark:text-gray-300 whitespace-nowrap">
                                                             {reg.couponCode ? (
                                                                 <span title={reg.couponTitle || ''}>
