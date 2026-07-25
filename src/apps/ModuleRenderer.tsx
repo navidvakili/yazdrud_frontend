@@ -13,7 +13,6 @@ import type { RoleInfo } from '@/src/login/types';
 import { USER_STRING } from '@/src/shared-constants';
 import { AppModules, resolveApp, LoadingFallback } from '@/src/apps';
 import DashboardModule from '@/src/dashboard';
-import ThesisManagement from '@/src/apps/library/ThesisManagement';
 import type { MenuCategory } from '@/src/layouts';
 
 interface ModuleRendererProps {
@@ -28,7 +27,7 @@ interface ModuleRendererProps {
     title: string;
     icon: LucideIcon;
     desc: string;
-    roles: readonly ('student' | 'professor' | 'admin')[];
+    roles: readonly ('admin' | 'editor' | 'user')[];
   }>;
   onOpenTab: (id: string, title: string, iconName: string, forceNewInstance?: boolean) => void;
   openTabsCount: number;
@@ -63,11 +62,6 @@ export default function ModuleRenderer({
 
   const tab = tabs.find(t => t.id === tabId);
   const moduleType = tab?.moduleType || tabId;
-
-  // Special case: theses (not yet migrated to app system)
-  if (moduleType === 'theses' || moduleType === 'theses-scientific' || moduleType === 'theses-permits') {
-    return <ThesisManagement userRole={user?.role || 'student'} initialView={moduleType} />;
-  }
 
   // Dynamic app resolution via moduleToAppMap
   const appName = resolveApp(moduleType);

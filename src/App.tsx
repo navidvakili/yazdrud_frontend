@@ -160,7 +160,7 @@ export default function App() {
       title: string;
       icon: LucideIcon;
       desc: string;
-      roles: readonly ('student' | 'professor' | 'admin')[];
+      roles: readonly ('admin' | 'editor' | 'user')[];
     }> = [];
 
     menuCategories.forEach(cat => {
@@ -171,7 +171,7 @@ export default function App() {
           title: sub.title,
           icon: resolveIcon(sub.iconName),
           desc: cat.title,
-          roles: ['student', 'professor', 'admin'] as const,
+          roles: ['admin', 'editor', 'user'] as const,
         });
       });
 
@@ -182,7 +182,7 @@ export default function App() {
           title: cat.title,
           icon: cat.icon,
           desc: cat.title,
-          roles: ['student', 'professor', 'admin'] as const,
+          roles: ['admin', 'editor', 'user'] as const,
         });
       }
     });

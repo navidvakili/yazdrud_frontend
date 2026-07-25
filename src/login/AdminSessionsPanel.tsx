@@ -240,11 +240,11 @@ export default function AdminSessionsPanel() {
                                         <div className="md:col-span-2">
                                             <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-full ${session.role === 'admin'
                                                     ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
-                                                    : session.role === 'professor'
+                                                    : session.role === 'editor'
                                                         ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
                                                         : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
                                                 }`}>
-                                                {session.role === 'admin' ? 'مدیر' : session.role === 'professor' ? 'استاد' : 'دانشجو'}
+                                                {session.role === 'admin' ? 'مدیر' : session.role === 'editor' ? 'ویرایشگر' : 'کاربر'}
                                             </span>
                                             {session.is_current && (
                                                 <span className="mr-1 inline-block text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300">

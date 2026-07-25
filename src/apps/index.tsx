@@ -9,9 +9,7 @@ import { lazy, Suspense, type ComponentType, type LazyExoticComponent } from 're
 
 // ===== تعریف App های اصلی با Lazy Loading =====
 export const AppModules: Record<string, LazyExoticComponent<ComponentType<any>>> = {
-  tuts: lazy(() => import('./tuts')),
   accounting: lazy(() => import('./accounting')),
-  crm: lazy(() => import('./crm')),
   library: lazy(() => import('./library')),
   auth: lazy(() => import('./auth')),
 };
@@ -21,28 +19,8 @@ export const AppModules: Record<string, LazyExoticComponent<ComponentType<any>>>
  * هر moduleType مشخص می‌کند کدام App باید رندر شود
  */
 export const moduleToAppMap: Record<string, string> = {
-  // Tuts App — دوره‌های آموزشی
-  'tuts': 'tuts',
-  'tuts-list': 'tuts',
-  'tuts-reports': 'tuts',
-  'tuts-receipts': 'tuts',
-  'tuts-stats': 'tuts',
-  'tuts-surveys': 'tuts',
-  'tuts-vouchers': 'tuts',
-  'tuts/vouchers': 'tuts',
-  'tuts/reports': 'tuts',
-  'tuts/bank-receipts': 'tuts',
-  'tuts/statistics': 'tuts',
-  'course-surveys': 'tuts',
-  'tuts-installments': 'tuts',
-
   // Accounting App
   'finance': 'accounting',
-
-  // CRM App
-  'students': 'crm',
-  'professors': 'crm',
-  'admin-sessions': 'crm',
 
   // Auth App
   'profile': 'auth',

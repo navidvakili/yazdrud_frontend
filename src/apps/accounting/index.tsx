@@ -5,8 +5,6 @@
 // گزارشات مالی می‌باشد.
 // ============================================================
 
-import { StandaloneTutsVouchers } from '@/src/apps/tuts/vouchers';
-
 interface AccountingModuleProps {
   user: any;
   activeTabId?: string;
@@ -17,7 +15,10 @@ interface AccountingModuleProps {
 export default function AccountingModule(_props: AccountingModuleProps) {
   return (
     <div className="py-2.5 relative">
-      <StandaloneTutsVouchers />
+      <div className="text-center py-20 text-gray-400">
+        <p className="text-sm font-bold">ماژول حسابداری</p>
+        <p className="text-xs mt-2">به زودی...</p>
+      </div>
     </div>
   );
 }

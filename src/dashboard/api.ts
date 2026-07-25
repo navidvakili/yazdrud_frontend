@@ -3,20 +3,8 @@
 // ============================================================
 
 import { API } from '@/src/shared-utils';
-import type { DashboardOverview } from '@/src/dashboard/types';
 
 export const dashboardApi = {
-  // ========== Dashboard Overview Widgets ==========
-
-  /**
-   * Fetch dashboard overview data including latest registrations,
-   * current week installments, recent surveys, unapproved receipts, etc.
-   */
-  async getOverview(): Promise<DashboardOverview> {
-    const data = await API<DashboardOverview>('dashboard/overview');
-    return data;
-  },
-
   // ========== Dashboard / Quick Access (Pinned Menus) ==========
 
   /**

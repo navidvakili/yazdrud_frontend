@@ -109,7 +109,6 @@ export function resolveIcon(name: string): LucideIcon {
 // ========== Default Data ==========
 
 export const defaultNotifications: PortalNotification[] = [
-  { id: 'nt-1', title: 'تمدید مهلت انتخاب واحد نیمسال جاری', body: 'بر اساس مجوز دپارتمان آموزش کل، فرصت انتخاب واحد تا فردا ساعت ۲۴ تمدید شد.', date: '۱۴۰۵/۰۳/۱۹', read: false, type: 'info' },
-  { id: 'nt-2', title: 'ثبت نهایی سوابق و نمرات کارنامه', body: 'نمرات نهایی دروس در پرونده الکترونیک دانشجو ثبت قطعی گردید.', date: '۱۴۰۵/۰۳/۱۷', read: false, type: 'success' },
-  { id: 'nt-3', title: 'اطلاعیه پرداخت مابقی اقساط شهریه', body: 'دانشجویان محترم جهت نهایی‌سازی گواهی اخذ امتحان، نسبت به پرداخت مابقی بدهی اقدام نمایند.', date: '۱۴۰۵/۰۳/۱۵', read: true, type: 'warning' },
+  { id: 'nt-1', title: 'خوش آمدگویی', body: 'به سیستم مدیریت محتوا خوش آمدید. از منوی سمت راست می‌توانید بخش‌های مختلف را مدیریت کنید.', date: '۱۴۰۵/۰۴/۰۴', read: false, type: 'info' },
+  { id: 'nt-2', title: 'به‌روزرسانی سیستم', body: 'سیستم مدیریت محتوا با موفقیت به‌روزرسانی شد.', date: '۱۴۰۵/۰۴/۰۳', read: false, type: 'success' },
 ];

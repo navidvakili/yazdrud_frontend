@@ -13,7 +13,7 @@ import {
   Loader2,
   AlertCircle,
   AlertTriangle,
-  GraduationCap,
+  ShieldCheck,
   Clock,
 } from 'lucide-react';
 import { loginApi } from './api';
@@ -235,7 +235,7 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
                   ورود به سامانه
                 </h2>
                 <p className="text-xs text-gray-500 mt-1.5">
-                  نرم‌افزار یکپارچهٔ آموزشی <span className="text-teal-600 font-bold">نیکا</span>
+                  سامانه مدیریت محتوا <span className="text-teal-600 font-bold">کارانت</span>
                 </p>
               </div>
 
@@ -345,7 +345,7 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
               {/* Footer */}
               <div className="mt-6 text-center">
                 <p className="text-[10px] text-gray-400 leading-relaxed">
-                  سامانه جامع آموزش، امور مالی و پژوهشی دانشگاه علم و هنر
+                  سامانه مدیریت محتوای کارانت
                 </p>
                 <a
                   href="https://karanet.info"
@@ -375,26 +375,26 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
           >
             {/* Badge */}
             <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-teal-500/30 text-teal-100 text-xs font-bold mb-5 backdrop-blur-md">
-              <GraduationCap className="w-4 h-4 shrink-0 text-teal-300" />
-              <span>نرم‌افزار یکپارچهٔ مدیریت دانشگاهی نیکا</span>
+              <ShieldCheck className="w-4 h-4 shrink-0 text-teal-300" />
+              <span>سامانه مدیریت محتوای کارانت</span>
             </div>
 
             {/* Headline */}
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white leading-tight sm:leading-snug mb-4">
-              سامانه جامع آموزش، پژوهش و امور مالی
+              سامانه مدیریت محتوای کارانت
             </h1>
 
             <p className="text-teal-50/70 text-sm sm:text-base leading-7 sm:leading-8 mb-8 text-justify">
-              پرتال یکپارچه دانشگاه علم و هنر، بستری امن و هوشمند برای مدیریت تمامی فرآیندهای آموزشی، پژوهشی و مالی دانشگاه.
-              با استفاده از این سامانه، اساتید، دانشجویان و کارکنان می‌توانند به سادگی به خدمات مورد نیاز خود دسترسی داشته باشند.
+              سامانه مدیریت محتوای کارانت، بستری امن و هوشمند برای مدیریت محتوا، اخبار و خدمات سازمانی.
+              مدیران و ویرایشگران محتوا می‌توانند به سادگی مطالب، صفحات و خدمات را مدیریت کنند.
             </p>
 
             {/* Feature items */}
             <div className="flex flex-col gap-4 mb-10">
               {[
-                { title: 'خدمات جامع آموزشی، مالی و رفاهی', desc: 'مدیریت پایان‌نامه‌ها و مصاحبه‌های دکتری، پرداخت شهریه و درخواست وام، خوابگاه‌ها، رویدادهای دانشجویی و انتخابات انجمن‌ها' },
-                { title: 'پروفایل یکپارچه', desc: 'مدیریت اطلاعات فردی، تحصیلی و اداری در یک جا' },
-                { title: 'گزارش‌های هوشمند', desc: 'داشبوردهای تحلیلی برای تصمیم‌گیری بهتر' },
+                { title: 'مدیریت محتوا', desc: 'ایجاد، ویرایش و انتشار مقالات، اخبار، صفحات و رسانه‌های سایت' },
+                { title: 'کنترل دسترسی', desc: 'مدیریت نقش‌ها و دسترسی‌های کاربران و گروه‌ها' },
+                { title: 'گزارش‌ها و آمار', desc: 'داشبورد هوشمند برای نظارت بر عملکرد سامانه' },
               ].map((item, index) => (
                 <div key={index} className="flex items-start gap-3 text-right">
                   <div className="w-6 h-6 rounded-full bg-teal-400/20 flex items-center justify-center shrink-0 mt-0.5">
@@ -411,11 +411,11 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
             {/* University footer link */}
             <div className="flex items-center gap-4 border-t border-white/10 pt-6">
               <div className="w-10 h-10 rounded-xl bg-teal-500/20 flex items-center justify-center text-teal-300 font-black text-sm">
-                SAU
+                KR
               </div>
               <div className="flex flex-col">
-                <span className="text-xs text-white font-bold">دانشگاه علم و هنر </span>
-                <span className="text-[10px] text-teal-200/50">وزارت علوم، تحقیقات و فناوری</span>
+                <span className="text-xs text-white font-bold">شرکت کارانت</span>
+                <span className="text-[10px] text-teal-200/50">سامانه مدیریت محتوا</span>
               </div>
             </div>
           </motion.div>

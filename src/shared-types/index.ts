@@ -2,7 +2,7 @@
 // Shared Types — انواع و اینترفیس‌های سراسری پروژه
 // ============================================================
 
-export type UserRole = 'student' | 'professor' | 'admin';
+export type UserRole = 'admin' | 'editor' | 'user';
 
 export interface User {
   username: string;

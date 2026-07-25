@@ -23,7 +23,7 @@ function mapBackendUser(backendUser: any): User {
     kodmeli: backendUser.kodmeli || '',
     mobile: backendUser.mobile || '',
     email: backendUser.email || '',
-    role: backendUser.role || 'student',
+    role: backendUser.role || 'user',
     roles: backendUser.roles || [],
     sign: backendUser.sign || null,
     name,
