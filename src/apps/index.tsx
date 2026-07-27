@@ -13,6 +13,7 @@ export const AppModules: Record<string, LazyExoticComponent<ComponentType<any>>>
   library: lazy(() => import('./library')),
   auth: lazy(() => import('./auth')),
   users: lazy(() => import('./users')),
+  news: lazy(() => import('./news')),
 };
 
 /**
@@ -31,6 +32,12 @@ export const moduleToAppMap: Record<string, string> = {
 
   // Users Management App
   'users': 'users',
+
+  // News App
+  'news': 'news',
+  'news-create': 'news',
+  'news-categories': 'news',
+  'news-analytics': 'news',
 
   // Library App — fallback for any unknown moduleType
   // (resolveApp returns 'library' by default)
