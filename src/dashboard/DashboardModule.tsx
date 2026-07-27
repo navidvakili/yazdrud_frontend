@@ -75,8 +75,8 @@ export default function DashboardModule({
   }, [quickActions, can]);
 
   const roleLabel = userRoles.find(r => r.active === 1)?.label
-    || (user.roles?.includes('admin') ? 'مدیر سامانه' : user.roles?.includes('editor') ? 'ویرایشگر محتوا' : 'کاربر');
-  const roleColor = user.roles?.includes('admin') ? 'from-rose-500/10 to-amber-500/10' : user.roles?.includes('editor') ? 'from-indigo-500/10 to-teal-500/10' : 'from-teal-500/10 to-indigo-500/10';
+    || (user.roles?.includes('support') ? 'پشتیبان' : user.roles?.includes('admin') ? 'مدیر سامانه' : user.roles?.includes('editor') ? 'ویرایشگر محتوا' : 'کاربر');
+  const roleColor = user.roles?.includes('support') ? 'from-purple-500/10 to-amber-500/10' : user.roles?.includes('admin') ? 'from-rose-500/10 to-amber-500/10' : user.roles?.includes('editor') ? 'from-indigo-500/10 to-teal-500/10' : 'from-teal-500/10 to-indigo-500/10';
 
   return (
     <div className="max-w-6xl mx-auto space-y-8">

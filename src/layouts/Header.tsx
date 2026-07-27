@@ -140,7 +140,7 @@ export default function Header({
               <span className="text-xs font-black text-gray-900 dark:text-white flex items-center gap-1.5">
                 {user.fname} {user.lname}
                 <span className="text-[9px] px-1.5 py-0.5 rounded bg-teal-500/10 text-teal-600 dark:text-teal-400 font-bold font-sans">
-                  {userRoles.find(r => r.active === 1)?.label || ((Array.isArray(user.roles) && user.roles.includes('admin')) ? 'مدیر سامانه' : (Array.isArray(user.roles) && user.roles.includes('editor')) ? 'ویرایشگر محتوا' : 'کاربر')}
+                  {userRoles.find(r => r.active === 1)?.label || ((Array.isArray(user.roles) && user.roles.includes('support')) ? 'پشتیبان' : (Array.isArray(user.roles) && user.roles.includes('admin')) ? 'مدیر سامانه' : (Array.isArray(user.roles) && user.roles.includes('editor')) ? 'ویرایشگر محتوا' : 'کاربر')}
                 </span>
               </span>
               <span className="text-[9px] text-gray-500  mt-0.5">{user.email}</span>
