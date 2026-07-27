@@ -54,7 +54,6 @@ interface ApiResponse<T> {
 // ===== Constants =====
 
 const MODULE_LABELS: Record<string, string> = {
-  dashboard: 'داشبورد',
   land: 'امور اراضی',
   library: 'کتابخانه',
   navigation: 'ناوبری',

@@ -60,7 +60,6 @@ export function usePermissions(user: User | null): PermissionChecker {
  * Maps module types to their required permissions.
  */
 export const MODULE_PERMISSIONS: Record<string, { view: string; create?: string; edit?: string; delete?: string; approve?: string }> = {
-  dashboard:    { view: 'dashboard.view' },
   users:        { view: 'users.view',        create: 'users.create',        edit: 'users.edit',        delete: 'users.delete' },
   roles:        { view: 'roles.view',        create: 'roles.create',        edit: 'roles.edit',        delete: 'roles.delete' },
   navigation:   { view: 'navigation.view',   create: 'navigation.create',   edit: 'navigation.edit',   delete: 'navigation.delete' },
