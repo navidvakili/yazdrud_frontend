@@ -23,6 +23,8 @@ import {
   RefreshCw,
   Lock,
   LogIn,
+  ToggleLeft,
+  ToggleRight,
 } from 'lucide-react';
 import { API } from '@/src/shared-utils/functions';
 import { loginApi } from '@/src/login';
@@ -39,6 +41,7 @@ interface UserItem {
   mobile: string;
   role: string;
   roles: string[];
+  is_active: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -379,6 +382,21 @@ export default function UsersModule() {
     }
   };
 
+  // ===== Toggle Active Status =====
+  const handleToggleActive = async (username: string) => {
+    try {
+      const data = await API<{ message: string; data: { is_active: boolean } }>(
+        `admin/users/${username}/toggle-active`,
+        {},
+        'PUT'
+      );
+      setUsers(prev => prev.map(u => u.username === username ? { ...u, is_active: data.data.is_active } : u));
+      showSuccess(data.message);
+    } catch (err: any) {
+      setError(err.message || 'خطا در تغییر وضعیت کاربر');
+    }
+  };
+
   // ===== Render =====
   return (
     <div className="max-w-6xl mx-auto space-y-6">
@@ -513,6 +531,7 @@ export default function UsersModule() {
                   <th className="px-4 py-3 text-right font-bold text-gray-600 dark:text-gray-400 text-xs">ایمیل</th>
                   <th className="px-4 py-3 text-right font-bold text-gray-600 dark:text-gray-400 text-xs">موبایل</th>
                   <th className="px-4 py-3 text-right font-bold text-gray-600 dark:text-gray-400 text-xs">نقش‌ها</th>
+                  <th className="px-4 py-3 text-center font-bold text-gray-600 dark:text-gray-400 text-xs">وضعیت</th>
                   <th className="px-4 py-3 text-center font-bold text-gray-600 dark:text-gray-400 text-xs">عملیات</th>
                 </tr>
               </thead>
@@ -532,6 +551,23 @@ export default function UsersModule() {
                             {ROLE_LABELS[role] || role}
                           </span>
                         ))}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-center">
+                        <button
+                          onClick={() => handleToggleActive(u.username)}
+                          disabled={u.username === 'support'}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
+                            u.is_active
+                              ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 hover:bg-emerald-200 dark:hover:bg-emerald-900/50'
+                              : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700'
+                          }`}
+                          title={u.is_active ? 'غیرفعال کردن' : 'فعال کردن'}
+                        >
+                          {u.is_active ? <ToggleRight className="w-4 h-4" /> : <ToggleLeft className="w-4 h-4" />}
+                          {u.is_active ? 'فعال' : 'غیرفعال'}
+                        </button>
                       </div>
                     </td>
                     <td className="px-4 py-3">
