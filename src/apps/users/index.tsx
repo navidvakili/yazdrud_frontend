@@ -1,6 +1,6 @@
 // ============================================================
 // UserManagement — سیستم مدیریت کاربران
-// شامل: لیست، ایجاد، ویرایش، تغییر رمز، تخصیص نقش
+// شامل: لیست، ایجاد، ویرایش، تغییر رمز، تخصیص نقش، مدیریت دسترسی‌ها
 // ============================================================
 
 import { useState, useEffect, useCallback } from 'react';
@@ -21,8 +21,10 @@ import {
   ChevronRight,
   UserPlus,
   RefreshCw,
+  Lock,
 } from 'lucide-react';
 import { API } from '@/src/shared-utils/functions';
+import PermissionsPanel from './PermissionsPanel';
 
 // ===== Types =====
 
@@ -99,6 +101,9 @@ const ROLE_COLORS: Record<string, string> = {
 // ===== Main Component =====
 
 export default function UsersModule() {
+  // Tab state
+  const [activeTab, setActiveTab] = useState<'users' | 'permissions'>('users');
+
   // List state
   const [users, setUsers] = useState<UserItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -383,12 +388,40 @@ export default function UsersModule() {
             <p className="text-xs text-gray-500 dark:text-gray-400">ایجاد، ویرایش و مدیریت دسترسی کاربران</p>
           </div>
         </div>
+        {activeTab === 'users' && (
+          <button
+            onClick={() => { setForm(emptyForm); setFormError(null); setShowCreateModal(true); }}
+            className="flex items-center gap-2 px-4 py-2.5 bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-bold rounded-xl transition-colors cursor-pointer shadow-sm"
+          >
+            <UserPlus className="w-4 h-4" />
+            کاربر جدید
+          </button>
+        )}
+      </div>
+
+      {/* Tabs */}
+      <div className="flex items-center gap-1 p-1 bg-gray-100 dark:bg-gray-800 rounded-xl w-fit">
         <button
-          onClick={() => { setForm(emptyForm); setFormError(null); setShowCreateModal(true); }}
-          className="flex items-center gap-2 px-4 py-2.5 bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-bold rounded-xl transition-colors cursor-pointer shadow-sm"
+          onClick={() => setActiveTab('users')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all cursor-pointer ${
+            activeTab === 'users'
+              ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm'
+              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+          }`}
         >
-          <UserPlus className="w-4 h-4" />
-          کاربر جدید
+          <Users className="w-4 h-4" />
+          لیست کاربران
+        </button>
+        <button
+          onClick={() => setActiveTab('permissions')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all cursor-pointer ${
+            activeTab === 'permissions'
+              ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm'
+              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+          }`}
+        >
+          <Shield className="w-4 h-4" />
+          نقش‌ها و دسترسی‌ها
         </button>
       </div>
 
@@ -405,8 +438,11 @@ export default function UsersModule() {
         </div>
       )}
 
-      {/* Search & Filters */}
-      <div className="flex items-center gap-3">
+      {/* ===== Users Tab Content ===== */}
+      {activeTab === 'users' && (
+        <>
+          {/* Search & Filters */}
+          <div className="flex items-center gap-3">
         <div className="relative flex-1">
           <Search className="w-4 h-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2" />
           <input
@@ -542,6 +578,13 @@ export default function UsersModule() {
           </div>
         )}
       </div>
+        </>
+      )}
+
+      {/* ===== Permissions Tab Content ===== */}
+      {activeTab === 'permissions' && (
+        <PermissionsPanel />
+      )}
 
       {/* ===== Modals ===== */}
 
