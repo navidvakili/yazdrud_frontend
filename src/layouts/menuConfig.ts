@@ -74,6 +74,9 @@ export const faToLucideName: Record<string, string> = {
   'fa fa-smile': 'Smile',
   'fa fa-sparkles': 'Sparkles',
   'fa fa-flag': 'Folder',
+  'fa fa-newspaper': 'FileText',
+  'fa fa-road': 'Briefcase',
+  'fa fa-map': 'Layers',
 };
 
 // ========== Utility Functions ==========
@@ -101,7 +104,7 @@ export function resolveIcon(name: string): LucideIcon {
     Calendar, DollarSign, FileText, Smile, MessageSquare: MessageSquareIcon,
     Sparkles, Heart, CreditCard, Building, Folder, ShieldCheck, Layers,
     Upload, Settings, Clock, Home, GraduationCap, Bell, HelpCircle,
-    Search, X, LogOut, Plus, LayoutDashboard, ChevronLeft,
+    Search, X, LogOut, Plus, LayoutDashboard, ChevronLeft, Globe,
   };
   return iconMap[name] || Folder;
 }
