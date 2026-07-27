@@ -4,7 +4,7 @@
 // شامل پروفایل کاربری، تغییر رمز عبور و داشبورد کاربر
 // ============================================================
 
-import { ProfileModule, ChangePasswordModule } from '@/src/login';
+import { ProfileModule, ChangePasswordModule, AdminSessionsPanel } from '@/src/login';
 import type { User as UserType } from '@/src/shared-types';
 import type { RoleInfo } from '@/src/login/types';
 
@@ -31,6 +31,9 @@ export default function AuthModule({ user, moduleId, userRoles, onUpdateUser }: 
       ) : null;
     case 'change-password':
       return <ChangePasswordModule />;
+    case 'sessions':
+    case 'admin-sessions':
+      return <AdminSessionsPanel />;
     default:
       return (
         <div className="flex items-center justify-center py-20 text-gray-400">

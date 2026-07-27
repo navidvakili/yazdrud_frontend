@@ -26,6 +26,8 @@ export const moduleToAppMap: Record<string, string> = {
   // Auth App
   'profile': 'auth',
   'change-password': 'auth',
+  'sessions': 'auth',
+  'admin-sessions': 'auth',
 
   // Users Management App
   'users': 'users',
