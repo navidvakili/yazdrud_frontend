@@ -108,20 +108,21 @@ export default function DashboardModule({
         </div>
       </motion.div>
 
-      {/* ===== Pinned Quick Access (shortcuts) — بالای ویجت‌ها ===== */}
-      {pinnedMenus.length > 0 && (
-        <div>
-          <h3 className="text-base font-black text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <Pin className="w-4 h-4 text-teal-500" />
-            <span>میانبرهای منتخب شما</span>
-            <span className="text-[10px] text-gray-400 font-bold bg-gray-50 dark:bg-gray-850 px-2 py-0.5 rounded-full">
-              {toPersianDigits(pinnedMenus.length)}
-            </span>
-          </h3>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            {filteredActions
-              .filter(a => pinnedMenus.includes(a.id))
-              .map((action, idx) => (
+      {/* ===== Quick Access — دسترسی سریع (pinned menus) ===== */}
+      {(() => {
+        const pinnedActions = filteredActions.filter(a => pinnedMenus.includes(a.id));
+        if (pinnedActions.length === 0) return null;
+        return (
+          <div>
+            <h3 className="text-base font-black text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              <Pin className="w-4 h-4 text-teal-500" />
+              <span>دسترسی سریع</span>
+              <span className="text-[10px] text-gray-400 font-bold bg-gray-50 dark:bg-gray-850 px-2 py-0.5 rounded-full">
+                {toPersianDigits(pinnedActions.length)}
+              </span>
+            </h3>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {pinnedActions.map((action, idx) => (
                 <motion.button
                   key={action.id}
                   initial={{ opacity: 0, y: 10 }}
@@ -139,38 +140,10 @@ export default function DashboardModule({
                   </div>
                 </motion.button>
               ))}
+            </div>
           </div>
-        </div>
-      )}
-
-      {/* ===== Quick Actions Grid ===== */}
-      {filteredActions.length > 0 && (
-        <div>
-          <h3 className="text-base font-black text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <span>دسترسی سریع</span>
-          </h3>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            {filteredActions.map((action, idx) => (
-              <motion.button
-                key={action.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: idx * 0.05 }}
-                onClick={() => onNavigate(action.id, action.title, action.icon.name)}
-                className="flex items-start gap-3 p-4 bg-gradient-to-br from-teal-50/80 to-indigo-50/50 dark:from-teal-950/30 dark:to-indigo-950/20 rounded-xl border border-teal-200/60 dark:border-teal-800/40 hover:shadow-md hover:border-teal-500/40 transition-all text-right cursor-pointer group relative"
-              >
-                <div className="p-2 rounded-xl bg-teal-500/15 text-teal-600 dark:text-teal-400 group-hover:bg-teal-600 group-hover:text-white transition-all">
-                  <action.icon className="w-4 h-4" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <span className="text-sm font-bold text-gray-900 dark:text-white block truncate">{action.title}</span>
-                  <span className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5 block line-clamp-1">{action.desc}</span>
-                </div>
-              </motion.button>
-            ))}
-          </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
