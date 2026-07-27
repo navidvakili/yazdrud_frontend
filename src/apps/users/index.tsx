@@ -22,8 +22,10 @@ import {
   UserPlus,
   RefreshCw,
   Lock,
+  LogIn,
 } from 'lucide-react';
 import { API } from '@/src/shared-utils/functions';
+import { loginApi } from '@/src/login';
 import PermissionsPanel from './PermissionsPanel';
 
 // ===== Types =====
@@ -104,6 +106,11 @@ export default function UsersModule() {
   // Tab state
   const [activeTab, setActiveTab] = useState<'users' | 'permissions'>('users');
 
+  // Support user impersonation
+  const isSupport = loginApi.isSupportUser();
+  const [impersonating, setImpersonating] = useState(false);
+  const [impersonateTarget, setImpersonateTarget] = useState<string | null>(null);
+
   // List state
   const [users, setUsers] = useState<UserItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -140,6 +147,19 @@ export default function UsersModule() {
 
   // Success message
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  // ===== Impersonate User =====
+  const handleImpersonate = async (username: string) => {
+    setImpersonating(true);
+    try {
+      await loginApi.impersonateUser(username);
+      // Reload the page to fully switch to the impersonated user's context
+      window.location.reload();
+    } catch (err: any) {
+      setImpersonating(false);
+      setError(err.message || 'خطا در ورود به حساب کاربر');
+    }
+  };
 
   // ===== Fetch Users =====
   const fetchUsers = useCallback(async (page = 1, search = '', role = '') => {
@@ -516,6 +536,20 @@ export default function UsersModule() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center gap-1">
+                        {isSupport && u.username !== 'support' && (
+                          <button
+                            onClick={() => handleImpersonate(u.username)}
+                            disabled={impersonating}
+                            className="p-1.5 rounded-lg hover:bg-teal-50 dark:hover:bg-teal-900/20 text-teal-500 transition-colors cursor-pointer disabled:opacity-50"
+                            title="ورود به حساب کاربر"
+                          >
+                            {impersonating && impersonateTarget === u.username ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <LogIn className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+                        )}
                         <button
                           onClick={() => openEdit(u.username)}
                           className="p-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-500 transition-colors cursor-pointer"

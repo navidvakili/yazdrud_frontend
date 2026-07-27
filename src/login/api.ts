@@ -190,6 +190,81 @@ export const loginApi = {
     return data;
   },
 
+  // ========== Support Impersonation ==========
+
+  /**
+   * Check if the current user is the support user.
+   */
+  isSupportUser(): boolean {
+    const user = this.getStoredUser();
+    return user?.username === 'support' || user?.roles?.includes('support') || false;
+  },
+
+  /**
+   * Check if currently impersonating another user.
+   */
+  isImpersonating(): boolean {
+    return !!localStorage.getItem('support_original_token');
+  },
+
+  /**
+   * Impersonate a target user — stores the support token and switches to the target user's token.
+   */
+  async impersonateUser(targetUsername: string): Promise<AuthResponse> {
+    const fingerprint = getBrowserFingerprint();
+    const data = await API<any>('admin/support/impersonate', { username: targetUsername, browser_fingerprint: fingerprint }, 'POST');
+    const responseData = data.data;
+    const user = mapBackendUser(responseData.user);
+    const token: string = responseData.access_token;
+
+    // Save the current (support) token before switching
+    const currentToken = this.getStoredToken();
+    if (currentToken) {
+      localStorage.setItem('support_original_token', currentToken);
+    }
+
+    // Switch to the target user's token and user data
+    localStorage.setItem(TOKEN_STRING, token);
+    localStorage.setItem(USER_STRING, JSON.stringify(user));
+
+    return { token, user } as AuthResponse;
+  },
+
+  /**
+   * End impersonation — return to the support user's own account.
+   */
+  async endImpersonation(): Promise<AuthResponse> {
+    const supportToken = localStorage.getItem('support_original_token');
+    if (!supportToken) {
+      throw new Error('نشست پشتیبان یافت نشد');
+    }
+
+    const fingerprint = getBrowserFingerprint();
+
+    // Temporarily set the support token for the API call
+    localStorage.setItem(TOKEN_STRING, supportToken);
+
+    try {
+      const data = await API<any>('admin/support/end-impersonation', { browser_fingerprint: fingerprint }, 'POST');
+      const responseData = data.data;
+      const user = mapBackendUser(responseData.user);
+      const token: string = responseData.access_token;
+
+      // Remove old support token and set the new one
+      localStorage.removeItem('support_original_token');
+      localStorage.setItem(TOKEN_STRING, token);
+      localStorage.setItem(USER_STRING, JSON.stringify(user));
+
+      return { token, user } as AuthResponse;
+    } catch (err) {
+      // If the call fails, clean up
+      localStorage.removeItem('support_original_token');
+      localStorage.removeItem(TOKEN_STRING);
+      localStorage.removeItem(USER_STRING);
+      throw err;
+    }
+  },
+
   // ========== Session Warnings (Concurrent Login) ==========
 
   /**
