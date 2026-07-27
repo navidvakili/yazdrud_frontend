@@ -20,6 +20,7 @@ import { ModuleRenderer } from '@/src/apps';
 import { loginApi, LoginForm, SessionWarningModal, useSessionWarning } from '@/src/login';
 import { dashboardApi } from '@/src/dashboard';
 import { LogoutModal, StandbyModal, TabLimitAlert } from '@/src/shared-components';
+import { PermissionsProvider } from '@/src/shared-utils/PermissionsContext';
 
 export default function App() {
   // ========== Core State ==========
@@ -325,6 +326,7 @@ export default function App() {
 
   return (
     <div className={`${theme} h-screen overflow-hidden bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100 flex flex-col transition-colors duration-300`}>
+    <PermissionsProvider user={user}>
 
       {/* ===== 1. Header Bar ===== */}
       <Header
@@ -478,6 +480,7 @@ export default function App() {
         onRespond={handleWarningRespond}
         isLoading={warningRespondLoading}
       />
+    </PermissionsProvider>
     </div>
   );
 }

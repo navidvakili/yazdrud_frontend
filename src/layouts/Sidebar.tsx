@@ -2,10 +2,12 @@
 // Sidebar — نوار کناری شامل منوهای دسته‌بندی و زیرمنوها
 // ============================================================
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Search, ChevronLeft, Plus, X } from 'lucide-react';
 import type { Tab } from '@/src/layouts/types';
 import type { MenuCategory } from './menuConfig';
+import { useAppPermissions } from '@/src/shared-utils/PermissionsContext';
+import { MODULE_PERMISSIONS } from '@/src/shared-utils/permissions';
 
 interface SidebarProps {
   menuCategories: MenuCategory[];
@@ -24,7 +26,24 @@ export default function Sidebar({
   handleOpenTab, tabs, activeTabId, isMobileMenuOpen, setIsMobileMenuOpen,
 }: SidebarProps) {
   const [drawerSubmenuFilter, setDrawerSubmenuFilter] = useState('');
-  const filteredCategories = menuCategories;
+  const { can } = useAppPermissions();
+
+  // Filter categories by permissions — defense-in-depth (backend already filters)
+  const filteredCategories = useMemo(() => {
+    return menuCategories
+      .map(cat => {
+        // Filter submenus by their view permission
+        const visibleSubs = cat.submenus.filter(sub => {
+          const modPerms = MODULE_PERMISSIONS[sub.targetId];
+          // If no permission mapping exists for this module, allow it
+          if (!modPerms) return true;
+          return can(modPerms.view);
+        });
+        return { ...cat, submenus: visibleSubs };
+      })
+      // Remove categories with no visible submenus (unless they have a direct targetId)
+      .filter(cat => cat.submenus.length > 0 || cat.targetId);
+  }, [menuCategories, can]);
 
   const handleCloseMobile = () => {
     setIsMobileMenuOpen(false);

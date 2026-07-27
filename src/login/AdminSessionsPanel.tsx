@@ -16,11 +16,14 @@ import {
     User as UserIcon,
     Clock,
     CheckCircle2,
+    ShieldAlert,
 } from 'lucide-react';
 import type { AdminSession } from '@/src/login/types';
 import { loginApi } from '@/src/login';
+import { useAppPermissions } from '@/src/shared-utils/PermissionsContext';
 
 export default function AdminSessionsPanel() {
+    const { hasRole } = useAppPermissions();
     const [sessions, setSessions] = useState<AdminSession[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -92,6 +95,21 @@ export default function AdminSessionsPanel() {
             (s.platform && s.platform.toLowerCase().includes(q))
         );
     });
+
+    // Permission gate — only admins should see this panel
+    if (!hasRole('admin')) {
+        return (
+            <div className="flex flex-col items-center justify-center py-20 text-center">
+                <ShieldAlert className="w-16 h-16 text-red-400 dark:text-red-500 mb-4" />
+                <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-2">
+                    دسترسی غیرمجاز
+                </h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md">
+                    شما مجوز دسترسی به مدیریت نشست‌ها را ندارید. فقط مدیران سامانه می‌توانند از این بخش استفاده کنند.
+                </p>
+            </div>
+        );
+    }
 
     return (
         <div className="max-w-5xl mx-auto">

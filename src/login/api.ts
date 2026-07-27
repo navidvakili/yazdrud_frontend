@@ -16,6 +16,14 @@ function mapBackendUser(backendUser: any): User {
   const name = backendUser.full_name || `${backendUser.fname || ''} ${backendUser.lname || ''}`.trim();
   const avatar = getAvatarUrl(backendUser.sign);
 
+  // Ensure roles is always a flat string array (backend may return object or array)
+  const rawRoles = backendUser.roles || [];
+  const rolesArray: string[] = Array.isArray(rawRoles)
+    ? rawRoles
+    : typeof rawRoles === 'object' && rawRoles !== null
+      ? Object.values(rawRoles).filter((v): v is string => typeof v === 'string')
+      : [];
+
   return {
     username: backendUser.username || '',
     fname: backendUser.fname || '',
@@ -24,7 +32,8 @@ function mapBackendUser(backendUser: any): User {
     mobile: backendUser.mobile || '',
     email: backendUser.email || '',
     role: backendUser.role || 'user',
-    roles: backendUser.roles || [],
+    roles: rolesArray,
+    permissions: Array.isArray(backendUser.permissions) ? backendUser.permissions : [],
     sign: backendUser.sign || null,
     name,
     avatar,
@@ -126,7 +135,12 @@ export const loginApi = {
     const stored = localStorage.getItem(USER_STRING);
     if (stored) {
       try {
-        return JSON.parse(stored) as User;
+        const parsed = JSON.parse(stored) as User;
+        // Normalize roles — old localStorage data may store roles as {"admin":"admin"} object
+        if (parsed && !Array.isArray(parsed.roles) && typeof parsed.roles === 'object' && parsed.roles !== null) {
+          parsed.roles = Object.values(parsed.roles).filter((v): v is string => typeof v === 'string');
+        }
+        return parsed;
       } catch {
         return null;
       }

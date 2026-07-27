@@ -14,6 +14,8 @@ export interface User {
   role: UserRole;
   /** All roles from the roles table (array of role names) */
   roles?: string[];
+  /** Granular permissions from Spatie (e.g. ['dashboard.view', 'users.create']) */
+  permissions?: string[];
   sign?: string | null;
   /** Derived full name from fname + lname */
   name: string;

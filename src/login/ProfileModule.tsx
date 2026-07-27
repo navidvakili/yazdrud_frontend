@@ -103,7 +103,7 @@ export default function ProfileModule({ user, userRoles, onUpdateUser }: Profile
   };
 
   const roleLabel = userRoles.find(r => r.active === 1)?.label
-    || (user.role === 'admin' ? 'مدیر سامانه' : user.role === 'editor' ? 'ویرایشگر محتوا' : 'کاربر');
+    || (user.roles?.includes('admin') ? 'مدیر سامانه' : user.roles?.includes('editor') ? 'ویرایشگر محتوا' : 'کاربر');
 
   const formatDateTime = (dateStr: string | null | undefined): string => {
     if (!dateStr) return '—';

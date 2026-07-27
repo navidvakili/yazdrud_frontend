@@ -3,6 +3,7 @@
 // سیستم مدیریت محتوا (CMS)
 // ============================================================
 
+import { useMemo } from 'react';
 import { motion } from 'motion/react';
 import {
   User,
@@ -13,6 +14,8 @@ import {
 import type { User as UserType } from '@/src/shared-types';
 import type { RoleInfo } from '@/src/login/types';
 import { MAX_TABS } from '@/src/shared-constants';
+import { useAppPermissions } from '@/src/shared-utils/PermissionsContext';
+import { MODULE_PERMISSIONS } from '@/src/shared-utils/permissions';
 
 interface MenuAction {
   id: string;
@@ -54,17 +57,26 @@ export default function DashboardModule({
 }: DashboardModuleProps) {
   if (!user) return null;
 
+  const { can } = useAppPermissions();
+
   // Use dynamic menu items if provided, otherwise fall back to built-in list
   const quickActions: MenuAction[] = allMenuItems || [
     { id: 'profile', title: 'مشخصات پروفایل', icon: User, desc: 'ویرایش اطلاعات شخصی و مشاهده پرونده', roles: ['admin', 'editor', 'user'] as const },
     { id: 'finance', title: 'امور مالی', icon: DollarSign, desc: 'مشاهده فاکتورها و تراکنش‌ها', roles: ['admin', 'editor', 'user'] as const },
   ];
 
-  const filteredActions = quickActions.filter(a => a.roles.includes(user.role as any));
+  // Filter actions by permissions — check if user has view permission for each module
+  const filteredActions = useMemo(() => {
+    return quickActions.filter(a => {
+      const modPerms = MODULE_PERMISSIONS[a.id];
+      if (!modPerms) return true; // No permission mapping → allow
+      return can(modPerms.view);
+    });
+  }, [quickActions, can]);
 
   const roleLabel = userRoles.find(r => r.active === 1)?.label
-    || (user.role === 'admin' ? 'مدیر سامانه' : user.role === 'editor' ? 'ویرایشگر محتوا' : 'کاربر');
-  const roleColor = user.role === 'admin' ? 'from-rose-500/10 to-amber-500/10' : user.role === 'editor' ? 'from-indigo-500/10 to-teal-500/10' : 'from-teal-500/10 to-indigo-500/10';
+    || (user.roles?.includes('admin') ? 'مدیر سامانه' : user.roles?.includes('editor') ? 'ویرایشگر محتوا' : 'کاربر');
+  const roleColor = user.roles?.includes('admin') ? 'from-rose-500/10 to-amber-500/10' : user.roles?.includes('editor') ? 'from-indigo-500/10 to-teal-500/10' : 'from-teal-500/10 to-indigo-500/10';
 
   return (
     <div className="max-w-6xl mx-auto space-y-8">
