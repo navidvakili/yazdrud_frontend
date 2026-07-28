@@ -41,6 +41,7 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
   const roleCanEdit = isAdmin || isEditor;
   const permCanEdit = can('news.create') || can('news.edit');
   const permCanDelete = can('news.delete');
+  const canApprove = can('news.approve') || isAdmin;
   const canEdit = roleCanEdit || permCanEdit;
   const canDelete = roleCanEdit || permCanDelete;
 
@@ -943,10 +944,16 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
                     value={formStatus} onChange={e => setFormStatus(e.target.value as any)}
                     className="w-full py-2.5 px-3 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-xs font-semibold text-gray-900 dark:text-white focus:outline-none focus:border-teal-500 cursor-pointer"
                   >
-                    <option value="published">منتشر شده</option>
+                    {canApprove && <option value="published">منتشر شده</option>}
                     <option value="draft">پیش‌نویس</option>
                     <option value="archived">آرشیو شده</option>
                   </select>
+                  {!canApprove && (
+                    <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 flex items-center gap-1">
+                      <span>⏳</span>
+                      <span>خبر پس از ذخیره به صورت پیش‌نویس ثبت شده و پس از تایید مدیر منتشر خواهد شد.</span>
+                    </p>
+                  )}
                 </div>
 
                 <div className="pt-2">
