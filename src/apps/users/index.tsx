@@ -109,9 +109,11 @@ const ROLE_COLORS: Record<string, string> = {
 export default function UsersModule() {
   const { can } = useAppPermissions();
   const canManageUsers = can('users.view');
-  const canViewRoles = can('roles.view');
+  // Permissions tab is visible to anyone with roles.view OR users.view
+  // (admins may not have explicit roles.view but have users.view)
+  const canViewRoles = can('roles.view') || can('users.view');
 
-  // Tab state — if user only has roles.view, default to permissions tab
+  // Tab state — if user only has roles.view (not users.view), default to permissions tab
   const [activeTab, setActiveTab] = useState<'users' | 'permissions'>(canManageUsers ? 'users' : 'permissions');
 
   // Support user impersonation
