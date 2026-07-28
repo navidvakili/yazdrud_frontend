@@ -3,7 +3,7 @@
 // شامل: لیست، ایجاد، ویرایش، تغییر رمز، تخصیص نقش، مدیریت دسترسی‌ها
 // ============================================================
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Users,
@@ -134,6 +134,9 @@ export default function UsersModule() {
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
 
+  // Track initial mount to avoid duplicate fetch on first render
+  const initialMount = useRef(true);
+
   // Form state
   const [form, setForm] = useState<UserForm>(emptyForm);
   const [formLoading, setFormLoading] = useState(false);
@@ -200,6 +203,19 @@ export default function UsersModule() {
     fetchUsers();
     fetchRoles();
   }, [fetchUsers, fetchRoles]);
+
+  // Refetch roles when switching back to users tab (roles may have been
+  // added/deleted in the PermissionsPanel tab). Skip initial mount since
+  // the useEffect above already fetches roles on first render.
+  useEffect(() => {
+    if (initialMount.current) {
+      initialMount.current = false;
+      return;
+    }
+    if (activeTab === 'users') {
+      fetchRoles();
+    }
+  }, [activeTab, fetchRoles]);
 
   // Debounced search
   useEffect(() => {
