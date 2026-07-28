@@ -37,6 +37,9 @@ export default function Sidebar({
           const modPerms = MODULE_PERMISSIONS[sub.targetId];
           // If no permission mapping exists for this module, allow it
           if (!modPerms) return true;
+          // Special case: users module also accessible with roles.view
+          // (PermissionsPanel/role management lives inside the Users module)
+          if (sub.targetId === 'users' && can('roles.view')) return true;
           return can(modPerms.view);
         });
         return { ...cat, submenus: visibleSubs };

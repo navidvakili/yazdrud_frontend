@@ -68,9 +68,18 @@ export default function App() {
     if (storedUser) {
       setUser(storedUser);
       setViewState('authenticated');
-      // Attempt to fetch the user's saved theme from backend (silent)
+      // Fetch fresh user data from backend (silent) to sync permissions,
+      // roles, and profile data — localStorage may be stale after admin
+      // changes role permissions via PermissionPanel.
       loginApi.getUser().then(profile => {
-        // If backend returns a theme field, apply it
+        // 🔴 CRITICAL: Update React state AND localStorage with fresh
+        // permissions/roles from backend. Without this, a page refresh
+        // restores old localStorage data and the user keeps stale permissions
+        // until they log out and log back in.
+        setUser(profile);
+        localStorage.setItem(USER_STRING, JSON.stringify(profile));
+        // Also refetch navigation since sidebar filtering depends on permissions
+        fetchNavigation();
         if ((profile as any).theme) {
           setTheme((profile as any).theme as 'light' | 'dark');
         }

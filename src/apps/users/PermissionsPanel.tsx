@@ -24,6 +24,7 @@ import {
   Settings,
 } from 'lucide-react';
 import { API } from '@/src/shared-utils/functions';
+import { useAppPermissions } from '@/src/shared-utils/PermissionsContext';
 
 // ===== Types =====
 
@@ -79,6 +80,9 @@ const ROLE_COLORS: Record<string, string> = {
 // ===== Main Component =====
 
 export default function PermissionsPanel() {
+  const { can } = useAppPermissions();
+  const canEditRoles = can('users.edit') || can('roles.edit');
+
   const [roles, setRoles] = useState<RoleItem[]>([]);
   const [allPermissions, setAllPermissions] = useState<PermissionsByModule>({});
   const [moduleLabels, setModuleLabels] = useState<Record<string, string>>({});
@@ -275,13 +279,15 @@ export default function PermissionsPanel() {
             <p className="text-xs text-gray-500 dark:text-gray-400">تعریف نقش‌ها و تخصیص دسترسی به هر نقش</p>
           </div>
         </div>
-        <button
-          onClick={() => { setNewRoleName(''); setFormError(null); setShowCreateModal(true); }}
-          className="flex items-center gap-2 px-4 py-2.5 bg-purple-500 hover:bg-purple-600 text-white text-sm font-bold rounded-xl transition-colors cursor-pointer shadow-sm"
-        >
-          <Plus className="w-4 h-4" />
-          نقش جدید
-        </button>
+        {canEditRoles && (
+          <button
+            onClick={() => { setNewRoleName(''); setFormError(null); setShowCreateModal(true); }}
+            className="flex items-center gap-2 px-4 py-2.5 bg-purple-500 hover:bg-purple-600 text-white text-sm font-bold rounded-xl transition-colors cursor-pointer shadow-sm"
+          >
+            <Plus className="w-4 h-4" />
+            نقش جدید
+          </button>
+        )}
       </div>
 
       {/* Error */}
@@ -324,7 +330,7 @@ export default function PermissionsPanel() {
                 <div
                   className="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors"
                   onClick={() => {
-                    if (!isEditing) {
+                    if (!isEditing && canEditRoles) {
                       startEditing(role);
                     }
                   }}
@@ -366,7 +372,7 @@ export default function PermissionsPanel() {
                       </>
                     ) : (
                       <>
-                        {role.name !== 'admin' && (
+                        {canEditRoles && role.name !== 'admin' && (
                           <button
                             onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(role.id); }}
                             className="p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-900/20 text-rose-500 transition-colors cursor-pointer"

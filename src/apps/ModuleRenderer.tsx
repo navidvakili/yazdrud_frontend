@@ -70,18 +70,25 @@ export default function ModuleRenderer({
 
   // Permission gating — check if user has view permission for this module
   const modPerms = MODULE_PERMISSIONS[moduleType];
-  if (modPerms && !can(modPerms.view)) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 text-center">
-        <ShieldAlert className="w-16 h-16 text-red-400 dark:text-red-500 mb-4" />
-        <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-2">
-          دسترسی غیرمجاز
-        </h3>
-        <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md">
+  if (modPerms) {
+    // Special case: users module also accessible with roles.view
+    // (PermissionsPanel/role management lives inside the Users module)
+    const hasAccess = moduleType === 'users'
+      ? can(modPerms.view) || can('roles.view')
+      : can(modPerms.view);
+    if (!hasAccess) {
+      return (
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <ShieldAlert className="w-16 h-16 text-red-400 dark:text-red-500 mb-4" />
+          <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-2">
+            دسترسی غیرمجاز
+          </h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md">
           شما مجوز دسترسی به این بخش را ندارید. لطفاً با مدیر سامانه تماس بگیرید.
         </p>
       </div>
-    );
+      );
+    }
   }
 
   // Dynamic app resolution via moduleToAppMap

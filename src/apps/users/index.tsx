@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { API } from '@/src/shared-utils/functions';
 import { loginApi } from '@/src/login';
+import { useAppPermissions } from '@/src/shared-utils/PermissionsContext';
 import PermissionsPanel from './PermissionsPanel';
 
 // ===== Types =====
@@ -106,8 +107,12 @@ const ROLE_COLORS: Record<string, string> = {
 // ===== Main Component =====
 
 export default function UsersModule() {
-  // Tab state
-  const [activeTab, setActiveTab] = useState<'users' | 'permissions'>('users');
+  const { can } = useAppPermissions();
+  const canManageUsers = can('users.view');
+  const canViewRoles = can('roles.view');
+
+  // Tab state — if user only has roles.view, default to permissions tab
+  const [activeTab, setActiveTab] = useState<'users' | 'permissions'>(canManageUsers ? 'users' : 'permissions');
 
   // Support user impersonation
   const isSupport = loginApi.isSupportUser();
@@ -200,14 +205,17 @@ export default function UsersModule() {
   }, []);
 
   useEffect(() => {
-    fetchUsers();
-    fetchRoles();
-  }, [fetchUsers, fetchRoles]);
+    if (canManageUsers) {
+      fetchUsers();
+      fetchRoles();
+    }
+  }, [canManageUsers, fetchUsers, fetchRoles]);
 
   // Refetch roles when switching back to users tab (roles may have been
   // added/deleted in the PermissionsPanel tab). Skip initial mount since
   // the useEffect above already fetches roles on first render.
   useEffect(() => {
+    if (!canManageUsers) return;
     if (initialMount.current) {
       initialMount.current = false;
       return;
@@ -215,15 +223,16 @@ export default function UsersModule() {
     if (activeTab === 'users') {
       fetchRoles();
     }
-  }, [activeTab, fetchRoles]);
+  }, [activeTab, fetchRoles, canManageUsers]);
 
   // Debounced search
   useEffect(() => {
+    if (!canManageUsers) return;
     const timer = setTimeout(() => {
       fetchUsers(1, searchQuery, filterRole);
     }, 400);
     return () => clearTimeout(timer);
-  }, [searchQuery, filterRole, fetchUsers]);
+  }, [searchQuery, filterRole, fetchUsers, canManageUsers]);
 
   const showSuccess = (msg: string) => {
     setSuccessMsg(msg);
@@ -455,28 +464,32 @@ export default function UsersModule() {
 
       {/* Tabs */}
       <div className="flex items-center gap-1 p-1 bg-gray-100 dark:bg-gray-800 rounded-xl w-fit">
-        <button
-          onClick={() => setActiveTab('users')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all cursor-pointer ${
-            activeTab === 'users'
-              ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm'
-              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-          }`}
-        >
-          <Users className="w-4 h-4" />
-          لیست کاربران
-        </button>
-        <button
-          onClick={() => setActiveTab('permissions')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all cursor-pointer ${
-            activeTab === 'permissions'
-              ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm'
-              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-          }`}
-        >
-          <Shield className="w-4 h-4" />
-          نقش‌ها و دسترسی‌ها
-        </button>
+        {canManageUsers && (
+          <button
+            onClick={() => setActiveTab('users')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all cursor-pointer ${
+              activeTab === 'users'
+                ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+            }`}
+          >
+            <Users className="w-4 h-4" />
+            لیست کاربران
+          </button>
+        )}
+        {canViewRoles && (
+          <button
+            onClick={() => setActiveTab('permissions')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all cursor-pointer ${
+              activeTab === 'permissions'
+                ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+            }`}
+          >
+            <Shield className="w-4 h-4" />
+            نقش‌ها و دسترسی‌ها
+          </button>
+        )}
       </div>
 
       {/* Error */}
