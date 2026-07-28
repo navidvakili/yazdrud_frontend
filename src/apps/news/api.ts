@@ -48,7 +48,7 @@ export async function createNews(data: {
   category_id?: number | null;
   image_url?: string;
   status: 'published' | 'draft' | 'archived';
-  target_audience: 'all' | 'students' | 'professors' | 'staff';
+  target_audience?: 'all' | 'students' | 'professors' | 'staff';
   is_pinned?: boolean;
   tags?: string[];
   attachments?: { name: string; size: string; url: string }[];
@@ -64,7 +64,7 @@ export async function updateNews(id: number, data: Partial<{
   category_id: number | null;
   image_url: string;
   status: 'published' | 'draft' | 'archived';
-  target_audience: 'all' | 'students' | 'professors' | 'staff';
+  target_audience?: 'all' | 'students' | 'professors' | 'staff';
   is_pinned: boolean;
   tags: string[];
   attachments: { name: string; size: string; url: string }[];

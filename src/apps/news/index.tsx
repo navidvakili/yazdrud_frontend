@@ -10,11 +10,13 @@ import {
   Trash2, Calendar, User as UserIcon, Tag, Clock, Sparkles,
   Share2, FileText, Download, MessageSquare, BarChart2, Layers,
   CheckCircle2, X, Send, SlidersHorizontal, LayoutGrid, List,
-  Flame, AlertCircle, ExternalLink, Info, Loader2,
+  Flame, AlertCircle, ExternalLink, Info, Loader2, Upload,
 } from 'lucide-react';
 import type { NewsItem, NewsCategory, User } from '@/src/shared-types';
 import ToastNotification from '@/src/shared-components/ToastNotification';
 import WysiwygEditor from '@/src/shared-components/WysiwygEditor';
+import TagInput from '@/src/shared-components/TagInput';
+import MediaManager from '@/src/shared-components/MediaManager';
 import {
   fetchNews, fetchNewsById, createNews, updateNews, deleteNews,
   togglePin, likeNews, incrementViews,
@@ -56,7 +58,6 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCatFilter, setSelectedCatFilter] = useState<number | 'all'>('all');
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>('all');
-  const [selectedAudienceFilter, setSelectedAudienceFilter] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const [sortBy, setSortBy] = useState<'newest' | 'views' | 'likes'>('newest');
 
@@ -70,11 +71,11 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
   const [formSummary, setFormSummary] = useState('');
   const [formContent, setFormContent] = useState('');
   const [formCategoryId, setFormCategoryId] = useState<number | null>(null);
-  const [formAudience, setFormAudience] = useState<'all' | 'students' | 'professors' | 'staff'>('all');
   const [formStatus, setFormStatus] = useState<'published' | 'draft' | 'archived'>('published');
   const [formIsPinned, setFormIsPinned] = useState(false);
   const [formImageUrl, setFormImageUrl] = useState('');
-  const [formTags, setFormTags] = useState('');
+  const [showMediaSelector, setShowMediaSelector] = useState(false);
+  const [formTags, setFormTags] = useState<string[]>([]);
   const [formMessage, setFormMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [formLoading, setFormLoading] = useState(false);
 
@@ -110,7 +111,6 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
       if (searchQuery) params.search = searchQuery;
       if (selectedCatFilter !== 'all') params.category_id = selectedCatFilter;
       if (selectedStatusFilter !== 'all') params.status = selectedStatusFilter;
-      if (selectedAudienceFilter !== 'all') params.target_audience = selectedAudienceFilter;
 
       const data = await fetchNews(params);
       setNewsList(data.data);
@@ -121,7 +121,7 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
     } finally {
       setLoading(false);
     }
-  }, [currentPage, sortBy, searchQuery, selectedCatFilter, selectedStatusFilter, selectedAudienceFilter]);
+  }, [currentPage, sortBy, searchQuery, selectedCatFilter, selectedStatusFilter]);
 
   const loadCategories = useCallback(async () => {
     try {
@@ -147,7 +147,7 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
       loadNews();
     }, 400);
     return () => clearTimeout(timer);
-  }, [searchQuery, selectedCatFilter, selectedStatusFilter, selectedAudienceFilter, sortBy]);
+  }, [searchQuery, selectedCatFilter, selectedStatusFilter, sortBy]);
 
   // ===== Handlers =====
   const handleOpenReader = async (item: NewsItem) => {
@@ -206,11 +206,10 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
     setFormSummary(item.summary || '');
     setFormContent(item.content);
     setFormCategoryId(item.category_id);
-    setFormAudience(item.target_audience);
     setFormStatus(item.status);
     setFormIsPinned(item.is_pinned);
     setFormImageUrl(item.image_url || '');
-    setFormTags((item.tags || []).join(', '));
+    setFormTags(item.tags || []);
     setFormMessage(null);
     setActiveTab('editor');
   };
@@ -221,11 +220,10 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
     setFormSummary('');
     setFormContent('');
     setFormCategoryId(null);
-    setFormAudience('all');
     setFormStatus('published');
     setFormIsPinned(false);
     setFormImageUrl('');
-    setFormTags('');
+    setFormTags([]);
     setFormMessage(null);
   };
 
@@ -236,7 +234,7 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
       return;
     }
 
-    const tagArray = formTags.split(',').map(t => t.trim()).filter(t => t.length > 0);
+    const tagArray = formTags;
     setFormLoading(true);
 
     try {
@@ -247,7 +245,6 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
         category_id: formCategoryId,
         image_url: formImageUrl || undefined,
         status: formStatus,
-        target_audience: formAudience,
         is_pinned: formIsPinned,
         tags: tagArray,
       };
@@ -510,18 +507,6 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
               </div>
               <div className="md:col-span-3">
                 <select
-                  value={selectedCatFilter === 'all' ? 'all' : String(selectedCatFilter)}
-                  onChange={e => setSelectedCatFilter(e.target.value === 'all' ? 'all' : Number(e.target.value))}
-                  className="w-full py-2.5 px-3 rounded-2xl bg-gray-50 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 text-xs text-gray-900 dark:text-white focus:outline-none focus:border-teal-500 cursor-pointer"
-                >
-                  <option value="all">همه دسته‌بندی‌ها</option>
-                  {categories.map(cat => (
-                    <option key={cat.id} value={cat.id}>{cat.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="md:col-span-2">
-                <select
                   value={selectedStatusFilter}
                   onChange={e => setSelectedStatusFilter(e.target.value)}
                   className="w-full py-2.5 px-3 rounded-2xl bg-gray-50 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 text-xs text-gray-900 dark:text-white focus:outline-none focus:border-teal-500 cursor-pointer"
@@ -534,14 +519,14 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
               </div>
               <div className="md:col-span-2">
                 <select
-                  value={selectedAudienceFilter}
-                  onChange={e => setSelectedAudienceFilter(e.target.value)}
+                  value={selectedCatFilter === 'all' ? 'all' : String(selectedCatFilter)}
+                  onChange={e => setSelectedCatFilter(e.target.value === 'all' ? 'all' : Number(e.target.value))}
                   className="w-full py-2.5 px-3 rounded-2xl bg-gray-50 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 text-xs text-gray-900 dark:text-white focus:outline-none focus:border-teal-500 cursor-pointer"
                 >
-                  <option value="all">همه مخاطبان</option>
-                  <option value="students">دانشجویان</option>
-                  <option value="professors">اساتید</option>
-                  <option value="staff">کارمندان</option>
+                  <option value="all">همه دسته‌بندی‌ها</option>
+                  {categories.map(cat => (
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -870,12 +855,13 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
                 <div>
                   <label className="block text-xs font-extrabold text-gray-700 dark:text-gray-300 mb-1.5 flex items-center gap-1">
                     <Tag className="w-3.5 h-3.5 text-teal-500" />
-                    <span>برچسب‌ها (با کاما جدا کنید)</span>
+                    <span>برچسب‌ها</span>
                   </label>
-                  <input
-                    type="text" value={formTags} onChange={e => setFormTags(e.target.value)}
-                    placeholder="مثال: انتخاب واحد, آموزشی, ترم تابستان"
-                    className="w-full px-4 py-2.5 rounded-2xl bg-gray-50 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 text-xs text-gray-900 dark:text-white focus:outline-none focus:border-teal-500"
+                  <TagInput
+                    tags={formTags}
+                    onChange={setFormTags}
+                    placeholder="برچسب را تایپ کنید و Enter بزنید..."
+                    maxTags={15}
                   />
                 </div>
               </div>
@@ -894,19 +880,6 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
                     {categories.map(cat => (
                       <option key={cat.id} value={cat.id}>{cat.name}</option>
                     ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-bold text-gray-600 dark:text-gray-400 mb-1">مخاطبان</label>
-                  <select
-                    value={formAudience} onChange={e => setFormAudience(e.target.value as any)}
-                    className="w-full py-2.5 px-3 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-xs font-semibold text-gray-900 dark:text-white focus:outline-none focus:border-teal-500 cursor-pointer"
-                  >
-                    <option value="all">عموم</option>
-                    <option value="students">دانشجویان</option>
-                    <option value="professors">اساتید</option>
-                    <option value="staff">کارمندان</option>
                   </select>
                 </div>
 
@@ -933,17 +906,39 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
                 </div>
 
                 <div className="pt-2">
-                  <label className="block text-[11px] font-bold text-gray-600 dark:text-gray-400 mb-1">لینک تصویر شاخص</label>
-                  <input
-                    type="text" value={formImageUrl} onChange={e => setFormImageUrl(e.target.value)}
-                    placeholder="https://..."
-                    className="w-full px-3 py-2 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-[11px] font-mono text-gray-900 dark:text-white focus:outline-none focus:border-teal-500"
-                  />
-                  {formImageUrl && (
-                    <div className="mt-2 h-28 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700">
-                      <img src={formImageUrl} alt="پیش‌نمایش" className="w-full h-full object-cover" />
-                    </div>
-                  )}
+                  <label className="block text-[11px] font-bold text-gray-600 dark:text-gray-400 mb-1">تصویر شاخص</label>
+                  <div className="space-y-2">
+                    {formImageUrl ? (
+                      <div className="relative h-32 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 group">
+                        <img src={formImageUrl} alt="پیش‌نمایش" className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setShowMediaSelector(true)}
+                            className="px-3 py-1.5 rounded-lg bg-white text-gray-800 text-xs font-bold cursor-pointer hover:bg-gray-100"
+                          >
+                            تغییر
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setFormImageUrl('')}
+                            className="px-3 py-1.5 rounded-lg bg-red-500 text-white text-xs font-bold cursor-pointer hover:bg-red-600"
+                          >
+                            حذف
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setShowMediaSelector(true)}
+                        className="w-full h-32 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center gap-2 text-gray-400 hover:border-teal-500 hover:text-teal-500 transition-all cursor-pointer"
+                      >
+                        <Upload className="w-6 h-6" />
+                        <span className="text-xs font-bold">انتخاب تصویر</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <div className="pt-4 border-t border-gray-200 dark:border-gray-700 space-y-2">
@@ -963,6 +958,17 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
           </form>
         </motion.div>
       )}
+
+      {/* Media Manager for form image */}
+      <MediaManager
+        open={showMediaSelector}
+        onClose={() => setShowMediaSelector(false)}
+        onSelect={(url) => {
+          setFormImageUrl(url);
+        }}
+        filter="image"
+        title="انتخاب تصویر شاخص"
+      />
 
       {/* ===== TAB 3: CATEGORIES ===== */}
       {activeTab === 'categories' && (

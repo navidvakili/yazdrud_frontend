@@ -27,8 +27,9 @@ import {
   List, ListOrdered, AlignRight, AlignCenter, AlignLeft, AlignJustify,
   Quote, Minus, Undo2, Redo2, Link as LinkIcon, Image as ImageIcon,
   Highlighter, Palette, Table as TableIcon, Type, RemoveFormatting,
-  Users, Globe, CodeSquare,
+  Users, Globe, CodeSquare, Upload,
 } from 'lucide-react';
+import MediaManager from './MediaManager';
 
 // ===== Collaboration Config =====
 const ROOM_PREFIX = 'news-editor-';
@@ -98,6 +99,8 @@ interface WysiwygEditorProps {
   /** Current user info for collaboration cursors */
   currentUser?: { name: string; color: string };
   minHeight?: string;
+  /** Optional callback when an image is uploaded from editor */
+  onImageUpload?: (url: string) => void;
 }
 
 // ===== Main Component =====
@@ -110,13 +113,16 @@ export default function WysiwygEditor({
   documentId,
   currentUser,
   minHeight = '320px',
+  onImageUpload,
 }: WysiwygEditorProps) {
   const yDocRef = useRef<Y.Doc | null>(null);
   const providerRef = useRef<WebrtcProvider | null>(null);
   const collabInitRef = useRef(false);
   const [showHtmlSource, setShowHtmlSource] = useState(false);
+  const [htmlSourceText, setHtmlSourceText] = useState('');
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showTableModal, setShowTableModal] = useState(false);
+  const [showMediaManager, setShowMediaManager] = useState(false);
   const [tableHover, setTableHover] = useState({ r: 0, c: 0 });
 
   // ===== Setup Collaboration =====
@@ -226,10 +232,7 @@ export default function WysiwygEditor({
   if (!editor) return null;
 
   const addImage = () => {
-    const url = window.prompt('آدرس تصویر را وارد کنید:');
-    if (url) {
-      editor.chain().focus().setImage({ src: url }).run();
-    }
+    setShowMediaManager(true);
   };
 
   const setLink = () => {
@@ -260,8 +263,6 @@ export default function WysiwygEditor({
     }
   };
 
-  const [htmlSourceText, setHtmlSourceText] = useState('');
-
   const collaborators = providerRef.current?.awareness?.getStates
     ? Array.from(providerRef.current.awareness.getStates().values())
         .map((s: any) => s.user)
@@ -269,10 +270,10 @@ export default function WysiwygEditor({
     : [];
 
   return (
-    <div className="wysiwyg-editor border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden bg-white dark:bg-gray-800/80">
+    <div className="wysiwyg-editor border border-gray-200 dark:border-gray-700 rounded-2xl bg-white dark:bg-gray-800/80">
       {/* ===== Toolbar ===== */}
       {editable && (
-        <div className="flex flex-wrap items-center gap-0.5 p-2 border-b border-gray-100 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-800/50">
+        <div className="relative z-50 flex flex-wrap items-center gap-0.5 p-2 border-b border-gray-100 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-800/50 rounded-t-2xl">
           {/* Undo / Redo */}
           <ToolbarBtn onClick={() => editor.chain().focus().undo().run()} disabled={!editor.can().undo()} title="بازگشت (Ctrl+Z)">
             <Undo2 className="w-4 h-4" />
@@ -488,24 +489,31 @@ export default function WysiwygEditor({
             {showTableModal && (
               <div
                 onMouseDown={e => e.preventDefault()}
-                className="absolute top-full left-0 mt-1 p-3 bg-white dark:bg-gray-900 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 z-50"
+                className="absolute top-full right-0 mt-1 p-3 bg-white dark:bg-gray-900 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 z-[60] min-w-[280px]"
               >
                 <div className="text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-2">انتخاب اندازه جدول</div>
-                <div className="grid grid-cols-8 gap-0.5 mb-2">
-                  {Array.from({ length: 8 }, (_, r) =>
-                    Array.from({ length: 8 }, (_, c) => (
+                <div
+                  className="inline-grid gap-1 mb-2"
+                  style={{ gridTemplateColumns: 'repeat(8, minmax(0, 1fr))' }}
+                  onMouseLeave={() => setTableHover({ r: 0, c: 0 })}
+                >
+                  {Array.from({ length: 64 }, (_, i) => {
+                    const r = Math.floor(i / 8);
+                    const c = i % 8;
+                    const active = r < tableHover.r && c < tableHover.c;
+                    return (
                       <div
                         key={`${r}-${c}`}
-                        className={`w-4 h-4 border cursor-pointer rounded-sm transition-colors ${
-                          r < tableHover.r && c < tableHover.c
+                        className={`w-7 h-7 border cursor-pointer rounded-md transition-colors ${
+                          active
                             ? 'bg-teal-400 dark:bg-teal-500 border-teal-500'
-                            : 'bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700'
+                            : 'bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-teal-400'
                         }`}
                         onMouseEnter={() => setTableHover({ r: r + 1, c: c + 1 })}
                         onClick={() => insertTable(r + 1, c + 1)}
                       />
-                    ))
-                  )}
+                    );
+                  })}
                 </div>
                 <div className="text-[10px] text-gray-400 text-center">
                   {tableHover.r > 0 ? `${tableHover.r} × ${tableHover.c}` : 'ردیف × ستون'}
@@ -572,7 +580,7 @@ export default function WysiwygEditor({
         />
       )}
       {showHtmlSource ? (
-        <div className="p-0">
+        <div className="p-0 overflow-hidden rounded-b-2xl">
           <div className="flex items-center justify-between px-4 py-2 bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
             <span className="text-[11px] font-bold text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
               <CodeSquare className="w-3.5 h-3.5" />
@@ -596,8 +604,24 @@ export default function WysiwygEditor({
           />
         </div>
       ) : (
-        <EditorContent editor={editor} />
+        <div className="overflow-hidden rounded-b-2xl">
+          <EditorContent editor={editor} />
+        </div>
       )}
+
+      {/* Media Manager Dialog */}
+      <MediaManager
+        open={showMediaManager}
+        onClose={() => setShowMediaManager(false)}
+        onSelect={(url) => {
+          if (editor) {
+            editor.chain().focus().setImage({ src: url }).run();
+          }
+          onImageUpload?.(url);
+        }}
+        filter="image"
+        title="انتخاب تصویر"
+      />
     </div>
   );
 }

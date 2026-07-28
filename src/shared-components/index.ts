@@ -6,3 +6,5 @@ export { JalaliDatepicker } from './JalaliDatepicker';
 export { default as ToastNotification } from './ToastNotification';
 export { default as NetworkStatus } from './NetworkStatus';
 export { default as WysiwygEditor } from './WysiwygEditor';
+export { default as TagInput } from './TagInput';
+export { default as MediaManager } from './MediaManager';
