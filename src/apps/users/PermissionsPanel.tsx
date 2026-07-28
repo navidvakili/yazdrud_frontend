@@ -54,16 +54,12 @@ interface ApiResponse<T> {
 // ===== Constants =====
 
 const MODULE_LABELS: Record<string, string> = {
-  land: 'امور اراضی',
   library: 'کتابخانه',
   navigation: 'ناوبری',
   news: 'اخبار',
-  roads: '道路 و حمل‌ونقل',
   roles: 'نقش‌ها',
-  services: 'خدمات',
   sessions: 'نشست‌ها',
   settings: 'تنظیمات',
-  urban: 'شهرسازی',
   users: 'کاربران',
 };
 

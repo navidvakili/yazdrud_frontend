@@ -68,10 +68,6 @@ export const MODULE_PERMISSIONS: Record<string, { view: string; create?: string;
   'news-create':    { view: 'news.view',     create: 'news.create' },
   'news-categories':{ view: 'news.view',     create: 'news.create',         edit: 'news.edit',         delete: 'news.delete' },
   'news-analytics': { view: 'news.view' },
-  services:     { view: 'services.view',     create: 'services.create',     edit: 'services.edit',     delete: 'services.delete' },
-  urban:        { view: 'urban.view',        create: 'urban.create',        edit: 'urban.edit',        delete: 'urban.delete' },
-  roads:        { view: 'roads.view',        create: 'roads.create',        edit: 'roads.edit',        delete: 'roads.delete' },
-  land:         { view: 'land.view',         create: 'land.create',         edit: 'land.edit',         delete: 'land.delete' },
   sessions:     { view: 'sessions.view',     delete: 'sessions.delete' },
   settings:     { view: 'settings.view',     edit: 'settings.edit' },
 };
