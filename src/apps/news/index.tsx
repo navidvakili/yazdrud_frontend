@@ -23,6 +23,7 @@ import {
   fetchCategories, createCategory, updateCategory, deleteCategory,
   fetchAnalytics,
 } from './api';
+import { useAppPermissions } from '@/src/shared-utils/PermissionsContext';
 
 interface NewsManagementProps {
   user?: User | null;
@@ -34,9 +35,14 @@ interface NewsManagementProps {
 type SubTab = 'list' | 'editor' | 'categories' | 'analytics';
 
 export default function NewsManagement({ user, activeTabId, moduleId }: NewsManagementProps) {
+  const { can } = useAppPermissions();
   const isAdmin = user?.roles?.includes('admin') || user?.roles?.includes('support');
   const isEditor = user?.roles?.includes('editor');
-  const canEdit = isAdmin || isEditor;
+  const roleCanEdit = isAdmin || isEditor;
+  const permCanEdit = can('news.create') || can('news.edit');
+  const permCanDelete = can('news.delete');
+  const canEdit = roleCanEdit || permCanEdit;
+  const canDelete = roleCanEdit || permCanDelete;
 
   // ===== Sub-tab state =====
   const [activeTab, setActiveTab] = useState<SubTab>(() => {
@@ -719,13 +725,15 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
                         >
                           <Edit3 className="w-3.5 h-3.5" />
                         </button>
-                        <button
-                          onClick={e => { e.stopPropagation(); setDeleteNewsId(item.id); }}
-                          className="p-1.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500 transition-colors cursor-pointer"
-                          title="حذف"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        {canDelete && (
+                          <button
+                            onClick={e => { e.stopPropagation(); setDeleteNewsId(item.id); }}
+                            className="p-1.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500 transition-colors cursor-pointer"
+                            title="حذف"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>
@@ -787,9 +795,11 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
                               <button onClick={e => handleStartEdit(item, e)} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-teal-600" title="ویرایش">
                                 <Edit3 className="w-4 h-4" />
                               </button>
-                              <button onClick={e => { e.stopPropagation(); setDeleteNewsId(item.id); }} className="p-1.5 rounded-lg hover:bg-red-50 text-red-500" title="حذف">
-                                <Trash2 className="w-4 h-4" />
-                              </button>
+                              {canDelete && (
+                                <button onClick={e => { e.stopPropagation(); setDeleteNewsId(item.id); }} className="p-1.5 rounded-lg hover:bg-red-50 text-red-500" title="حذف">
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              )}
                             </>
                           )}
                         </div>
