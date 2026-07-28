@@ -209,7 +209,7 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
       setFormTitle(data.title);
       setFormSummary(data.summary || '');
       setFormContent(data.content || '');
-      setFormCategoryId(data.category_id ? Number(data.category_id) : null);
+      setFormCategoryId(data.category_id ? Number(data.category_id) : (categories.length > 0 ? categories[0].id : null));
       setFormStatus(data.status);
       setFormIsPinned(data.is_pinned);
       setFormImageUrl(data.image_url || '');
@@ -220,7 +220,7 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
       setFormTitle(item.title);
       setFormSummary(item.summary || '');
       setFormContent(item.content || '');
-      setFormCategoryId(item.category_id ? Number(item.category_id) : null);
+      setFormCategoryId(item.category_id ? Number(item.category_id) : (categories.length > 0 ? categories[0].id : null));
       setFormStatus(item.status);
       setFormIsPinned(item.is_pinned);
       setFormImageUrl(item.image_url || '');
@@ -236,7 +236,7 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
     setFormTitle('');
     setFormSummary('');
     setFormContent('');
-    setFormCategoryId(null);
+    setFormCategoryId(categories.length > 0 ? categories[0].id : null);
     setFormStatus('published');
     setFormIsPinned(false);
     setFormImageUrl('');
@@ -363,7 +363,7 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
 
   // ===== Helper to get category name by id =====
   const getCategoryName = (id: number | null): string => {
-    if (!id) return 'بدون دسته‌بندی';
+    if (!id) return 'عمومی';
     return categories.find(c => c.id === id)?.name || 'نامشخص';
   };
 
@@ -931,7 +931,6 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
                     value={formCategoryId || ''} onChange={e => setFormCategoryId(e.target.value ? Number(e.target.value) : null)}
                     className="w-full py-2.5 px-3 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-xs font-semibold text-gray-900 dark:text-white focus:outline-none focus:border-teal-500 cursor-pointer"
                   >
-                    <option value="">بدون دسته‌بندی</option>
                     {categories.map(cat => (
                       <option key={cat.id} value={cat.id}>{cat.name}</option>
                     ))}
@@ -1276,14 +1275,7 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
                       </div>
                     </div>
                   ))}
-                  {analytics.uncategorized_count > 0 && (
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="font-bold text-gray-800 dark:text-gray-200">بدون دسته‌بندی</span>
-                        <span className="font-mono text-gray-400">{analytics.uncategorized_count} خبر</span>
-                      </div>
-                    </div>
-                  )}
+
                 </div>
               </div>
             </div>
@@ -1366,7 +1358,7 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
                   آیا از حذف این دسته‌بندی اطمینان دارید؟
                   <br />
-                  <span className="text-amber-500 text-xs">خبرهای این دسته بدون دسته‌بندی می‌شوند.</span>
+                  <span className="text-rose-500 text-xs">دسته‌بندی اخبار این دسته حذف خواهد شد.</span>
                   <br />
                   <span className="text-rose-500 text-xs">این عمل قابل بازگشت نیست.</span>
                 </p>
