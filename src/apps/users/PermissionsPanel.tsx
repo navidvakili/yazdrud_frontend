@@ -151,15 +151,78 @@ export default function PermissionsPanel() {
     setFormError(null);
   };
 
+  /**
+   * Enforce dependency rules on a permission set:
+   * 1. If any {module}.{create|edit|delete|approve} is present → {module}.view must also be present
+   * 2. If any roles.* permission is present → users.view must also be present
+   */
+  const enforceDependencies = (perms: Set<string>): Set<string> => {
+    const result = new Set(perms);
+
+    // Collect all modules that have a non-view action selected
+    const modulesWithActions = new Set<string>();
+    let hasRolesPerm = false;
+
+    for (const perm of perms) {
+      const parts = perm.split('.');
+      const module = parts[0];
+      const action = parts.slice(1).join('.');
+
+      if (module === 'roles') hasRolesPerm = true;
+      if (action && action !== 'view') modulesWithActions.add(module);
+    }
+
+    // Rule 1: Ensure view for any module that has other actions
+    for (const mod of modulesWithActions) {
+      result.add(`${mod}.view`);
+    }
+
+    // Rule 2: If roles permissions exist, ensure users.view
+    if (hasRolesPerm) {
+      result.add('users.view');
+    }
+
+    return result;
+  };
+
   const togglePerm = (permName: string) => {
     setEditingPerms(prev => {
       const next = new Set(prev);
+      const parts = permName.split('.');
+      const module = parts[0];
+      const action = parts.slice(1).join('.');
+
       if (next.has(permName)) {
+        // Deselecting
         next.delete(permName);
+
+        // If deselecting 'view' for a module, also remove dependent perms
+        if (action === 'view') {
+          const modulePerms = allPermissions[module] || [];
+          modulePerms.forEach(p => {
+            const pAction = p.name.split('.').slice(1).join('.');
+            if (pAction && pAction !== 'view') {
+              next.delete(p.name);
+            }
+          });
+        }
       } else {
+        // Selecting
         next.add(permName);
+
+        // Rule 1: If selecting create/edit/delete/approve, auto-add view
+        if (action && action !== 'view') {
+          next.add(`${module}.view`);
+        }
+
+        // Rule 2: If selecting any roles permission, auto-add users.view
+        if (module === 'roles') {
+          next.add('users.view');
+        }
       }
-      return next;
+
+      // Always enforce all dependency rules
+      return enforceDependencies(next);
     });
   };
 
@@ -168,14 +231,23 @@ export default function PermissionsPanel() {
       const next = new Set(prev);
       const modulePerms = allPermissions[module] || [];
       const allSelected = modulePerms.every(p => next.has(p.name));
+
       modulePerms.forEach(p => {
         if (allSelected) {
           next.delete(p.name);
+          // Also clean up: if roles perms removed, users.view stays (may be needed for other reasons)
         } else {
           next.add(p.name);
         }
       });
-      return next;
+
+      // Rule 2: If toggling roles module ON, auto-add users.view
+      if (!allSelected && module === 'roles') {
+        next.add('users.view');
+      }
+
+      // Always enforce all dependency rules
+      return enforceDependencies(next);
     });
   };
 
@@ -184,8 +256,10 @@ export default function PermissionsPanel() {
     setSaving(true);
     setFormError(null);
     try {
+      // Enforce dependency rules before saving (safety net)
+      const finalPerms = enforceDependencies(editingPerms);
       await API(`admin/roles/${editingRoleId}`, {
-        permissions: Array.from(editingPerms),
+        permissions: Array.from(finalPerms),
       }, 'PUT');
       showSuccess('دسترسی‌های نقش با موفقیت بروزرسانی شد');
       cancelEditing();
