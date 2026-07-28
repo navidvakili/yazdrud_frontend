@@ -38,6 +38,19 @@ export interface NewsAttachment {
   url: string;
 }
 
+export interface NewsComment {
+  id: number;
+  news_id?: number;
+  news_title?: string;
+  author_name: string;
+  content: string;
+  is_approved: boolean;
+  approved_at?: string | null;
+  approved_by_name?: string | null;
+  created_at: string;
+  updated_at?: string;
+}
+
 export interface NewsItem {
   id: number;
   title: string;
@@ -53,6 +66,9 @@ export interface NewsItem {
   views_count: number;
   likes_count: number;
   is_pinned: boolean;
+  comments_enabled: boolean;
+  comments_count: number;
+  comments?: NewsComment[];
   status: 'published' | 'draft' | 'archived';
   target_audience: 'all' | 'students' | 'professors' | 'staff';
   tags: string[];

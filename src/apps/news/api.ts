@@ -3,7 +3,7 @@
 // ============================================================
 
 import { API } from '@/src/shared-utils/functions';
-import type { NewsItem, NewsCategory, NewsAnalytics } from '@/src/shared-types';
+import type { NewsItem, NewsCategory, NewsAnalytics, NewsComment } from '@/src/shared-types';
 
 // ===== News CRUD =====
 
@@ -132,4 +132,36 @@ export async function deleteCategory(id: number): Promise<{ message: string }> {
 /** Get news analytics */
 export async function fetchAnalytics(): Promise<{ data: NewsAnalytics }> {
   return API('news-analytics');
+}
+
+// ===== Comments Moderation =====
+
+/** Get all comments (with optional filters) for moderation */
+export async function fetchComments(params: {
+  page?: number;
+  per_page?: number;
+  news_id?: number;
+  status?: 'pending' | 'approved';
+} = {}): Promise<{
+  data: NewsComment[];
+  current_page: number;
+  last_page: number;
+  total: number;
+}> {
+  const query = new URLSearchParams();
+  if (params.page) query.set('page', String(params.page));
+  if (params.per_page) query.set('per_page', String(params.per_page));
+  if (params.news_id) query.set('news_id', String(params.news_id));
+  if (params.status) query.set('status', params.status);
+  return API(`news-comments?${query.toString()}`);
+}
+
+/** Approve a comment */
+export async function approveComment(id: number): Promise<{ message: string; data: { is_approved: boolean } }> {
+  return API(`news-comments/${id}/approve`, {}, 'PUT');
+}
+
+/** Delete a comment */
+export async function deleteComment(id: number): Promise<{ message: string }> {
+  return API(`news-comments/${id}`, {}, 'DELETE');
 }

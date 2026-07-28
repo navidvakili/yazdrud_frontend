@@ -21,7 +21,7 @@ import {
   fetchNews, fetchNewsById, createNews, updateNews, deleteNews,
   togglePin, incrementViews,
   fetchCategories, createCategory, updateCategory, deleteCategory,
-  fetchAnalytics,
+  fetchAnalytics, fetchComments, approveComment, deleteComment,
 } from './api';
 import { useAppPermissions } from '@/src/shared-utils/PermissionsContext';
 
@@ -32,7 +32,7 @@ interface NewsManagementProps {
   onOpenTab?: (id: string, title: string, iconName: string) => void;
 }
 
-type SubTab = 'list' | 'editor' | 'categories' | 'analytics';
+type SubTab = 'list' | 'editor' | 'categories' | 'comments' | 'analytics';
 
 export default function NewsManagement({ user, activeTabId, moduleId }: NewsManagementProps) {
   const { can } = useAppPermissions();
@@ -83,6 +83,7 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
   const [formImageUrl, setFormImageUrl] = useState('');
   const [showMediaSelector, setShowMediaSelector] = useState(false);
   const [formTags, setFormTags] = useState<string[]>([]);
+  const [formCommentsEnabled, setFormCommentsEnabled] = useState(true);
   const [formMessage, setFormMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [formLoading, setFormLoading] = useState(false);
 
@@ -110,6 +111,15 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
 
   // ===== Analytics state =====
   const [analytics, setAnalytics] = useState<any>(null);
+
+  // ===== Comment Moderation State =====
+  const [commentsList, setCommentsList] = useState<any[]>([]);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [commentsFilter, setCommentsFilter] = useState<'all' | 'pending' | 'approved'>('pending');
+  const [commentsPage, setCommentsPage] = useState(1);
+  const [commentsTotalPages, setCommentsTotalPages] = useState(1);
+  const [approveLoadingId, setApproveLoadingId] = useState<number | null>(null);
+  const [deleteCommentId, setDeleteCommentId] = useState<number | null>(null);
 
   // ===== Fetch data =====
   const loadNews = useCallback(async () => {
@@ -212,6 +222,7 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
       setFormCategoryId(data.category_id ? Number(data.category_id) : (categories.length > 0 ? categories[0].id : null));
       setFormStatus(data.status);
       setFormIsPinned(data.is_pinned);
+      setFormCommentsEnabled(data.comments_enabled);
       setFormImageUrl(data.image_url || '');
       setFormTags(data.tags || []);
     } catch (err: any) {
@@ -223,6 +234,7 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
       setFormCategoryId(item.category_id ? Number(item.category_id) : (categories.length > 0 ? categories[0].id : null));
       setFormStatus(item.status);
       setFormIsPinned(item.is_pinned);
+      setFormCommentsEnabled(item.comments_enabled);
       setFormImageUrl(item.image_url || '');
       setFormTags(item.tags || []);
       showToast(err.message || 'خطا در بارگذاری جزئیات خبر', 'error');
@@ -239,6 +251,7 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
     setFormCategoryId(categories.length > 0 ? categories[0].id : null);
     setFormStatus('published');
     setFormIsPinned(false);
+    setFormCommentsEnabled(true);
     setFormImageUrl('');
     setFormTags([]);
     setFormMessage(null);
@@ -264,6 +277,7 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
         status: formStatus,
         target_audience: 'all' as const,
         is_pinned: formIsPinned,
+        comments_enabled: formCommentsEnabled,
         tags: tagArray,
       };
 
@@ -383,6 +397,54 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
     }
   }, [activeTab]);
 
+  // ===== Load comments for moderation =====
+  const loadComments = useCallback(async () => {
+    setCommentsLoading(true);
+    try {
+      const params: Record<string, any> = { page: commentsPage, per_page: 20 };
+      if (commentsFilter !== 'all') params.status = commentsFilter;
+      const data = await fetchComments(params);
+      setCommentsList(data.data || []);
+      setCommentsTotalPages(data.last_page || 1);
+    } catch {
+      setCommentsList([]);
+    } finally {
+      setCommentsLoading(false);
+    }
+  }, [commentsPage, commentsFilter]);
+
+  useEffect(() => {
+    if (activeTab === 'comments') {
+      loadComments();
+    }
+  }, [activeTab, loadComments]);
+
+  const handleApproveComment = async (id: number) => {
+    setApproveLoadingId(id);
+    try {
+      await approveComment(id);
+      setCommentsList(prev => prev.map(c => c.id === id ? { ...c, is_approved: true } : c));
+      showToast('نظر با موفقیت تایید شد.', 'success');
+    } catch {
+      showToast('خطا در تایید نظر', 'error');
+    } finally {
+      setApproveLoadingId(null);
+    }
+  };
+
+  const confirmDeleteComment = async () => {
+    if (!deleteCommentId) return;
+    try {
+      await deleteComment(deleteCommentId);
+      setCommentsList(prev => prev.filter(c => c.id !== deleteCommentId));
+      showToast('نظر با موفقیت حذف شد.', 'success');
+    } catch {
+      showToast('خطا در حذف نظر', 'error');
+    } finally {
+      setDeleteCommentId(null);
+    }
+  };
+
   // ===== Category color map for display =====
   const CATEGORY_COLORS: Record<string, string> = {
     'bg-teal-500/10 text-teal-700 dark:text-teal-300 border-teal-500/30': 'teal',
@@ -501,6 +563,18 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
             <Layers className="w-4 h-4" />
             <span>دسته‌بندی‌های خبری</span>
           </button>
+
+          {isAdmin && (
+            <button
+              onClick={() => setActiveTab('comments')}
+              className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
+                activeTab === 'comments' ? 'bg-teal-600 text-white shadow-md shadow-teal-600/20' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+              }`}
+            >
+              <MessageSquare className="w-4 h-4" />
+              <span>مدیریت نظرات</span>
+            </button>
+          )}
 
           {isAdmin && (
             <button
@@ -965,6 +1039,17 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
                   </label>
                 </div>
 
+                <div className="pt-1">
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input type="checkbox" checked={formCommentsEnabled} onChange={e => setFormCommentsEnabled(e.target.checked)} className="rounded text-teal-600 focus:ring-teal-500 h-4 w-4" />
+                    <span className="text-xs font-bold text-gray-800 dark:text-gray-200 flex items-center gap-1">
+                      <MessageSquare className="w-3.5 h-3.5 text-teal-500" />
+                      فعال بودن بخش نظرات
+                    </span>
+                  </label>
+                  <p className="text-[10px] text-gray-400 mt-1 mr-6">در صورت غیرفعال بودن، بخش نظرات در نمایش عمومی خبر نمایش داده نمی‌شود.</p>
+                </div>
+
                 <div className="pt-2">
                   <label className="block text-[11px] font-bold text-gray-600 dark:text-gray-400 mb-1">تصویر شاخص</label>
                   <div className="space-y-2">
@@ -1192,7 +1277,133 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
         </div>
       )}
 
-      {/* ===== TAB 4: ANALYTICS ===== */}
+      {/* ===== TAB 4: COMMENTS MODERATION ===== */}
+      {activeTab === 'comments' && isAdmin && (
+        <div className="space-y-6">
+          {/* Moderation Header */}
+          <div className="bg-white dark:bg-gray-900 p-5 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-xs">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <h2 className="text-base font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
+                <MessageSquare className="w-5 h-5 text-teal-600" />
+                <span>مدیریت و تایید نظرات</span>
+              </h2>
+              <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
+                {(['pending', 'all', 'approved'] as const).map(filter => (
+                  <button
+                    key={filter}
+                    onClick={() => { setCommentsFilter(filter); setCommentsPage(1); }}
+                    className={`px-4 py-1.5 rounded-lg text-[11px] font-black transition-all cursor-pointer ${
+                      commentsFilter === filter ? 'bg-white dark:bg-gray-700 text-teal-600 dark:text-teal-400 shadow-xs' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                    }`}
+                  >
+                    {filter === 'pending' ? 'در انتظار تایید' : filter === 'all' ? 'همه' : 'تایید شده'}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Comments List */}
+          {commentsLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-8 h-8 text-teal-500 animate-spin" />
+            </div>
+          ) : commentsList.length === 0 ? (
+            <div className="bg-white dark:bg-gray-900 rounded-3xl p-12 text-center space-y-3 border border-gray-100 dark:border-gray-800">
+              <MessageSquare className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto" />
+              <h3 className="text-base font-bold text-gray-700 dark:text-gray-200">نظری یافت نشد</h3>
+              <p className="text-xs text-gray-400">
+                {commentsFilter === 'pending' ? 'همه نظرات بررسی و تایید شده‌اند.' : 'هنوز نظری ثبت نشده است.'}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {commentsList.map(comment => (
+                <div
+                  key={comment.id}
+                  className={`bg-white dark:bg-gray-900 rounded-3xl p-5 border shadow-xs transition-all ${
+                    comment.is_approved ? 'border-emerald-200 dark:border-emerald-900/40' : 'border-amber-200 dark:border-amber-900/40 border-dashed'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0 space-y-2">
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <span className="text-xs font-extrabold text-gray-900 dark:text-white">
+                          {comment.author_name}
+                        </span>
+                        <span className="text-[10px] font-mono text-gray-400">
+                          {new Date(comment.created_at).toLocaleDateString('fa-IR')}
+                        </span>
+                        {comment.news_title && (
+                          <span className="text-[10px] font-bold text-teal-600 dark:text-teal-400 bg-teal-500/10 px-2 py-0.5 rounded-lg">
+                            خبر: {comment.news_title}
+                          </span>
+                        )}
+                        {comment.is_approved ? (
+                          <span className="text-[10px] font-bold text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded-lg flex items-center gap-1">
+                            <CheckCircle2 className="w-3 h-3" />
+                            تایید شده
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-bold text-amber-600 bg-amber-500/10 px-2 py-0.5 rounded-lg flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            در انتظار تایید
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed">
+                        {comment.content}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {!comment.is_approved && (
+                        <button
+                          onClick={() => handleApproveComment(comment.id)}
+                          disabled={approveLoadingId === comment.id}
+                          className="px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold cursor-pointer transition-all disabled:opacity-50 flex items-center gap-1"
+                        >
+                          {approveLoadingId === comment.id ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <CheckCircle2 className="w-3 h-3" />
+                          )}
+                          <span>تایید</span>
+                        </button>
+                      )}
+                      <button
+                        onClick={() => setDeleteCommentId(comment.id)}
+                        className="px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 text-xs font-bold cursor-pointer transition-all flex items-center gap-1"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        <span>حذف</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              {/* Pagination */}
+              {commentsTotalPages > 1 && (
+                <div className="flex items-center justify-center gap-2 pt-4">
+                  {Array.from({ length: commentsTotalPages }, (_, i) => i + 1).map(page => (
+                    <button
+                      key={page}
+                      onClick={() => setCommentsPage(page)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                        page === commentsPage ? 'bg-teal-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ===== TAB 5: ANALYTICS ===== */}
       {activeTab === 'analytics' && (
         <div className="space-y-6">
           {!analytics ? (
@@ -1374,6 +1585,53 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
                     className="px-5 py-2.5 text-sm font-bold text-white bg-rose-500 hover:bg-rose-600 rounded-xl transition-colors cursor-pointer"
                   >
                     حذف دسته‌بندی
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* ===== Delete Comment Confirmation Modal ===== */}
+      <AnimatePresence>
+        {deleteCommentId !== null && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/40 z-50"
+              onClick={() => setDeleteCommentId(null)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
+            >
+              <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 p-6 w-full max-w-md pointer-events-auto text-center">
+                <div className="mx-auto w-12 h-12 bg-rose-100 dark:bg-rose-900/30 rounded-full flex items-center justify-center mb-4">
+                  <Trash2 className="w-6 h-6 text-rose-500" />
+                </div>
+                <h3 className="text-lg font-black text-gray-900 dark:text-white mb-2">حذف نظر</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+                  آیا از حذف این نظر اطمینان دارید؟
+                  <br />
+                  <span className="text-rose-500 text-xs">این عمل قابل بازگشت نیست.</span>
+                </p>
+                <div className="flex justify-center gap-3">
+                  <button
+                    onClick={() => setDeleteCommentId(null)}
+                    className="px-5 py-2.5 text-sm font-bold text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors cursor-pointer"
+                  >
+                    انصراف
+                  </button>
+                  <button
+                    onClick={confirmDeleteComment}
+                    className="px-5 py-2.5 text-sm font-bold text-white bg-rose-500 hover:bg-rose-600 rounded-xl transition-colors cursor-pointer"
+                  >
+                    حذف نظر
                   </button>
                 </div>
               </div>
