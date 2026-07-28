@@ -53,16 +53,6 @@ interface ApiResponse<T> {
 
 // ===== Constants =====
 
-const MODULE_LABELS: Record<string, string> = {
-  library: 'کتابخانه',
-  navigation: 'ناوبری',
-  news: 'اخبار',
-  roles: 'نقش‌ها',
-  sessions: 'نشست‌ها',
-  settings: 'تنظیمات',
-  users: 'کاربران',
-};
-
 const PERMISSION_LABELS: Record<string, string> = {
   view: 'مشاهده',
   create: 'ایجاد',
@@ -91,6 +81,7 @@ const ROLE_COLORS: Record<string, string> = {
 export default function PermissionsPanel() {
   const [roles, setRoles] = useState<RoleItem[]>([]);
   const [allPermissions, setAllPermissions] = useState<PermissionsByModule>({});
+  const [moduleLabels, setModuleLabels] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -119,10 +110,13 @@ export default function PermissionsPanel() {
     try {
       const [rolesRes, permsRes] = await Promise.all([
         API<ApiResponse<RoleItem[]>>('admin/roles'),
-        API<ApiResponse<PermissionsByModule>>('admin/permissions'),
+        API<ApiResponse<PermissionsByModule> & { labels: Record<string, string> }>('admin/permissions'),
       ]);
       setRoles(rolesRes.data);
       setAllPermissions(permsRes.data);
+      if (permsRes.labels) {
+        setModuleLabels(permsRes.labels);
+      }
     } catch (err: any) {
       setError(err.message || 'خطا در دریافت اطلاعات');
     } finally {
@@ -405,7 +399,7 @@ export default function PermissionsPanel() {
 
                     <div className="p-5 space-y-4">
                       {Object.entries(allPermissions).map(([module, perms]) => {
-                        const moduleLabel = MODULE_LABELS[module] || module;
+                        const moduleLabel = moduleLabels[module] || module;
                         const allSelected = perms.every(p => editingPerms.has(p.name));
                         const someSelected = perms.some(p => editingPerms.has(p.name));
                         const isExpanded = expandedModules.has(module);
