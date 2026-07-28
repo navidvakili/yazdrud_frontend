@@ -3,10 +3,10 @@
 // مبتنی بر Tiptap + Y.js Collaboration
 // ============================================================
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef, memo } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
+import { NodeSelection } from '@tiptap/pm/state';
 import StarterKit from '@tiptap/starter-kit';
-import Placeholder from '@tiptap/extension-placeholder';
 import TextAlign from '@tiptap/extension-text-align';
 import Image from '@tiptap/extension-image';
 import Link from '@tiptap/extension-link';
@@ -26,10 +26,43 @@ import {
   Bold, Italic, Underline as UnderlineIcon, Strikethrough, Code, Heading1, Heading2, Heading3,
   List, ListOrdered, AlignRight, AlignCenter, AlignLeft, AlignJustify,
   Quote, Minus, Undo2, Redo2, Link as LinkIcon, Image as ImageIcon,
-  Highlighter, Palette, Table as TableIcon, Type, RemoveFormatting,
-  Users, Globe, CodeSquare, Upload,
+  Highlighter, Palette, Table as TableIcon, RemoveFormatting,
+  Globe, CodeSquare,
 } from 'lucide-react';
 import MediaManager from './MediaManager';
+
+/** Image extension with configurable width (for resize controls) */
+const ResizableImage = Image.extend({
+  selectable: true,
+  // NOTE: draggable: true conflicts with click-to-select in ProseMirror's event pipeline.
+  // When enabled, ProseMirror's drag handler intercepts mousedown on the image and
+  // reverts NodeSelection back to TextSelection. Keep it false for reliable selection.
+  draggable: false,
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      width: {
+        default: null,
+        parseHTML: element => element.getAttribute('width') || element.style.width || null,
+        renderHTML: attributes => {
+          if (!attributes.width) return {};
+          const width = String(attributes.width);
+          return {
+            width,
+            style: `width: ${width}; height: auto;`,
+          };
+        },
+      },
+    };
+  },
+});
+
+const IMAGE_SIZE_PRESETS = [
+  { label: '۲۵٪', value: '25%' },
+  { label: '۵۰٪', value: '50%' },
+  { label: '۷۵٪', value: '75%' },
+  { label: '۱۰۰٪', value: '100%' },
+] as const;
 
 // ===== Collaboration Config =====
 const ROOM_PREFIX = 'news-editor-';
@@ -86,6 +119,105 @@ function ToolbarDivider() {
   return <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-0.5" />;
 }
 
+// ===== ImageSizePalette — image resize controls =====
+// Shows floating width presets when an image is selected (NodeSelection).
+// We rely on ProseMirror's built-in mousedown handler + handleClick in editorProps
+// to create a stable NodeSelection. No DOM manipulation needed.
+const ImageSizePalette = memo(function ImageSizePalette({ editor }: { editor: any }) {
+  const [visible, setVisible] = useState(false);
+  const [currentWidth, setCurrentWidth] = useState<string>('');
+
+  useEffect(() => {
+    if (!editor) return;
+
+    const update = () => {
+      const { selection } = editor.state;
+      if (!(selection instanceof NodeSelection)) {
+        setVisible(false);
+        return;
+      }
+      const node = selection.node;
+      if (!node || node.type?.name !== 'image') {
+        setVisible(false);
+        return;
+      }
+
+      setVisible(true);
+      setCurrentWidth(node.attrs?.width ?? '');
+    };
+
+    editor.on('selectionUpdate', update);
+    update();
+
+    return () => {
+      editor.off('selectionUpdate', update);
+    };
+  }, [editor]);
+
+  const setWidth = (width: string | null) => {
+    const { selection } = editor.state;
+    if (!(selection instanceof NodeSelection) || !selection.node || selection.node.type?.name !== 'image') return;
+    editor.chain().updateAttributes('image', { width }).run();
+  };
+
+  const applyWidthInput = () => {
+    if (!inputRef.current) return;
+    const width = inputRef.current.value.trim() || null;
+    const { selection } = editor.state;
+    if (!(selection instanceof NodeSelection) || !selection.node || selection.node.type?.name !== 'image') return;
+    editor.chain().updateAttributes('image', { width }).run();
+  };
+
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  if (!visible) return null;
+
+  return (
+    <div className="flex items-center gap-1 mr-1 px-1.5 py-0.5 rounded-lg bg-teal-50 dark:bg-teal-950/30 border border-teal-200 dark:border-teal-800">
+      <span className="text-[10px] font-bold text-teal-700 dark:text-teal-300 whitespace-nowrap shrink-0">اندازه:</span>
+      {IMAGE_SIZE_PRESETS.map(preset => (
+        <button
+          key={preset.value}
+          type="button"
+          onMouseDown={e => e.preventDefault()}
+          onClick={() => setWidth(preset.value)}
+          className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold cursor-pointer transition-colors shrink-0 ${
+            currentWidth === preset.value
+              ? 'bg-teal-600 text-white'
+              : 'text-teal-700 dark:text-teal-300 hover:bg-teal-100 dark:hover:bg-teal-900/40'
+          }`}
+          title={`عرض تصویر ${preset.label}`}
+        >
+          {preset.label}
+        </button>
+      ))}
+      <input
+        ref={inputRef}
+        type="text"
+        defaultValue={currentWidth}
+        onBlur={applyWidthInput}
+        onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+        placeholder="مثلاً 300px"
+        className="w-16 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-white dark:bg-gray-800 border border-teal-300 dark:border-teal-700 text-gray-900 dark:text-white text-center focus:outline-none focus:ring-1 focus:ring-teal-500"
+        title="عرض دلخواه (px یا %)"
+      />
+      <button
+        type="button"
+        onMouseDown={e => e.preventDefault()}
+        onClick={() => setWidth(null)}
+        className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold cursor-pointer transition-colors shrink-0 ${
+          !currentWidth
+            ? 'bg-teal-600 text-white'
+            : 'text-teal-700 dark:text-teal-300 hover:bg-teal-100 dark:hover:bg-teal-900/40'
+        }`}
+        title="اندازه پیش‌فرض"
+      >
+        خودکار
+      </button>
+    </div>
+  );
+});
+
 // ===== Props =====
 interface WysiwygEditorProps {
   content: string;
@@ -117,7 +249,8 @@ export default function WysiwygEditor({
 }: WysiwygEditorProps) {
   const yDocRef = useRef<Y.Doc | null>(null);
   const providerRef = useRef<WebrtcProvider | null>(null);
-  const collabInitRef = useRef(false);
+  const isInternalUpdate = useRef(false);
+  const lastSyncedContentRef = useRef(content);
   const [showHtmlSource, setShowHtmlSource] = useState(false);
   const [htmlSourceText, setHtmlSourceText] = useState('');
   const [showColorPicker, setShowColorPicker] = useState(false);
@@ -125,29 +258,22 @@ export default function WysiwygEditor({
   const [showMediaManager, setShowMediaManager] = useState(false);
   const [tableHover, setTableHover] = useState({ r: 0, c: 0 });
 
-  // ===== Setup Collaboration =====
-  const setupCollaboration = useCallback((docId: string) => {
-    if (collabInitRef.current) return;
-
+  // ===== Create yDoc BEFORE extensions if collaboration enabled =====
+  // This ensures Collaboration extensions have access to yDoc at editor creation time
+  if (collaboration && documentId && !yDocRef.current) {
     const yDoc = new Y.Doc();
     yDocRef.current = yDoc;
-
-    const roomName = `${ROOM_PREFIX}${docId}`;
-    const provider = new WebrtcProvider(roomName, yDoc, {
+    const provider = new WebrtcProvider(`${ROOM_PREFIX}${documentId}`, yDoc, {
       signaling: ['wss://signaling.yjs.dev'],
     });
     providerRef.current = provider;
-
-    // Set user info for cursor
     if (currentUser) {
       provider.awareness.setLocalStateField('user', {
         name: currentUser.name,
         color: currentUser.color,
       });
     }
-
-    collabInitRef.current = true;
-  }, [currentUser]);
+  }
 
   // ===== Cleanup =====
   useEffect(() => {
@@ -158,75 +284,114 @@ export default function WysiwygEditor({
     };
   }, []);
 
-  // ===== Extensions =====
-  const baseExtensions = [
-    StarterKit.configure({
-      heading: { levels: [1, 2, 3] },
-    }),
-    Placeholder.configure({ placeholder }),
-    TextAlign.configure({ types: ['heading', 'paragraph'] }),
-    Image.configure({ inline: false, allowBase64: true }),
-    Link.configure({ openOnClick: false, HTMLAttributes: { class: 'text-teal-600 underline' } }),
-    Highlight.configure({ multicolor: true }),
-    Underline,
-    TextStyle,
-    Color,
-    Table.configure({ resizable: true }),
-    TableRow,
-    TableCell,
-    TableHeader,
-  ];
+  // ===== Extensions (stable reference — initialized once) =====
+  const extensionsRef = useRef<any[] | null>(null);
+  if (!extensionsRef.current) {
+    const exts: any[] = [
+      StarterKit.configure({
+        heading: { levels: [1, 2, 3] },
+        link: false,
+        underline: false,
+      }),
+      TextAlign.configure({ types: ['heading', 'paragraph'] }),
+      ResizableImage.configure({ inline: false, allowBase64: true }),
+      Link.configure({ openOnClick: false, HTMLAttributes: { class: 'text-teal-600 underline' } }),
+      Highlight.configure({ multicolor: true }),
+      Underline,
+      TextStyle,
+      Color,
+      Table.configure({ resizable: true }),
+      TableRow,
+      TableCell,
+      TableHeader,
+    ];
 
-  // Add collaboration extensions if enabled
-  const collabExtensions: any[] = [];
-  if (collaboration && documentId && yDocRef.current) {
-    collabExtensions.push(
-      Collaboration.configure({ document: yDocRef.current }),
-    );
-    if (currentUser) {
-      collabExtensions.push(
-        CollaborationCursor.configure({
-          provider: providerRef.current!,
-          user: currentUser,
-        }),
-      );
+    // Add Collaboration extensions if yDoc is ready (created before extensions)
+    if (yDocRef.current && providerRef.current) {
+      exts.push(Collaboration.configure({ document: yDocRef.current }));
+      exts.push(CollaborationCursor.configure({ provider: providerRef.current }));
     }
+
+    extensionsRef.current = exts;
   }
 
-  const extensions = [...baseExtensions, ...collabExtensions];
-
   const editor = useEditor({
-    extensions,
+    extensions: extensionsRef.current,
     content,
     editable,
     editorProps: {
       attributes: {
-        class: 'tiptap-editor prose prose-sm max-w-none focus:outline-none min-h-[280px] p-4 text-xs leading-relaxed',
+        class: 'tiptap-editor max-w-none focus:outline-none min-h-[280px] p-4 text-xs',
         dir: 'rtl',
         style: `min-height: ${minHeight}`,
       },
+      handleDOMEvents: {
+        mousedown(view, event) {
+          // Handle image clicks at the EARLIEST possible moment (mousedown)
+          // to call event.preventDefault() before the browser creates a
+          // DOM selection, and return true to skip ProseMirror's built-in
+          // mouseDown() (which would set up a mouseup listener that could
+          // fire extra transactions).
+          const target = event.target;
+          if (!(target instanceof HTMLElement)) return false;
+          const imgEl = target.tagName === 'IMG' ? target : target.closest('img');
+          if (!imgEl) return false;
+          const imgPos = view.posAtDOM(imgEl, 0);
+          if (imgPos === undefined || imgPos === null) return false;
+          const $pos = view.state.doc.resolve(imgPos);
+          if ($pos.nodeAfter?.type.name === 'image') {
+            event.preventDefault();
+            const nodeSel = new NodeSelection($pos);
+            view.dispatch(view.state.tr.setSelection(nodeSel));
+            return true;
+          }
+          return false;
+        },
+      },
+      handleClick(view, pos, event) {
+        // Backup: reinforce NodeSelection in case the DOM selectionchange
+        // observer fired between mousedown and click.
+        const $pos = view.state.doc.resolve(pos);
+        if ($pos.nodeAfter?.type.name === 'image') {
+          event.preventDefault();
+          const nodeSel = new NodeSelection($pos);
+          view.dispatch(view.state.tr.setSelection(nodeSel));
+          return true;
+        }
+        return false;
+      },
     },
     onUpdate: ({ editor: e }) => {
+      isInternalUpdate.current = true;
+      lastSyncedContentRef.current = e.getHTML();
       onChange(e.getHTML());
     },
   });
 
-  // ===== Sync content from outside =====
+  // ===== Sync content from outside (only for GENUINE external changes) =====
+  // Uses isInternalUpdate flag to ignore changes caused by our own onUpdate.
+  // This breaks the endless loop: onUpdate → parent setState → content prop → setContent → selection destroyed
   useEffect(() => {
-    if (editor && !collaboration) {
-      const currentContent = editor.getHTML();
-      if (content !== currentContent) {
-        editor.commands.setContent(content, { emitUpdate: false });
-      }
-    }
-  }, [content, editor, collaboration]);
+    if (!editor) return;
 
-  // ===== Setup collaboration on mount =====
-  useEffect(() => {
-    if (collaboration && documentId) {
-      setupCollaboration(documentId);
+    // Skip if this content change was triggered by our own editing
+    if (isInternalUpdate.current) {
+      isInternalUpdate.current = false;
+      return;
     }
-  }, [collaboration, documentId, setupCollaboration]);
+
+    // Use ref comparison to avoid infinite loop from formatting differences
+    // between editor.getHTML() and the content prop (e.g., '' vs '<p></p>').
+    if (lastSyncedContentRef.current === content) return;
+
+    lastSyncedContentRef.current = content;
+
+    // Genuine external change (e.g., loading a new document)
+    editor.commands.setContent(content, { emitUpdate: false });
+  }, [content, editor]);
+
+  // EditorContent مستقیماً رندر می‌شود
+  const editorView = <EditorContent editor={editor} />;
 
   // ===== Toolbar Actions =====
   if (!editor) return null;
@@ -474,6 +639,7 @@ export default function WysiwygEditor({
           <ToolbarBtn onClick={addImage} title="تصویر">
             <ImageIcon className="w-4 h-4" />
           </ToolbarBtn>
+          <ImageSizePalette editor={editor} />
 
           <ToolbarDivider />
 
@@ -605,7 +771,7 @@ export default function WysiwygEditor({
         </div>
       ) : (
         <div className="overflow-hidden rounded-b-2xl">
-          <EditorContent editor={editor} />
+          {editorView}
         </div>
       )}
 

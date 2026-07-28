@@ -19,8 +19,8 @@ import TagInput from '@/src/shared-components/TagInput';
 import MediaManager from '@/src/shared-components/MediaManager';
 import {
   fetchNews, fetchNewsById, createNews, updateNews, deleteNews,
-  togglePin, likeNews, incrementViews,
-  fetchCategories, createCategory, deleteCategory,
+  togglePin, incrementViews,
+  fetchCategories, createCategory, updateCategory, deleteCategory,
   fetchAnalytics,
 } from './api';
 
@@ -84,6 +84,11 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
   const [newCatDesc, setNewCatDesc] = useState('');
   const [newCatColor, setNewCatColor] = useState('bg-teal-500/10 text-teal-700 dark:text-teal-300 border-teal-500/30');
   const [catLoading, setCatLoading] = useState(false);
+  const [editingCategoryId, setEditingCategoryId] = useState<number | null>(null);
+  const [editCatName, setEditCatName] = useState('');
+  const [editCatDesc, setEditCatDesc] = useState('');
+  const [editCatColor, setEditCatColor] = useState('');
+  const [editCatLoading, setEditCatLoading] = useState(false);
 
   // ===== Toast state =====
   const [toast, setToast] = useState<{ text: string; type: 'success' | 'error' | 'info' } | null>(null);
@@ -159,19 +164,6 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
     }
   };
 
-  const handleToggleLike = async (itemId: number, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
-    try {
-      const result = await likeNews(itemId);
-      setNewsList(prev => prev.map(n => n.id === itemId ? { ...n, likes_count: result.data.likes_count } : n));
-      if (activeReaderItem?.id === itemId) {
-        setActiveReaderItem(prev => prev ? { ...prev, likes_count: result.data.likes_count } : null);
-      }
-    } catch (err) {
-      console.error('Like error:', err);
-    }
-  };
-
   const handleTogglePin = async (itemId: number, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     try {
@@ -199,19 +191,37 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
     }
   };
 
-  const handleStartEdit = (item: NewsItem, e?: React.MouseEvent) => {
+  const handleStartEdit = async (item: NewsItem, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    setEditingNewsId(item.id);
-    setFormTitle(item.title);
-    setFormSummary(item.summary || '');
-    setFormContent(item.content);
-    setFormCategoryId(item.category_id);
-    setFormStatus(item.status);
-    setFormIsPinned(item.is_pinned);
-    setFormImageUrl(item.image_url || '');
-    setFormTags(item.tags || []);
     setFormMessage(null);
     setActiveTab('editor');
+    setFormLoading(true);
+    try {
+      const { data } = await fetchNewsById(item.id);
+      setEditingNewsId(data.id);
+      setFormTitle(data.title);
+      setFormSummary(data.summary || '');
+      setFormContent(data.content || '');
+      setFormCategoryId(data.category_id ? Number(data.category_id) : null);
+      setFormStatus(data.status);
+      setFormIsPinned(data.is_pinned);
+      setFormImageUrl(data.image_url || '');
+      setFormTags(data.tags || []);
+    } catch (err: any) {
+      // Fallback to list item if detail fetch fails
+      setEditingNewsId(item.id);
+      setFormTitle(item.title);
+      setFormSummary(item.summary || '');
+      setFormContent(item.content || '');
+      setFormCategoryId(item.category_id ? Number(item.category_id) : null);
+      setFormStatus(item.status);
+      setFormIsPinned(item.is_pinned);
+      setFormImageUrl(item.image_url || '');
+      setFormTags(item.tags || []);
+      showToast(err.message || 'خطا در بارگذاری جزئیات خبر', 'error');
+    } finally {
+      setFormLoading(false);
+    }
   };
 
   const handleResetForm = () => {
@@ -245,6 +255,7 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
         category_id: formCategoryId,
         image_url: formImageUrl || undefined,
         status: formStatus,
+        target_audience: 'all' as const,
         is_pinned: formIsPinned,
         tags: tagArray,
       };
@@ -287,10 +298,45 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
       await loadCategories();
       setNewCatName('');
       setNewCatDesc('');
+      showToast('دسته‌بندی با موفقیت ایجاد شد.', 'success');
     } catch (err: any) {
-      alert(err.message || 'خطا در ایجاد دسته‌بندی');
+      showToast(err.message || 'خطا در ایجاد دسته‌بندی', 'error');
     } finally {
       setCatLoading(false);
+    }
+  };
+
+  const handleStartEditCategory = (cat: NewsCategory) => {
+    setEditingCategoryId(cat.id);
+    setEditCatName(cat.name);
+    setEditCatDesc(cat.description || '');
+    setEditCatColor(cat.color || 'bg-teal-500/10 text-teal-700 dark:text-teal-300 border-teal-500/30');
+  };
+
+  const handleCancelEditCategory = () => {
+    setEditingCategoryId(null);
+    setEditCatName('');
+    setEditCatDesc('');
+    setEditCatColor('');
+  };
+
+  const handleUpdateCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCategoryId || !editCatName.trim()) return;
+    setEditCatLoading(true);
+    try {
+      await updateCategory(editingCategoryId, {
+        name: editCatName.trim(),
+        description: editCatDesc || undefined,
+        color: editCatColor || undefined,
+      });
+      await loadCategories();
+      handleCancelEditCategory();
+      showToast('عنوان دسته‌بندی با موفقیت به‌روزرسانی شد.', 'success');
+    } catch (err: any) {
+      showToast(err.message || 'خطا در ویرایش دسته‌بندی', 'error');
+    } finally {
+      setEditCatLoading(false);
     }
   };
 
@@ -647,14 +693,10 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
                         <Eye className="w-3.5 h-3.5 text-teal-500" />
                         <span className="font-mono">{item.views_count}</span>
                       </span>
-                      <button
-                        onClick={e => handleToggleLike(item.id, e)}
-                        className="flex items-center gap-1 text-[11px] hover:text-rose-500 transition-colors cursor-pointer"
-                        title="پسندیدن"
-                      >
+                      <span className="flex items-center gap-1 text-[11px]" title="پسندها">
                         <Heart className="w-3.5 h-3.5 text-rose-500" />
                         <span className="font-mono">{item.likes_count}</span>
-                      </button>
+                      </span>
                     </div>
 
                     {canEdit && (
@@ -982,33 +1024,102 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
                 </h3>
                 <div className="space-y-3">
                   {categories.map(cat => (
-                    <div key={cat.id} className="p-4 rounded-2xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/60 flex items-center justify-between gap-4">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className={`px-2.5 py-0.5 rounded-lg text-xs font-black ${cat.color}`}>
-                            {cat.name}
-                          </span>
-                          <span className="text-[11px] font-mono text-gray-400">({cat.count ?? 0} خبر)</span>
+                    <div key={cat.id} className="p-4 rounded-2xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/60">
+                      {editingCategoryId === cat.id ? (
+                        <form onSubmit={handleUpdateCategory} className="space-y-3">
+                          <div>
+                            <label className="block text-[11px] font-bold text-gray-600 dark:text-gray-400 mb-1">عنوان دسته‌بندی</label>
+                            <input
+                              type="text"
+                              required
+                              value={editCatName}
+                              onChange={e => setEditCatName(e.target.value)}
+                              className="w-full px-3 py-2 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-xs font-bold text-gray-900 dark:text-white focus:outline-none focus:border-teal-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-bold text-gray-600 dark:text-gray-400 mb-1">توضیحات</label>
+                            <textarea
+                              rows={2}
+                              value={editCatDesc}
+                              onChange={e => setEditCatDesc(e.target.value)}
+                              className="w-full px-3 py-2 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-xs text-gray-900 dark:text-white focus:outline-none focus:border-teal-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-bold text-gray-600 dark:text-gray-400 mb-1">رنگ</label>
+                            <select
+                              value={editCatColor}
+                              onChange={e => setEditCatColor(e.target.value)}
+                              className="w-full px-3 py-2 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-xs font-bold"
+                            >
+                              <option value="bg-teal-500/10 text-teal-700 dark:text-teal-300 border-teal-500/30">سبز فیروزه‌ای</option>
+                              <option value="bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border-indigo-500/30">نیلی</option>
+                              <option value="bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30">طلایی</option>
+                              <option value="bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/30">رز</option>
+                              <option value="bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/30">بنفش</option>
+                              <option value="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30">سبز</option>
+                            </select>
+                          </div>
+                          <div className="flex items-center gap-2 justify-end">
+                            <button
+                              type="button"
+                              onClick={handleCancelEditCategory}
+                              className="px-3 py-1.5 rounded-xl bg-white dark:bg-gray-900 text-xs font-bold text-gray-600 border border-gray-200 dark:border-gray-700 cursor-pointer"
+                            >
+                              انصراف
+                            </button>
+                            <button
+                              type="submit"
+                              disabled={editCatLoading}
+                              className="px-4 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                            >
+                              {editCatLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                              ذخیره عنوان
+                            </button>
+                          </div>
+                        </form>
+                      ) : (
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="space-y-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className={`px-2.5 py-0.5 rounded-lg text-xs font-black border ${cat.color || 'bg-gray-100 text-gray-700'}`}>
+                                {cat.name}
+                              </span>
+                              <span className="text-[11px] font-mono text-gray-400">({cat.count ?? 0} خبر)</span>
+                            </div>
+                            {cat.description && (
+                              <p className="text-xs text-gray-500 dark:text-gray-400">{cat.description}</p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <button
+                              onClick={() => { setSelectedCatFilter(cat.id); setActiveTab('list'); }}
+                              className="px-3 py-1.5 rounded-xl bg-white dark:bg-gray-900 text-xs font-bold text-teal-600 border border-gray-200 dark:border-gray-700 hover:bg-teal-50"
+                            >
+                              مشاهده اخبار
+                            </button>
+                            {canEdit && (
+                              <button
+                                onClick={() => handleStartEditCategory(cat)}
+                                className="p-1.5 rounded-lg hover:bg-teal-50 dark:hover:bg-teal-950/30 text-teal-600 cursor-pointer"
+                                title="ویرایش عنوان دسته‌بندی"
+                              >
+                                <Edit3 className="w-4 h-4" />
+                              </button>
+                            )}
+                            {isAdmin && (
+                              <button
+                                onClick={() => setDeleteCatId(cat.id)}
+                                className="p-1.5 rounded-lg hover:bg-red-50 text-red-500 cursor-pointer"
+                                title="حذف دسته‌بندی"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
                         </div>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">{cat.description}</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => { setSelectedCatFilter(cat.id); setActiveTab('list'); }}
-                          className="px-3 py-1.5 rounded-xl bg-white dark:bg-gray-900 text-xs font-bold text-teal-600 border border-gray-200 dark:border-gray-700 hover:bg-teal-50"
-                        >
-                          مشاهده اخبار
-                        </button>
-                        {isAdmin && (
-                          <button
-                            onClick={() => setDeleteCatId(cat.id)}
-                            className="p-1.5 rounded-lg hover:bg-red-50 text-red-500 cursor-pointer"
-                            title="حذف دسته‌بندی"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        )}
-                      </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -1093,6 +1204,34 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
                         </span>
                         <span className="text-xs font-mono font-bold text-rose-500 flex items-center gap-1">
                           <Heart className="w-3.5 h-3.5" />{item.likes_count}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Top Liked */}
+              <div className="bg-white dark:bg-gray-900 rounded-3xl p-6 border border-gray-100 dark:border-gray-800 shadow-xs space-y-4">
+                <h3 className="text-base font-extrabold text-gray-900 dark:text-white flex items-center gap-2 border-b border-gray-100 dark:border-gray-800 pb-3">
+                  <Heart className="w-5 h-5 text-rose-500" />
+                  <span>پربیشترین پسند</span>
+                </h3>
+                <div className="space-y-3">
+                  {analytics.top_liked?.map((item: any, idx: number) => (
+                    <div key={item.id} className="flex items-center justify-between p-3.5 rounded-2xl bg-gray-50 dark:bg-gray-800/50 transition-all">
+                      <div className="flex items-center gap-3 max-w-xs">
+                        <span className="w-7 h-7 rounded-full bg-rose-500/10 text-rose-600 font-black text-xs flex items-center justify-center font-mono">#{idx + 1}</span>
+                        <div className="truncate">
+                          <h4 className="text-xs font-bold text-gray-900 dark:text-white truncate">{item.title}</h4>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <span className="text-xs font-mono font-bold text-rose-500 flex items-center gap-1">
+                          <Heart className="w-3.5 h-3.5" />{item.likes_count}
+                        </span>
+                        <span className="text-xs font-mono font-bold text-teal-600 dark:text-teal-400 flex items-center gap-1">
+                          <Eye className="w-3.5 h-3.5" />{item.views_count}
                         </span>
                       </div>
                     </div>
@@ -1290,13 +1429,10 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
                     <span className="flex items-center gap-1 text-teal-600 dark:text-teal-400 font-bold">
                       <Eye className="w-4 h-4" />{activeReaderItem.views_count} بازدید
                     </span>
-                    <button
-                      onClick={() => handleToggleLike(activeReaderItem.id)}
-                      className="flex items-center gap-1 px-3 py-1 rounded-xl bg-rose-500/10 text-rose-600 font-bold hover:bg-rose-500/20 cursor-pointer"
-                    >
+                    <span className="flex items-center gap-1 px-3 py-1 rounded-xl bg-rose-500/10 text-rose-600 font-bold">
                       <Heart className="w-4 h-4 fill-current" />
                       <span>{activeReaderItem.likes_count} پسند</span>
-                    </button>
+                    </span>
                   </div>
                 </div>
 
@@ -1306,9 +1442,10 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
                   </div>
                 )}
 
-                <div className="text-xs sm:text-sm text-gray-800 dark:text-gray-200 leading-relaxed space-y-4 whitespace-pre-line font-sans">
-                  {activeReaderItem.content}
-                </div>
+                <div
+                  className="text-xs sm:text-sm text-gray-800 dark:text-gray-200 leading-relaxed space-y-4 font-sans prose-content"
+                  dangerouslySetInnerHTML={{ __html: activeReaderItem.content }}
+                />
 
                 {/* Tags */}
                 {activeReaderItem.tags && activeReaderItem.tags.length > 0 && (

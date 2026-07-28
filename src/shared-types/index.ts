@@ -87,6 +87,13 @@ export interface NewsAnalytics {
     views_count: number;
     likes_count: number;
   }>;
+  top_liked: Array<{
+    id: number;
+    title: string;
+    category_id: number | null;
+    views_count: number;
+    likes_count: number;
+  }>;
   category_distribution: Array<{
     id: number;
     name: string;
