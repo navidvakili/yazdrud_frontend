@@ -13,6 +13,7 @@ import {
   Flame, AlertCircle, ExternalLink, Info, Loader2,
 } from 'lucide-react';
 import type { NewsItem, NewsCategory, User } from '@/src/shared-types';
+import ToastNotification from '@/src/shared-components/ToastNotification';
 import {
   fetchNews, fetchNewsById, createNews, updateNews, deleteNews,
   togglePin, likeNews, incrementViews,
@@ -81,6 +82,17 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
   const [newCatDesc, setNewCatDesc] = useState('');
   const [newCatColor, setNewCatColor] = useState('bg-teal-500/10 text-teal-700 dark:text-teal-300 border-teal-500/30');
   const [catLoading, setCatLoading] = useState(false);
+
+  // ===== Toast state =====
+  const [toast, setToast] = useState<{ text: string; type: 'success' | 'error' | 'info' } | null>(null);
+  const showToast = (text: string, type: 'success' | 'error' | 'info' = 'success') => {
+    setToast({ text, type });
+    setTimeout(() => setToast(null), 4000);
+  };
+
+  // ===== Delete Confirmation Modal state =====
+  const [deleteNewsId, setDeleteNewsId] = useState<number | null>(null);
+  const [deleteCatId, setDeleteCatId] = useState<number | null>(null);
 
   // ===== Analytics state =====
   const [analytics, setAnalytics] = useState<any>(null);
@@ -172,15 +184,17 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
     }
   };
 
-  const handleDeleteNews = async (itemId: number, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
-    if (!confirm('آیا از حذف این خبر اطمینان دارید؟')) return;
+  const confirmDeleteNews = async () => {
+    if (!deleteNewsId) return;
     try {
-      await deleteNews(itemId);
-      setNewsList(prev => prev.filter(n => n.id !== itemId));
-      if (activeReaderItem?.id === itemId) setActiveReaderItem(null);
+      await deleteNews(deleteNewsId);
+      setNewsList(prev => prev.filter(n => n.id !== deleteNewsId));
+      if (activeReaderItem?.id === deleteNewsId) setActiveReaderItem(null);
+      showToast('خبر با موفقیت حذف شد.', 'success');
     } catch (err: any) {
-      alert(err.message || 'خطا در حذف خبر');
+      showToast(err.message || 'خطا در حذف خبر', 'error');
+    } finally {
+      setDeleteNewsId(null);
     }
   };
 
@@ -282,14 +296,17 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
     }
   };
 
-  const handleDeleteCategory = async (catId: number) => {
-    if (!confirm('آیا از حذف این دسته‌بندی اطمینان دارید؟ خبرهای این دسته بدون دسته‌بندی می‌شوند.')) return;
+  const confirmDeleteCategory = async () => {
+    if (!deleteCatId) return;
     try {
-      await deleteCategory(catId);
+      await deleteCategory(deleteCatId);
       await loadCategories();
-      if (selectedCatFilter === catId) setSelectedCatFilter('all');
+      if (selectedCatFilter === deleteCatId) setSelectedCatFilter('all');
+      showToast('دسته‌بندی با موفقیت حذف شد.', 'success');
     } catch (err: any) {
-      alert(err.message || 'خطا در حذف دسته‌بندی');
+      showToast(err.message || 'خطا در حذف دسته‌بندی', 'error');
+    } finally {
+      setDeleteCatId(null);
     }
   };
 
@@ -673,7 +690,7 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
                           <Edit3 className="w-3.5 h-3.5" />
                         </button>
                         <button
-                          onClick={e => handleDeleteNews(item.id, e)}
+                          onClick={e => { e.stopPropagation(); setDeleteNewsId(item.id); }}
                           className="p-1.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500 transition-colors cursor-pointer"
                           title="حذف"
                         >
@@ -740,7 +757,7 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
                               <button onClick={e => handleStartEdit(item, e)} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-teal-600" title="ویرایش">
                                 <Edit3 className="w-4 h-4" />
                               </button>
-                              <button onClick={e => handleDeleteNews(item.id, e)} className="p-1.5 rounded-lg hover:bg-red-50 text-red-500" title="حذف">
+                              <button onClick={e => { e.stopPropagation(); setDeleteNewsId(item.id); }} className="p-1.5 rounded-lg hover:bg-red-50 text-red-500" title="حذف">
                                 <Trash2 className="w-4 h-4" />
                               </button>
                             </>
@@ -976,7 +993,7 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
                         </button>
                         {isAdmin && (
                           <button
-                            onClick={() => handleDeleteCategory(cat.id)}
+                            onClick={() => setDeleteCatId(cat.id)}
                             className="p-1.5 rounded-lg hover:bg-red-50 text-red-500 cursor-pointer"
                             title="حذف دسته‌بندی"
                           >
@@ -1107,6 +1124,105 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
           )}
         </div>
       )}
+
+      {/* ===== Toast Notification ===== */}
+      <ToastNotification toast={toast} />
+
+      {/* ===== Delete News Confirmation Modal ===== */}
+      <AnimatePresence>
+        {deleteNewsId !== null && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/40 z-50"
+              onClick={() => setDeleteNewsId(null)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
+            >
+              <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 p-6 w-full max-w-md pointer-events-auto text-center">
+                <div className="mx-auto w-12 h-12 bg-rose-100 dark:bg-rose-900/30 rounded-full flex items-center justify-center mb-4">
+                  <Trash2 className="w-6 h-6 text-rose-500" />
+                </div>
+                <h3 className="text-lg font-black text-gray-900 dark:text-white mb-2">حذف خبر</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+                  آیا از حذف این خبر اطمینان دارید؟
+                  <br />
+                  <span className="text-rose-500 text-xs">این عمل قابل بازگشت نیست.</span>
+                </p>
+                <div className="flex justify-center gap-3">
+                  <button
+                    onClick={() => setDeleteNewsId(null)}
+                    className="px-5 py-2.5 text-sm font-bold text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors cursor-pointer"
+                  >
+                    انصراف
+                  </button>
+                  <button
+                    onClick={confirmDeleteNews}
+                    className="px-5 py-2.5 text-sm font-bold text-white bg-rose-500 hover:bg-rose-600 rounded-xl transition-colors cursor-pointer"
+                  >
+                    حذف خبر
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* ===== Delete Category Confirmation Modal ===== */}
+      <AnimatePresence>
+        {deleteCatId !== null && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/40 z-50"
+              onClick={() => setDeleteCatId(null)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
+            >
+              <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 p-6 w-full max-w-md pointer-events-auto text-center">
+                <div className="mx-auto w-12 h-12 bg-rose-100 dark:bg-rose-900/30 rounded-full flex items-center justify-center mb-4">
+                  <Trash2 className="w-6 h-6 text-rose-500" />
+                </div>
+                <h3 className="text-lg font-black text-gray-900 dark:text-white mb-2">حذف دسته‌بندی</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+                  آیا از حذف این دسته‌بندی اطمینان دارید؟
+                  <br />
+                  <span className="text-amber-500 text-xs">خبرهای این دسته بدون دسته‌بندی می‌شوند.</span>
+                  <br />
+                  <span className="text-rose-500 text-xs">این عمل قابل بازگشت نیست.</span>
+                </p>
+                <div className="flex justify-center gap-3">
+                  <button
+                    onClick={() => setDeleteCatId(null)}
+                    className="px-5 py-2.5 text-sm font-bold text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors cursor-pointer"
+                  >
+                    انصراف
+                  </button>
+                  <button
+                    onClick={confirmDeleteCategory}
+                    className="px-5 py-2.5 text-sm font-bold text-white bg-rose-500 hover:bg-rose-600 rounded-xl transition-colors cursor-pointer"
+                  >
+                    حذف دسته‌بندی
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* ===== READER MODAL ===== */}
       <AnimatePresence>
