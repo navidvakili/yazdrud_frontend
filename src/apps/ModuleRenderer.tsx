@@ -106,15 +106,6 @@ export default function ModuleRenderer({
       onUpdateUser,
     };
 
-    // Library app needs the module label for display
-    if (appName === 'library') {
-      const activeSub = menuCategories
-        .flatMap(cat => cat.submenus || [])
-        .find(sub => sub.targetId === moduleType);
-      appProps.moduleIdLabel = activeSub ? activeSub.label : 'خدمات الکترونیکی پورتال';
-      appProps.moduleId = tabId || moduleType;
-    }
-
     return user ? (
       <Suspense fallback={<LoadingFallback />}>
         <AppComponent {...appProps} />
@@ -122,6 +113,5 @@ export default function ModuleRenderer({
     ) : null;
   }
 
-  // Fallback: should never reach here since resolveApp always returns at least 'library'
   return null;
 }

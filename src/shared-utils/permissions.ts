@@ -62,12 +62,9 @@ export function usePermissions(user: User | null): PermissionChecker {
 export const MODULE_PERMISSIONS: Record<string, { view: string; create?: string; edit?: string; delete?: string; approve?: string }> = {
   users:        { view: 'users.view',        create: 'users.create',        edit: 'users.edit',        delete: 'users.delete' },
   roles:        { view: 'roles.view',        create: 'roles.create',        edit: 'roles.edit',        delete: 'roles.delete' },
-  navigation:   { view: 'navigation.view',   create: 'navigation.create',   edit: 'navigation.edit',   delete: 'navigation.delete' },
-  library:      { view: 'library.view',      create: 'library.create',      edit: 'library.edit',      delete: 'library.delete',      approve: 'library.approve' },
   news:         { view: 'news.view',         create: 'news.create',         edit: 'news.edit',         delete: 'news.delete',         approve: 'news.approve' },
   'news-create':    { view: 'news.view',     create: 'news.create' },
   'news-categories':{ view: 'news.view',     create: 'news.create',         edit: 'news.edit',         delete: 'news.delete' },
   'news-analytics': { view: 'news.view' },
   sessions:     { view: 'sessions.view',     delete: 'sessions.delete' },
-  settings:     { view: 'settings.view',     edit: 'settings.edit' },
 };

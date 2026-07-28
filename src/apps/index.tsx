@@ -10,7 +10,6 @@ import { lazy, Suspense, type ComponentType, type LazyExoticComponent } from 're
 // ===== تعریف App های اصلی با Lazy Loading =====
 export const AppModules: Record<string, LazyExoticComponent<ComponentType<any>>> = {
   accounting: lazy(() => import('./accounting')),
-  library: lazy(() => import('./library')),
   auth: lazy(() => import('./auth')),
   users: lazy(() => import('./users')),
   news: lazy(() => import('./news')),
@@ -39,15 +38,13 @@ export const moduleToAppMap: Record<string, string> = {
   'news-categories': 'news',
   'news-analytics': 'news',
 
-  // Library App — fallback for any unknown moduleType
-  // (resolveApp returns 'library' by default)
 };
 
 /**
  * برگرداندن App name برای یک moduleType
  */
 export function resolveApp(moduleType: string): string {
-  return moduleToAppMap[moduleType] || 'library';
+  return moduleToAppMap[moduleType] || '';
 }
 
 /**
