@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import type { NewsItem, NewsCategory, User } from '@/src/shared-types';
 import ToastNotification from '@/src/shared-components/ToastNotification';
+import WysiwygEditor from '@/src/shared-components/WysiwygEditor';
 import {
   fetchNews, fetchNewsById, createNews, updateNews, deleteNews,
   togglePin, likeNews, incrementViews,
@@ -858,10 +859,11 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
                   <label className="block text-xs font-extrabold text-gray-700 dark:text-gray-300 mb-1.5">
                     متن کامل خبر <span className="text-red-500">*</span>
                   </label>
-                  <textarea
-                    rows={12} required value={formContent} onChange={e => setFormContent(e.target.value)}
-                    placeholder="متن کامل خبر..."
-                    className="w-full p-4 rounded-2xl bg-gray-50 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 text-xs leading-relaxed text-gray-900 dark:text-white focus:outline-none focus:border-teal-500"
+                  <WysiwygEditor
+                    content={formContent}
+                    onChange={setFormContent}
+                    placeholder="متن کامل خبر را بنویسید..."
+                    minHeight="320px"
                   />
                 </div>
 
