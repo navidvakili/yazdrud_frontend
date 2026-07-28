@@ -48,6 +48,19 @@ interface PermissionsByModule {
   [module: string]: PermissionItem[];
 }
 
+interface CategoryInfo {
+  id: number;
+  name: string;
+  slug: string;
+  color: string;
+}
+
+interface CategoryPermissions {
+  [categoryType: string]: {
+    [categoryId: number]: string[];
+  };
+}
+
 interface ApiResponse<T> {
   data: T;
 }
@@ -96,6 +109,10 @@ export default function PermissionsPanel() {
   const [saving, setSaving] = useState(false);
   const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
 
+  // Category permissions state
+  const [allCategories, setAllCategories] = useState<Record<string, CategoryInfo[]>>({});
+  const [editingCategoryPerms, setEditingCategoryPerms] = useState<Record<string, Record<number, Set<string>>>>({});
+
   // Create role modal
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newRoleName, setNewRoleName] = useState('');
@@ -114,12 +131,20 @@ export default function PermissionsPanel() {
     try {
       const [rolesRes, permsRes] = await Promise.all([
         API<ApiResponse<RoleItem[]>>('admin/roles'),
-        API<ApiResponse<PermissionsByModule> & { labels: Record<string, string> }>('admin/permissions'),
+        API<
+          ApiResponse<PermissionsByModule> & {
+            labels: Record<string, string>;
+            categories: Record<string, CategoryInfo[]>;
+          }
+        >('admin/permissions'),
       ]);
       setRoles(rolesRes.data);
       setAllPermissions(permsRes.data);
       if (permsRes.labels) {
         setModuleLabels(permsRes.labels);
+      }
+      if (permsRes.categories) {
+        setAllCategories(permsRes.categories);
       }
     } catch (err: any) {
       setError(err.message || 'خطا در دریافت اطلاعات');
@@ -141,6 +166,20 @@ export default function PermissionsPanel() {
   const startEditing = (role: RoleItem) => {
     setEditingRoleId(role.id);
     setEditingPerms(new Set(role.permissions.map(p => p.name)));
+
+    // Initialize category permissions from role data
+    const catPerms: Record<string, Record<number, Set<string>>> = {};
+    const roleData = role as RoleItem & { category_permissions?: Record<string, Record<string, string[]>> };
+    if (roleData.category_permissions) {
+      for (const [categoryType, catMap] of Object.entries(roleData.category_permissions)) {
+        catPerms[categoryType] = {};
+        for (const [catId, permissions] of Object.entries(catMap)) {
+          catPerms[categoryType][Number(catId)] = new Set(permissions);
+        }
+      }
+    }
+    setEditingCategoryPerms(catPerms);
+
     setExpandedModules(new Set(Object.keys(allPermissions)));
     setFormError(null);
   };
@@ -148,6 +187,7 @@ export default function PermissionsPanel() {
   const cancelEditing = () => {
     setEditingRoleId(null);
     setEditingPerms(new Set());
+    setEditingCategoryPerms({});
     setFormError(null);
   };
 
@@ -226,6 +266,63 @@ export default function PermissionsPanel() {
     });
   };
 
+  const toggleCategoryPerm = (categoryType: string, categoryId: number, permission: string) => {
+    setEditingCategoryPerms(prev => {
+      const next = { ...prev };
+      if (!next[categoryType]) {
+        next[categoryType] = {};
+      }
+      const catPerms = new Set(next[categoryType][categoryId] || []);
+      if (catPerms.has(permission)) {
+        catPerms.delete(permission);
+      } else {
+        catPerms.add(permission);
+      }
+      if (catPerms.size > 0) {
+        next[categoryType] = { ...next[categoryType], [categoryId]: catPerms };
+      } else {
+        // Clean up empty category entries
+        const newCatMap = { ...next[categoryType] };
+        delete newCatMap[categoryId];
+        if (Object.keys(newCatMap).length > 0) {
+          next[categoryType] = newCatMap;
+        } else {
+          delete next[categoryType];
+        }
+      }
+      return next;
+    });
+  };
+
+  const toggleAllCategories = (categoryType: string) => {
+    setEditingCategoryPerms(prev => {
+      const cats = allCategories[categoryType];
+      if (!cats || cats.length === 0) return prev;
+
+      const next = { ...prev };
+      const catMap = next[categoryType] || {};
+
+      // Check if all categories already have 'view' permission
+      const allSelected = cats.every(cat => catMap[cat.id]?.has('view'));
+
+      if (allSelected) {
+        // Deselect all: remove the categoryType entirely
+        delete next[categoryType];
+      } else {
+        // Select all: give 'view' to every category
+        const newCatMap: Record<number, Set<string>> = { ...catMap };
+        for (const cat of cats) {
+          const existing = new Set(newCatMap[cat.id] || []);
+          existing.add('view');
+          newCatMap[cat.id] = existing;
+        }
+        next[categoryType] = newCatMap;
+      }
+
+      return next;
+    });
+  };
+
   const toggleModule = (module: string) => {
     setEditingPerms(prev => {
       const next = new Set(prev);
@@ -258,8 +355,19 @@ export default function PermissionsPanel() {
     try {
       // Enforce dependency rules before saving (safety net)
       const finalPerms = enforceDependencies(editingPerms);
+
+      // Build category_permissions payload for the API
+      const categoryPayload: Record<string, Record<number, string[]>> = {};
+      for (const [categoryType, catMap] of Object.entries(editingCategoryPerms)) {
+        categoryPayload[categoryType] = {};
+        for (const [catId, permSet] of Object.entries(catMap)) {
+          categoryPayload[categoryType][Number(catId)] = Array.from(permSet);
+        }
+      }
+
       await API(`admin/roles/${editingRoleId}`, {
         permissions: Array.from(finalPerms),
+        category_permissions: categoryPayload,
       }, 'PUT');
       showSuccess('دسترسی‌های نقش با موفقیت بروزرسانی شد');
       cancelEditing();
@@ -274,6 +382,22 @@ export default function PermissionsPanel() {
     } finally {
       setSaving(false);
     }
+  };
+
+  // ===== Select All / Deselect All =====
+  const selectAllPerms = () => {
+    setEditingPerms(prev => {
+      const allPermNames = Object.values(allPermissions).flat().map(p => p.name);
+      const allCurrentlySelected = allPermNames.every(name => prev.has(name));
+
+      if (allCurrentlySelected) {
+        // Deselect all
+        return enforceDependencies(new Set());
+      } else {
+        // Select all
+        return enforceDependencies(new Set(allPermNames));
+      }
+    });
   };
 
   // ===== Create Role =====
@@ -478,6 +602,25 @@ export default function PermissionsPanel() {
                     )}
 
                     <div className="p-5 space-y-4">
+                      {/* Select All / Deselect All toolbar */}
+                      <div className="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-gray-800">
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          {Object.values(allPermissions).flat().filter(p => editingPerms.has(p.name)).length}
+                          {' '}از{' '}
+                          {Object.values(allPermissions).flat().length}
+                          {' '}دسترسی انتخاب شده
+                        </span>
+                        <button
+                          onClick={selectAllPerms}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-xs font-bold rounded-lg transition-colors cursor-pointer text-gray-600 dark:text-gray-400"
+                        >
+                          {Object.values(allPermissions).flat().every(p => editingPerms.has(p.name))
+                            ? <><X className="w-3 h-3" /> لغو همه</>
+                            : <><CheckCircle className="w-3 h-3" /> انتخاب همه</>
+                          }
+                        </button>
+                      </div>
+
                       {Object.entries(allPermissions).map(([module, perms]) => {
                         const moduleLabel = moduleLabels[module] || module;
                         const allSelected = perms.every(p => editingPerms.has(p.name));
@@ -543,6 +686,55 @@ export default function PermissionsPanel() {
                                     </label>
                                   );
                                 })}
+                              </div>
+                            )}
+
+                            {/* Category-level permissions */}
+                            {isExpanded && allCategories[module] && allCategories[module].length > 0 && (
+                              <div className="px-4 pb-4 pt-0 border-t border-gray-50 dark:border-gray-800 mt-1">
+                                <div className="flex items-center justify-between mb-2 mt-2">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-1 h-4 bg-teal-400 rounded-full" />
+                                    <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500">
+                                      دسترسی به دسته‌بندی‌ها
+                                    </span>
+                                  </div>
+                                  <button
+                                    onClick={() => toggleAllCategories(module)}
+                                    className="text-[10px] font-bold text-teal-500 hover:text-teal-600 dark:hover:text-teal-400 transition-colors cursor-pointer"
+                                  >
+                                    {allCategories[module] && allCategories[module].every(
+                                      cat => editingCategoryPerms[module]?.[cat.id]?.has('view')
+                                    )
+                                      ? 'لغو همه'
+                                      : 'انتخاب همه'
+                                    }
+                                  </button>
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                  {allCategories[module].map(cat => {
+                                    const catPerms = editingCategoryPerms[module]?.[cat.id] || new Set();
+                                    const hasAccess = catPerms.has('view');
+                                    return (
+                                      <label
+                                        key={cat.id}
+                                        className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-bold cursor-pointer transition-all ${
+                                          hasAccess
+                                            ? 'bg-teal-50 dark:bg-teal-900/20 border-teal-200 dark:border-teal-800 text-teal-700 dark:text-teal-300'
+                                            : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600'
+                                        }`}
+                                      >
+                                        <input
+                                          type="checkbox"
+                                          checked={hasAccess}
+                                          onChange={() => toggleCategoryPerm(module, cat.id, 'view')}
+                                          className="w-3.5 h-3.5 rounded border-gray-300 text-teal-500 focus:ring-teal-500/40 cursor-pointer"
+                                        />
+                                        <span>{cat.name}</span>
+                                      </label>
+                                    );
+                                  })}
+                                </div>
                               </div>
                             )}
                           </div>
