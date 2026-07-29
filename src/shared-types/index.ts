@@ -141,3 +141,25 @@ export interface CountyProject {
   created_at: string;
   updated_at: string;
 }
+
+// ============================================================
+// Hero Slide Types — انواع مربوط به اسلایدر صفحه اصلی
+// ============================================================
+
+export interface HeroSlide {
+  id: number;
+  tag: string;
+  title: string;
+  subtitle: string;
+  badge: string;
+  badge_icon: string;
+  bg_image: string | null;
+  primary_cta_text: string;
+  primary_cta_target: string;
+  secondary_cta_text: string;
+  secondary_cta_target: string;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
