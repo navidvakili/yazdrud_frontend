@@ -67,4 +67,5 @@ export const MODULE_PERMISSIONS: Record<string, { view: string; create?: string;
   'news-categories':{ view: 'news.view',     create: 'news.create',         edit: 'news.edit',         delete: 'news.delete' },
   'news-analytics': { view: 'news.view' },
   sessions:     { view: 'sessions.view',     delete: 'sessions.delete' },
+  'county-projects': { view: 'county-projects.view', edit: 'county-projects.edit' },
 };

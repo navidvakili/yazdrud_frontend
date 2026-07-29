@@ -7,7 +7,7 @@ import {
   Calendar, DollarSign, FileText, Smile, MessageSquare as MessageSquareIcon,
   Sparkles, Heart, CreditCard, Building, Folder, ShieldCheck, Layers,
   Upload, Settings, Clock, Home, GraduationCap, Bell, HelpCircle,
-  Search, X, LogOut, Plus, LayoutDashboard, ChevronLeft, Globe,
+  Search, X, LogOut, Plus, LayoutDashboard, ChevronLeft, Globe, Map,
   type LucideIcon,
 } from 'lucide-react';
 import type { PortalNotification } from '@/src/layouts/types';
@@ -76,7 +76,7 @@ export const faToLucideName: Record<string, string> = {
   'fa fa-flag': 'Folder',
   'fa fa-newspaper': 'FileText',
   'fa fa-road': 'Briefcase',
-  'fa fa-map': 'Layers',
+  'fa fa-map': 'Map',
 };
 
 // ========== Utility Functions ==========
