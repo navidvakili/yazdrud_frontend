@@ -34,7 +34,11 @@ import {
   MousePointer,
   HelpCircle,
   Clock,
-  Sparkle
+  Sparkle,
+  GripVertical,
+  AlertTriangle,
+  Move,
+  X
 } from 'lucide-react';
 import type { SliderProject, Slide, Layer, LayerType, BreakpointWidth } from '@/src/shared-types/slider-studio';
 import { INITIAL_SLIDER_PROJECTS } from '../data/presetTemplates';
@@ -82,6 +86,16 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
       );
     }
   }, [initialProject]);
+
+  // Confirmation dialog state
+  const [confirmDialog, setConfirmDialog] = useState<{
+    message: string;
+    onConfirm: () => void;
+  } | null>(null);
+
+  const handleConfirmDelete = (message: string, onConfirm: () => void) => {
+    setConfirmDialog({ message, onConfirm });
+  };
 
   // Sidebar visibility
   const [showLeftSidebar, setShowLeftSidebar] = useState<boolean>(true);
@@ -187,14 +201,44 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
     setSelectedLayerId(newLayerId);
   };
 
-  // Delete Layer
-  const handleDeleteLayer = (layerId: string) => {
+  // ---- Actual mutation helpers (used by confirm callbacks) ----
+
+  const doDeleteLayer = (layerId: string) => {
     const updatedLayers = activeSlide.layers.filter(l => l.id !== layerId);
     const updatedSlides = project.slides.map(s => (s.id === activeSlide.id ? { ...s, layers: updatedLayers } : s));
     setProject({ ...project, slides: updatedSlides });
     if (selectedLayerId === layerId) {
       setSelectedLayerId(updatedLayers[0]?.id || null);
     }
+  };
+
+  const doDeleteSlide = (slideId: string) => {
+    if (project.slides.length <= 1) return;
+    const updatedSlides = project.slides.filter(s => s.id !== slideId);
+    setProject({ ...project, slides: updatedSlides });
+    if (activeSlideId === slideId) {
+      const newActiveId = updatedSlides[0]?.id || project.slides[0].id;
+      setActiveSlideId(newActiveId);
+      const newSlide = updatedSlides.find(s => s.id === newActiveId);
+      setSelectedLayerId(newSlide?.layers[0]?.id || null);
+    }
+  };
+
+  // Show confirmation then delete
+  const handleDeleteLayer = (layerId: string) => {
+    const layer = activeSlide.layers.find(l => l.id === layerId);
+    handleConfirmDelete(
+      `آیا از حذف لایه «${layer?.name || layerId}» اطمینان دارید؟`,
+      () => doDeleteLayer(layerId)
+    );
+  };
+
+  const handleDeleteSlide = (slideId: string) => {
+    const slide = project.slides.find(s => s.id === slideId);
+    handleConfirmDelete(
+      `آیا از حذف ${slide?.title || 'اسلاید'} اطمینان دارید؟`,
+      () => doDeleteSlide(slideId)
+    );
   };
 
   // Add Slide
@@ -215,19 +259,6 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
 
     setProject({ ...project, slides: [...project.slides, newSlide] });
     setActiveSlideId(newSlideId);
-  };
-
-  // Delete Slide
-  const handleDeleteSlide = (slideId: string) => {
-    if (project.slides.length <= 1) return; // Don't delete the last slide
-    const updatedSlides = project.slides.filter(s => s.id !== slideId);
-    setProject({ ...project, slides: updatedSlides });
-    if (activeSlideId === slideId) {
-      const newActiveId = updatedSlides[0]?.id || project.slides[0].id;
-      setActiveSlideId(newActiveId);
-      const newSlide = updatedSlides.find(s => s.id === newActiveId);
-      setSelectedLayerId(newSlide?.layers[0]?.id || null);
-    }
   };
 
   // Move Layer Up in the list (earlier index → appears higher)
@@ -254,6 +285,60 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
       );
       setProject({ ...project, slides: updatedSlides });
     }
+  };
+
+  // ---- Drag-and-drop state & handlers ----
+
+  const dragItemRef = useRef<{ type: 'layer' | 'slide'; id: string; fromIndex: number } | null>(null);
+  const dragOverIndexRef = useRef<number | null>(null);
+
+  // Layer drag-and-drop
+  const handleLayerDragStart = (layerId: string, index: number) => {
+    dragItemRef.current = { type: 'layer', id: layerId, fromIndex: index };
+  };
+
+  const handleLayerDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    dragOverIndexRef.current = index;
+  };
+
+  const handleLayerDrop = (e: React.DragEvent, toIndex: number) => {
+    e.preventDefault();
+    const drag = dragItemRef.current;
+    if (!drag || drag.type !== 'layer') return;
+    if (drag.fromIndex === toIndex) return;
+    const layers = [...activeSlide.layers];
+    const [removed] = layers.splice(drag.fromIndex, 1);
+    layers.splice(toIndex, 0, removed);
+    const updatedSlides = project.slides.map(s =>
+      s.id === activeSlide.id ? { ...s, layers } : s
+    );
+    setProject({ ...project, slides: updatedSlides });
+    dragItemRef.current = null;
+    dragOverIndexRef.current = null;
+  };
+
+  // Slide drag-and-drop
+  const handleSlideDragStart = (slideId: string, index: number) => {
+    dragItemRef.current = { type: 'slide', id: slideId, fromIndex: index };
+  };
+
+  const handleSlideDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    dragOverIndexRef.current = index;
+  };
+
+  const handleSlideDrop = (e: React.DragEvent, toIndex: number) => {
+    e.preventDefault();
+    const drag = dragItemRef.current;
+    if (!drag || drag.type !== 'slide') return;
+    if (drag.fromIndex === toIndex) return;
+    const slides = [...project.slides];
+    const [removed] = slides.splice(drag.fromIndex, 1);
+    slides.splice(toIndex, 0, removed);
+    setProject({ ...project, slides });
+    dragItemRef.current = null;
+    dragOverIndexRef.current = null;
   };
 
   // Canvas Mouse Down Drag
@@ -453,29 +538,40 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
           <div className="w-px h-5 bg-gray-200 dark:bg-slate-700 mx-1"></div>
           <span className="text-slate-500 font-bold text-[11px]">مدیریت اسلایدها:</span>
           <div className="flex items-center gap-1">
-            {project.slides.map((s, idx) => (
-              <div key={s.id} className="relative group/slidetab">
-                <button
+            {project.slides.map((s, idx) => {
+              const isDragOver = dragOverIndexRef.current === idx;
+              return (
+              <div
+                key={s.id}
+                draggable
+                onDragStart={() => handleSlideDragStart(s.id, idx)}
+                onDragOver={e => handleSlideDragOver(e, idx)}
+                onDrop={e => handleSlideDrop(e, idx)}
+                onDragEnd={() => { dragItemRef.current = null; dragOverIndexRef.current = null; }}
+                className={`relative group/slidetab flex items-center gap-0.5 px-2 py-1 rounded-xl font-bold transition-all cursor-pointer select-none ${
+                  activeSlideId === s.id
+                    ? 'bg-teal-600 dark:bg-teal-500 text-white dark:text-slate-950 font-black shadow-xs'
+                    : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-gray-200 dark:border-slate-800'
+                } ${isDragOver ? 'ring-2 ring-teal-400' : ''}`}
+              >
+                <span className="cursor-grab active:cursor-grabbing opacity-40 hover:opacity-100 transition-opacity" title="درگ برای جابجایی">
+                  <GripVertical className="w-3 h-3" />
+                </span>
+                <span
                   onClick={() => setActiveSlideId(s.id)}
-                  className={`px-3 py-1 rounded-xl font-bold transition-all cursor-pointer ${
-                    activeSlideId === s.id
-                      ? 'bg-teal-600 dark:bg-teal-500 text-white dark:text-slate-950 font-black shadow-xs'
-                      : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-gray-200 dark:border-slate-800'
-                  }`}
-                >
-                  اسلاید {idx + 1}
-                </button>
+                  className="cursor-pointer"
+                >اسلاید {idx + 1}</span>
                 {project.slides.length > 1 && (
                   <button
                     onClick={e => { e.stopPropagation(); handleDeleteSlide(s.id); }}
-                    className="absolute -top-1.5 -left-1.5 p-0.5 rounded-full bg-rose-500 text-white opacity-0 group-hover/slidetab:opacity-100 hover:bg-rose-600 transition-all cursor-pointer shadow-md"
+                    className="p-0.5 rounded-full bg-rose-500/80 text-white opacity-0 group-hover/slidetab:opacity-100 hover:bg-rose-600 transition-all cursor-pointer ml-0.5"
                     title="حذف اسلاید"
                   >
-                    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                    <X className="w-2.5 h-2.5" />
                   </button>
                 )}
               </div>
-            ))}
+            )})}
             <button
               onClick={handleAddSlide}
               className="p-1 rounded-xl bg-teal-50 dark:bg-teal-500/20 text-teal-700 dark:text-teal-300 hover:bg-teal-600 hover:text-white dark:hover:bg-teal-500 dark:hover:text-slate-950 transition-colors cursor-pointer border border-teal-200 dark:border-teal-500/30"
@@ -515,19 +611,28 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
 
           {/* Layers List */}
           <div className="flex-1 overflow-y-auto p-2 space-y-1">
-            {filteredLayers.map(layer => {
+            {filteredLayers.map((layer, idx) => {
               const isSelected = selectedLayerId === layer.id;
+              const isDragOver = dragOverIndexRef.current === idx;
               return (
                 <div
                   key={layer.id}
+                  draggable
+                  onDragStart={() => handleLayerDragStart(layer.id, idx)}
+                  onDragOver={e => handleLayerDragOver(e, idx)}
+                  onDrop={e => handleLayerDrop(e, idx)}
+                  onDragEnd={() => { dragItemRef.current = null; dragOverIndexRef.current = null; }}
                   onClick={() => setSelectedLayerId(layer.id)}
                   className={`p-2.5 rounded-2xl flex items-center justify-between text-xs cursor-pointer transition-all ${
                     isSelected
                       ? 'bg-teal-50 dark:bg-teal-500/20 border border-teal-300 dark:border-teal-500/40 text-teal-800 dark:text-teal-300 font-extrabold shadow-xs'
                       : 'hover:bg-slate-100 dark:hover:bg-slate-800/60 text-slate-700 dark:text-slate-300 border border-transparent'
-                  }`}
+                  } ${isDragOver ? 'border-teal-400 border-2' : ''}`}
                 >
-                  <div className="flex items-center gap-2 truncate">
+                  <div className="flex items-center gap-1.5 truncate">
+                    <span className="text-slate-300 dark:text-slate-600 cursor-grab active:cursor-grabbing" title="درگ برای جابجایی">
+                      <GripVertical className="w-3.5 h-3.5" />
+                    </span>
                     {layer.type === 'text' && <Type className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 shrink-0" />}
                     {layer.type === 'image' && <ImageIcon className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400 shrink-0" />}
                     {layer.type === 'button' && <Square className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />}
@@ -561,7 +666,7 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
                         e.stopPropagation();
                         handleMoveLayerUp(layer.id);
                       }}
-                      className="p-1 hover:text-slate-900 dark:hover:text-white cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                      className="p-1 hover:text-slate-900 dark:hover:text-white cursor-pointer"
                       title="جابجایی به بالا"
                     >
                       <ChevronUp className="w-3.5 h-3.5" />
@@ -571,7 +676,7 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
                         e.stopPropagation();
                         handleMoveLayerDown(layer.id);
                       }}
-                      className="p-1 hover:text-slate-900 dark:hover:text-white cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                      className="p-1 hover:text-slate-900 dark:hover:text-white cursor-pointer"
                       title="جابجایی به پایین"
                     >
                       <ChevronDown className="w-3.5 h-3.5" />
@@ -750,6 +855,54 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
         onClose={() => setIsPreviewModalOpen(false)}
         project={project}
       />
+
+      {/* CONFIRMATION DIALOG */}
+      <AnimatePresence>
+        {confirmDialog && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+            onClick={() => setConfirmDialog(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={e => e.stopPropagation()}
+              className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-gray-200 dark:border-slate-700 p-6 max-w-sm w-full mx-4"
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-rose-100 dark:bg-rose-500/20 flex items-center justify-center">
+                  <AlertTriangle className="w-5 h-5 text-rose-600 dark:text-rose-400" />
+                </div>
+                <h3 className="text-base font-black text-slate-900 dark:text-white">تأیید حذف</h3>
+              </div>
+              <p className="text-sm text-slate-600 dark:text-slate-300 mb-6 leading-relaxed">
+                {confirmDialog.message}
+              </p>
+              <div className="flex items-center gap-2 justify-end">
+                <button
+                  onClick={() => setConfirmDialog(null)}
+                  className="px-4 py-2 rounded-xl bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold transition-colors cursor-pointer"
+                >
+                  انصراف
+                </button>
+                <button
+                  onClick={() => {
+                    confirmDialog.onConfirm();
+                    setConfirmDialog(null);
+                  }}
+                  className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-colors cursor-pointer shadow-md shadow-rose-500/20"
+                >
+                  تأیید حذف
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
