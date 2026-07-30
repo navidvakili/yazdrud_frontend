@@ -219,11 +219,22 @@ export default function InteractivePreviewModal({
           {...(() => {
             const t = activeSlide.transition || 'fade';
             const variants: Record<string, any> = {
-              fade:       { initial: { opacity: 0 },                animate: { opacity: 1 },                exit: { opacity: 0 } },
-              slideLeft:  { initial: { opacity: 0, x: 200 },        animate: { opacity: 1, x: 0 },           exit: { opacity: 0, x: -200 } },
-              slideRight: { initial: { opacity: 0, x: -200 },       animate: { opacity: 1, x: 0 },           exit: { opacity: 0, x: 200 } },
-              zoomOut:    { initial: { opacity: 0, scale: 1.2 },    animate: { opacity: 1, scale: 1 },       exit: { opacity: 0, scale: 0.8 } },
-              '3dCube':   { initial: { opacity: 0, rotateY: -45, scale: 0.9 }, animate: { opacity: 1, rotateY: 0, scale: 1 }, exit: { opacity: 0, rotateY: 45, scale: 0.9 } },
+              fade:        { initial: { opacity: 0 },                          animate: { opacity: 1 },                     exit: { opacity: 0 } },
+              slideLeft:   { initial: { opacity: 0, x: 200 },                  animate: { opacity: 1, x: 0 },               exit: { opacity: 0, x: -200 } },
+              slideRight:  { initial: { opacity: 0, x: -200 },                 animate: { opacity: 1, x: 0 },               exit: { opacity: 0, x: 200 } },
+              zoomOut:     { initial: { opacity: 0, scale: 1.2 },              animate: { opacity: 1, scale: 1 },           exit: { opacity: 0, scale: 0.8 } },
+              '3dCube':    { initial: { opacity: 0, rotateY: -45, scale: 0.9 }, animate: { opacity: 1, rotateY: 0, scale: 1 }, exit: { opacity: 0, rotateY: 45, scale: 0.9 } },
+              blinds:      { initial: { opacity: 0, clipPath: 'inset(100% 0% 0% 0%)' }, animate: { opacity: 1, clipPath: 'inset(0% 0% 0% 0%)' }, exit: { opacity: 0, clipPath: 'inset(0% 0% 100% 0%)' } },
+              clipWipe:    { initial: { clipPath: 'inset(0 0 0 100%)' },       animate: { clipPath: 'inset(0 0 0 0%)' },     exit: { clipPath: 'inset(0 0 100% 0)' } },
+              doors:       { initial: { opacity: 0, clipPath: 'inset(0 50% 0 50%)' }, animate: { opacity: 1, clipPath: 'inset(0 0% 0 0%)' }, exit: { opacity: 0, clipPath: 'inset(50% 0 50% 0)' } },
+              iris:        { initial: { clipPath: 'circle(0% at 50% 50%)' },   animate: { clipPath: 'circle(100% at 50% 50%)' }, exit: { clipPath: 'circle(0% at 50% 50%)' } },
+              irisClick:   { initial: { clipPath: 'circle(0% at 50% 50%)' },   animate: { clipPath: 'circle(100% at 50% 50%)' }, exit: { clipPath: 'circle(0% at 50% 50%)' } },
+              mixed:       { initial: { opacity: 0, scale: 1.1, rotate: -5 },  animate: { opacity: 1, scale: 1, rotate: 0 },  exit: { opacity: 0, scale: 0.9, rotate: 5 } },
+              pixels:      { initial: { opacity: 0, clipPath: 'inset(45% 45% 45% 45% round 20px)' }, animate: { opacity: 1, clipPath: 'inset(0% 0% 0% 0% round 0px)' }, exit: { opacity: 0, clipPath: 'inset(45% 45% 45% 45% round 20px)' } },
+              scope:       { initial: { clipPath: 'circle(0% at 50% 50%)' },   animate: { clipPath: 'circle(100% at 50% 50%)' }, exit: { clipPath: 'circle(0% at 50% 50%)' } },
+              shutter:     { initial: { clipPath: 'inset(50% 0% 50% 0%)' },    animate: { clipPath: 'inset(0% 0% 0% 0%)' },  exit: { clipPath: 'inset(50% 0% 50% 0%)' } },
+              staggerWipe: { initial: { opacity: 0, clipPath: 'inset(0 100% 0 0)' }, animate: { opacity: 1, clipPath: 'inset(0 0 0 0)' }, exit: { opacity: 0, clipPath: 'inset(100% 0 0 0)' } },
+              wipe:        { initial: { clipPath: 'inset(0 100% 0 0)' },       animate: { clipPath: 'inset(0 0% 0 0)' },     exit: { clipPath: 'inset(0 0 0 100%)' } },
             };
             return variants[t] || variants.fade;
           })()}
@@ -243,7 +254,7 @@ export default function InteractivePreviewModal({
             height: `${project.height * scaleFactor}px`,
             background:
               activeSlide.background.gradient || activeSlide.background.color || '#0f172a',
-            perspective: activeSlide.transition === '3dCube' ? '1200px' : undefined
+            perspective: activeSlide.transition === '3dCube' || activeSlide.transition === 'doors' ? '1200px' : undefined
           }}
           className="relative rounded-3xl overflow-hidden border-2 border-teal-500/30 shadow-2xl transition-all duration-300"
         >

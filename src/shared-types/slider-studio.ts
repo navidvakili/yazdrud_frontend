@@ -113,7 +113,9 @@ export interface Slide {
   duration: number;
   background: SlideBackground;
   layers: Layer[];
-  transition: 'fade' | 'slideLeft' | 'slideRight' | 'zoomOut' | '3dCube';
+  transition: 'fade' | 'slideLeft' | 'slideRight' | 'zoomOut' | '3dCube'
+    | 'blinds' | 'clipWipe' | 'doors' | 'iris' | 'irisClick' | 'mixed'
+    | 'pixels' | 'scope' | 'shutter' | 'staggerWipe' | 'wipe';
   interactions?: LayerInteraction[];
 }
 

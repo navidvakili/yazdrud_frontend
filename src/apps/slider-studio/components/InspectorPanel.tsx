@@ -156,6 +156,17 @@ export default function InspectorPanel({
                 <option value="slideRight">Slide Right (حرکت به راست)</option>
                 <option value="zoomOut">Zoom Out (زوم بیرون)</option>
                 <option value="3dCube">3D Cube (مکعب سه بعدی)</option>
+                <option value="blinds">Blinds (کرکره عمودی)</option>
+                <option value="clipWipe">Clip Wipe (پاک شدن)</option>
+                <option value="doors">Doors (درهای بازشونده)</option>
+                <option value="iris">Iris (عنبیه)</option>
+                <option value="irisClick">Iris Click (عنبیه سریع)</option>
+                <option value="mixed">Mixed (ترکیبی)</option>
+                <option value="pixels">Pixels (پیکسلی)</option>
+                <option value="scope">Scope (دوربین)</option>
+                <option value="shutter">Shutter (کرکره افقی)</option>
+                <option value="staggerWipe">Stagger Wipe (پاک شدن پله‌ای)</option>
+                <option value="wipe">Wipe (پاک شدن ساده)</option>
               </select>
             </div>
           </div>
