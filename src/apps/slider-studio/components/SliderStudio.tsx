@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Type,
@@ -105,6 +105,13 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [showTimeline, setShowTimeline] = useState<boolean>(true);
+
+  // Reset timeline to 0 when playback starts (sync before paint to avoid flash)
+  useLayoutEffect(() => {
+    if (isPlaying) {
+      setCurrentTime(0);
+    }
+  }, [isPlaying]);
 
   // Viewport & Breakpoints
   const [activeBreakpoint, setActiveBreakpoint] = useState<BreakpointWidth>('1240');
@@ -372,6 +379,82 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
     dragStartRef.current = null;
   };
 
+  // ---- Animation Playback Helpers ----
+
+  /** Compute the Framer Motion animate state for a layer based on playback position */
+  const computeLayerPlaybackState = (layer: Layer): {
+    opacity: number;
+    x: number;
+    y: number;
+    scale: number;
+    rotate: number;
+  } => {
+    // Final/resting state (fully visible, no transform)
+    const finalState = {
+      opacity: layer.opacity,
+      x: 0,
+      y: 0,
+      scale: 1,
+      rotate: layer.rotation,
+    };
+
+    if (!isPlaying) return finalState;
+
+    const { inDelay = 0, inDuration = 0.8, inPreset = 'fadeIn' } = layer.animation;
+    if (inPreset === 'none' || inDuration === 0) return finalState;
+
+    const elapsed = currentTime - inDelay;
+
+    // Before animation starts (hidden at initial state)
+    if (elapsed <= 0) {
+      switch (inPreset) {
+        case 'fadeIn':    return { ...finalState, opacity: 0 };
+        case 'slideUp':   return { ...finalState, opacity: 0, y: 80 };
+        case 'slideDown': return { ...finalState, opacity: 0, y: -80 };
+        case 'slideLeft': return { ...finalState, opacity: 0, x: -120 };
+        case 'slideRight':return { ...finalState, opacity: 0, x: 120 };
+        case 'zoomIn':    return { ...finalState, opacity: 0, scale: 0.4 };
+        case 'zoomOut':   return { ...finalState, opacity: 0, scale: 1.5 };
+        case 'rotateIn':  return { ...finalState, opacity: 0, scale: 0.8, rotate: layer.rotation - 20 };
+        default:          return { ...finalState, opacity: 0 };
+      }
+    }
+
+    // Animation completed – final/resting state
+    if (elapsed >= inDuration) return finalState;
+
+    // During animation – interpolate by progress
+    const progress = elapsed / inDuration;
+    // easeOutCubic
+    const eased = 1 - Math.pow(1 - progress, 3);
+
+    switch (inPreset) {
+      case 'fadeIn':
+        return { ...finalState, opacity: eased * layer.opacity };
+      case 'slideUp':
+        return { ...finalState, opacity: eased * layer.opacity, y: 80 * (1 - eased) };
+      case 'slideDown':
+        return { ...finalState, opacity: eased * layer.opacity, y: -80 * (1 - eased) };
+      case 'slideLeft':
+        return { ...finalState, opacity: eased * layer.opacity, x: -120 * (1 - eased) };
+      case 'slideRight':
+        return { ...finalState, opacity: eased * layer.opacity, x: 120 * (1 - eased) };
+      case 'zoomIn':
+        return { ...finalState, opacity: eased * layer.opacity, scale: 0.4 + 0.6 * eased };
+      case 'zoomOut':
+        return { ...finalState, opacity: eased * layer.opacity, scale: 1.5 - 0.5 * eased };
+      case 'rotateIn':
+        return {
+          ...finalState,
+          opacity: eased * layer.opacity,
+          scale: 0.8 + 0.2 * eased,
+          rotate: layer.rotation - 20 * (1 - eased),
+        };
+      default:
+        return { ...finalState, opacity: eased * layer.opacity };
+    }
+  };
+
   // Filtered Layers in Left Sidebar
   const filteredLayers = activeSlide.layers.filter(l =>
     l.name.toLowerCase().includes(layerSearchQuery.toLowerCase())
@@ -409,18 +492,6 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
               )}
             </div>
           )}
-          <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-teal-600 to-emerald-600 dark:from-teal-500 dark:to-indigo-500 flex items-center justify-center font-black text-lg text-white shadow-md shadow-teal-500/20">
-            Q
-          </div>
-          <div>
-            <h1 className="text-xs font-black text-slate-900 dark:text-white flex items-center gap-1.5">
-              <span>سیستم هوشمند اسلایدر و سازنده محتوا</span>
-              <span className="px-2 py-0.5 rounded-full bg-teal-50 dark:bg-teal-500/20 text-teal-700 dark:text-teal-300 text-[10px] border border-teal-200 dark:border-teal-500/30 font-mono font-bold">
-                v1.0 Pro
-              </span>
-            </h1>
-            <p className="text-[10px] text-slate-500 dark:text-slate-400">Visual Timeline Editor &amp; revolution engine</p>
-          </div>
         </div>
 
         {/* Center Breakpoint & Design Mode Badge */}
@@ -730,8 +801,10 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
               .map(layer => {
                 const isSelected = selectedLayerId === layer.id;
 
+                const animState = computeLayerPlaybackState(layer);
+
                 return (
-                  <div
+                  <motion.div
                     key={layer.id}
                     onMouseDown={e => handleMouseDownLayer(e, layer)}
                     style={{
@@ -748,10 +821,14 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
                       borderRadius: `${layer.borderRadius}px`,
                       padding: layer.padding,
                       zIndex: layer.zIndex,
-                      transform: `rotate(${layer.rotation}deg)`,
                       boxShadow: layer.shadow
                     }}
-                    className={`group/layer flex items-center justify-center transition-shadow cursor-move select-none ${
+                    animate={animState}
+                    transition={isPlaying
+                      ? { duration: 0.05, ease: 'linear' }
+                      : { duration: 0 }
+                    }
+                    className={`group/layer flex items-center justify-center cursor-move select-none ${
                       isSelected ? 'ring-2 ring-teal-400 ring-offset-2 ring-offset-slate-900 shadow-2xl' : ''
                     }`}
                   >
@@ -801,7 +878,7 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
                         </button>
                       </div>
                     )}
-                  </div>
+                  </motion.div>
                 );
               })}
           </div>
