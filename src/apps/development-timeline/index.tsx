@@ -1,5 +1,5 @@
 // ============================================================
-// DevelopmentTimelineManagement — مدیریت روند توسعه و تحول عمرانی
+// DevelopmentTimelineManagement — مدیریت روند توسعه و تحول
 //
 // CRUD کامل برای آیتم‌های تایم‌لاین توسعه عمران شهری و جاده‌ای
 // ============================================================
@@ -51,6 +51,12 @@ const PREDEFINED_ICONS = [
   { fa: 'fa-solid fa-bridge',      label: 'پل',            color: '#8D6E63' },
   { fa: 'fa-solid fa-rocket',      label: 'پیشرفت',        color: '#E07A5F' },
   { fa: 'fa-solid fa-flag',        label: 'افتتاح',        color: '#D62828' },
+  { fa: 'fa-solid fa-user-graduate', label: 'دانشجویان',    color: '#5B8DEF' },
+  { fa: 'fa-solid fa-briefcase',     label: 'اشتغال',       color: '#E67E22' },
+  { fa: 'fa-solid fa-book-open',     label: 'رشته تحصیلی',  color: '#8E44AD' },
+  { fa: 'fa-solid fa-handshake',     label: 'شریک علمی',    color: '#1ABC9C' },
+  { fa: 'fa-solid fa-person-digging', label: 'عمران',        color: '#B76E4C' },
+  { fa: 'fa-solid fa-desktop',        label: 'فناوری',       color: '#6C5CE7' },
 ];
 
 const emptyForm = {
@@ -414,7 +420,7 @@ export default function DevelopmentTimelineManagement(_props: DevelopmentTimelin
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800 dark:text-white">روند توسعه و تحول عمرانی</h1>
+          <h1 className="text-2xl font-bold text-gray-800 dark:text-white">روند توسعه و تحول</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             مدیریت آیتم‌های تایم‌لاین توسعه عمران شهری و جاده‌ای یزد
           </p>

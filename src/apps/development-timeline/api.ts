@@ -1,5 +1,5 @@
 // ============================================================
-// Development Timeline API — API روند توسعه و تحول عمرانی
+// Development Timeline API — API روند توسعه و تحول
 // ============================================================
 
 import { API } from '@/src/shared-utils/functions';
