@@ -884,22 +884,25 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
             style={{
               width: `${canvasWidth}px`,
               height: `${canvasHeight}px`,
-              background: activeSlide.background.gradient || activeSlide.background.color || '#0f172a'
+              background:
+                activeSlide.background.type === 'image' || activeSlide.background.type === 'video'
+                  ? 'transparent'
+                  : activeSlide.background.gradient || activeSlide.background.color || '#0f172a'
             }}
             className="relative rounded-3xl overflow-hidden shadow-2xl border-2 border-gray-300 dark:border-slate-800 transition-all duration-300"
           >
-            {/* Particle Canvas Addon */}
-            {project.addonParticles && (
-              <AddonParticleCanvas preset={activeSlide.background.particlesPreset || 'stars'} opacity={0.6} />
-            )}
-
-            {/* Background Image overlay if specified */}
-            {activeSlide.background.imageUrl && (
+            {/* Background Image - full when type is 'image', overlay otherwise */}
+            {activeSlide.background.imageUrl && activeSlide.background.type === 'image' && (
               <img
                 src={activeSlide.background.imageUrl}
                 alt="slide bg"
-                className="absolute inset-0 w-full h-full object-cover pointer-events-none opacity-30 mix-blend-overlay"
+                className="absolute inset-0 w-full h-full object-cover pointer-events-none"
               />
+            )}
+
+            {/* Particle Canvas — show when type is 'particles' OR project addon is enabled */}
+            {(project.addonParticles || activeSlide.background.type === 'particles') && (
+              <AddonParticleCanvas preset={activeSlide.background.particlesPreset || 'stars'} opacity={0.6} />
             )}
 
             {/* Render Stage Layers */}

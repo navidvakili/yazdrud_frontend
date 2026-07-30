@@ -23,7 +23,7 @@ import {
   ImageIcon
 } from 'lucide-react';
 import { MediaManager } from '@/src/shared-components';
-import type { Layer, LayerType, AnimationPreset, AnimationEasing, InteractionTrigger, InteractionActionType, Slide, SlideBackground, BreakpointWidth } from '@/src/shared-types/slider-studio';
+import type { Layer, LayerType, AnimationPreset, AnimationEasing, InteractionTrigger, InteractionActionType, LayerInteraction, Slide, SlideBackground, BreakpointWidth } from '@/src/shared-types/slider-studio';
 
 interface InspectorPanelProps {
   selectedLayer: Layer | null;
@@ -282,6 +282,126 @@ export default function InspectorPanel({
               </div>
             )}
           </div>
+        </div>
+
+        {/* ---- Slide-level Interactions ---- */}
+        <div className="p-3 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-gray-200 dark:border-slate-800/80 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="font-extrabold text-teal-600 dark:text-teal-400 text-[11px]">رویدادهای اسلاید</span>
+            <button
+              onClick={() => {
+                const existing = slide.interactions || [];
+                const newInt: LayerInteraction = {
+                  id: `int-${Date.now()}`,
+                  trigger: 'slideLoad',
+                  action: 'jumpSlide',
+                  targetSlideId: allSlides[0]?.id || ''
+                };
+                updateSlideField('interactions', [...existing, newInt]);
+              }}
+              className="px-2.5 py-1.5 rounded-xl bg-teal-600 dark:bg-teal-500 hover:bg-teal-700 dark:hover:bg-teal-400 text-white dark:text-slate-950 font-extrabold text-[11px] flex items-center gap-1 cursor-pointer"
+            >
+              <Plus className="w-3 h-3" />
+              <span>افزودن رویداد</span>
+            </button>
+          </div>
+
+          {(!slide.interactions || slide.interactions.length === 0) ? (
+            <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-center text-slate-500 text-[11px]">
+              هیچ رویدادی برای اسلاید ثبت نشده است.
+            </div>
+          ) : (
+            slide.interactions.map((int, idx) => (
+              <div key={int.id} className="p-2.5 bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 space-y-2">
+                <div className="flex items-center justify-between text-[11px] font-bold text-teal-600 dark:text-teal-400">
+                  <span>رویداد {idx + 1}</span>
+                  <button
+                    onClick={() => {
+                      const updated = (slide.interactions || []).filter(i => i.id !== int.id);
+                      updateSlideField('interactions', updated);
+                    }}
+                    className="text-rose-500 hover:text-rose-600 dark:text-rose-400 cursor-pointer"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[10px] text-slate-500 dark:text-slate-400">رویداد (Trigger)</label>
+                    <select
+                      value={int.trigger}
+                      onChange={e => {
+                        const updated = (slide.interactions || []).map(item =>
+                          item.id === int.id ? { ...item, trigger: e.target.value as InteractionTrigger } : item
+                        );
+                        updateSlideField('interactions', updated);
+                      }}
+                      className="w-full p-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-slate-900 dark:text-white font-sans text-xs cursor-pointer"
+                    >
+                      <option value="slideLoad">بارگذاری اسلاید (Slide Load)</option>
+                      <option value="click">کلیک (Click)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] text-slate-500 dark:text-slate-400">عملیات (Action)</label>
+                    <select
+                      value={int.action}
+                      onChange={e => {
+                        const updated = (slide.interactions || []).map(item =>
+                          item.id === int.id ? { ...item, action: e.target.value as InteractionActionType } : item
+                        );
+                        updateSlideField('interactions', updated);
+                      }}
+                      className="w-full p-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-slate-900 dark:text-white font-sans text-xs cursor-pointer"
+                    >
+                      <option value="jumpSlide">پرش به اسلاید دیگر</option>
+                      <option value="link">هدایت به لینک خارجی</option>
+                    </select>
+                  </div>
+                </div>
+
+                {int.action === 'jumpSlide' && (
+                  <div>
+                    <label className="text-[10px] text-slate-500 dark:text-slate-400">اسلاید مقصد</label>
+                    <select
+                      value={int.targetSlideId || ''}
+                      onChange={e => {
+                        const updated = (slide.interactions || []).map(item =>
+                          item.id === int.id ? { ...item, targetSlideId: e.target.value } : item
+                        );
+                        updateSlideField('interactions', updated);
+                      }}
+                      className="w-full p-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-slate-900 dark:text-white font-sans text-xs cursor-pointer"
+                    >
+                      {allSlides.map(s => (
+                        <option key={s.id} value={s.id}>{s.title}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {int.action === 'link' && (
+                  <div>
+                    <label className="text-[10px] text-slate-500 dark:text-slate-400">آدرس URL مقصد</label>
+                    <input
+                      type="text"
+                      value={int.targetUrl || ''}
+                      onChange={e => {
+                        const updated = (slide.interactions || []).map(item =>
+                          item.id === int.id ? { ...item, targetUrl: e.target.value } : item
+                        );
+                        updateSlideField('interactions', updated);
+                      }}
+                      placeholder="https://..."
+                      className="w-full p-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-slate-900 dark:text-white font-mono text-xs"
+                    />
+                  </div>
+                )}
+              </div>
+            ))
+          )}
         </div>
       </div>
       <MediaManager

@@ -47,6 +47,42 @@ export default function InteractivePreviewModal({
     return () => clearTimeout(timer);
   }, [isOpen, isPlaying, currentSlideIndex, activeSlide, project.slides.length]);
 
+  // Execute slide-level 'slideLoad' interactions when the slide mounts
+  useEffect(() => {
+    if (!activeSlide.interactions) return;
+    activeSlide.interactions.forEach(int => {
+      if (int.trigger === 'slideLoad') {
+        if (int.action === 'jumpSlide' && int.targetSlideId) {
+          const targetIdx = project.slides.findIndex(s => s.id === int.targetSlideId);
+          if (targetIdx !== -1) {
+            setCurrentSlideIndex(targetIdx);
+            setKeyCounter(prev => prev + 1);
+          }
+        } else if (int.action === 'link' && int.targetUrl) {
+          window.open(int.targetUrl, '_blank');
+        }
+      }
+    });
+  }, [activeSlide.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Handle slide-level click interactions
+  const handleSlideClick = () => {
+    if (!activeSlide.interactions) return;
+    activeSlide.interactions.forEach(int => {
+      if (int.trigger === 'click') {
+        if (int.action === 'jumpSlide' && int.targetSlideId) {
+          const targetIdx = project.slides.findIndex(s => s.id === int.targetSlideId);
+          if (targetIdx !== -1) {
+            setCurrentSlideIndex(targetIdx);
+            setKeyCounter(prev => prev + 1);
+          }
+        } else if (int.action === 'link' && int.targetUrl) {
+          window.open(int.targetUrl, '_blank');
+        }
+      }
+    });
+  };
+
   if (!isOpen) return null;
 
   // Viewport sizes
@@ -175,31 +211,46 @@ export default function InteractivePreviewModal({
           </>
         )}
 
-        {/* Viewport Frame */}
+        {/* Viewport Frame with AnimatePresence for transitions */}
+        <AnimatePresence mode="wait">
         <motion.div
           key={`${activeSlide.id}-${keyCounter}`}
-          initial={{ opacity: 0, scale: 0.96 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5 }}
+          {...(() => {
+            const t = activeSlide.transition || 'fade';
+            const variants: Record<string, any> = {
+              fade:       { initial: { opacity: 0 },                animate: { opacity: 1 },                exit: { opacity: 0 } },
+              slideLeft:  { initial: { opacity: 0, x: 200 },        animate: { opacity: 1, x: 0 },           exit: { opacity: 0, x: -200 } },
+              slideRight: { initial: { opacity: 0, x: -200 },       animate: { opacity: 1, x: 0 },           exit: { opacity: 0, x: 200 } },
+              zoomOut:    { initial: { opacity: 0, scale: 1.2 },    animate: { opacity: 1, scale: 1 },       exit: { opacity: 0, scale: 0.8 } },
+              '3dCube':   { initial: { opacity: 0, rotateY: -45, scale: 0.9 }, animate: { opacity: 1, rotateY: 0, scale: 1 }, exit: { opacity: 0, rotateY: 45, scale: 0.9 } },
+            };
+            return variants[t] || variants.fade;
+          })()}
+          onClick={handleSlideClick}
+          transition={{ duration: 0.6, ease: 'easeInOut' }}
           style={{
             width: `${viewportWidths[deviceSize]}px`,
             height: `${project.height * scaleFactor}px`,
-            background: activeSlide.background.gradient || activeSlide.background.color || '#0f172a'
+            background:
+              activeSlide.background.type === 'image' || activeSlide.background.type === 'video'
+                ? 'transparent'
+                : activeSlide.background.gradient || activeSlide.background.color || '#0f172a',
+            perspective: activeSlide.transition === '3dCube' ? '1200px' : undefined
           }}
           className="relative rounded-3xl overflow-hidden border-2 border-teal-500/30 shadow-2xl transition-all duration-300"
         >
-          {/* Particle Backdrop */}
-          {project.addonParticles && (
-            <AddonParticleCanvas preset={activeSlide.background.particlesPreset || 'stars'} opacity={0.6} />
-          )}
-
-          {/* Background Image if present */}
-          {activeSlide.background.imageUrl && (
+          {/* Background Image - full when type is 'image', overlay otherwise */}
+          {activeSlide.background.imageUrl && activeSlide.background.type === 'image' && (
             <img
               src={activeSlide.background.imageUrl}
               alt="slide background"
-              className="absolute inset-0 w-full h-full object-cover pointer-events-none opacity-40 mix-blend-overlay"
+              className="absolute inset-0 w-full h-full object-cover pointer-events-none"
             />
+          )}
+
+          {/* Particle Backdrop — show when type is 'particles' OR project addon is enabled */}
+          {(project.addonParticles || activeSlide.background.type === 'particles') && (
+            <AddonParticleCanvas preset={activeSlide.background.particlesPreset || 'stars'} opacity={0.6} />
           )}
 
           {/* Render Layers */}
@@ -322,6 +373,7 @@ export default function InteractivePreviewModal({
               );
             })}
         </motion.div>
+      </AnimatePresence>
       </div>
 
       {/* Bottom Indicator Dots */}

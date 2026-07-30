@@ -112,6 +112,7 @@ export interface Slide {
   background: SlideBackground;
   layers: Layer[];
   transition: 'fade' | 'slideLeft' | 'slideRight' | 'zoomOut' | '3dCube';
+  interactions?: LayerInteraction[];
 }
 
 export interface SliderProject {
