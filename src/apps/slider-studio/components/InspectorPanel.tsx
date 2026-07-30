@@ -1009,8 +1009,10 @@ export default function InspectorPanel({
                   className="w-full p-2 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-slate-900 dark:text-white font-sans text-xs cursor-pointer"
                 >
                   <option value="easeOut">Ease Out (نرم و ملایم)</option>
-                  <option value="bounce">Bounce (فنری)</option>
+                  <option value="easeIn">Ease In (نرم شروع)</option>
                   <option value="easeInOut">Ease In Out</option>
+                  <option value="bounce">Bounce (فنری)</option>
+                  <option value="elastic">Elastic (کشسان)</option>
                   <option value="linear">Linear (خطی)</option>
                 </select>
               </div>

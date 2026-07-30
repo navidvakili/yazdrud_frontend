@@ -174,9 +174,16 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
 
   // Layer Update Handler
   const handleUpdateLayer = (updated: Layer) => {
+    const existing = activeSlide.layers.find(l => l.id === updated.id);
+    const animChanged = existing && JSON.stringify(existing.animation) !== JSON.stringify(updated.animation);
     const updatedLayers = activeSlide.layers.map(l => (l.id === updated.id ? updated : l));
     const updatedSlides = project.slides.map(s => (s.id === activeSlide.id ? { ...s, layers: updatedLayers } : s));
     setProject({ ...project, slides: updatedSlides });
+    // Reset timeline when animation settings change while playing,
+    // so the user immediately sees the new delay/easing take effect
+    if (animChanged && isPlaying) {
+      setCurrentTime(0);
+    }
   };
 
   // Slide Update Handler
@@ -1000,7 +1007,7 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
                     }}
                     animate={animState}
                     transition={isPlaying
-                      ? { duration: 0.05, ease: layer.animation.inEasing === 'bounce' || layer.animation.inEasing === 'elastic' ? 'easeOut' : layer.animation.inEasing || 'easeOut' }
+                      ? { duration: 0.02, ease: 'linear' }
                       : { duration: 0 }
                     }
                     whileHover={

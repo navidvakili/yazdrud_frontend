@@ -295,9 +295,11 @@ export default function InteractivePreviewModal({
                 }
               };
 
+              const animKey = `${layer.id}-anim-${layer.animation.inPreset}-${layer.animation.inDuration}-${layer.animation.inDelay}-${layer.animation.inEasing}`;
+
               return (
                 <motion.div
-                  key={layer.id}
+                  key={animKey}
                   initial={getInitialAnimation()}
                   animate={{ opacity: layer.opacity, x: 0, y: 0, scale: 1, rotate: layer.rotation }}
                   transition={{
