@@ -195,6 +195,7 @@ export default function GradientPicker({ value, onChange }: GradientPickerProps)
               value={stop.position}
               onChange={(e) => handleStopPosition(index, parseInt(e.target.value))}
               className="flex-1 h-1 accent-teal-500 cursor-pointer"
+              dir="ltr"
             />
             <span className="text-[10px] text-slate-500 w-8 text-right font-mono">
               {stop.position}%
@@ -226,6 +227,7 @@ export default function GradientPicker({ value, onChange }: GradientPickerProps)
               emit(val, stops);
             }}
             className="flex-1 h-1 accent-teal-500 cursor-pointer"
+            dir="ltr"
           />
           <span className="text-[10px] text-slate-500 w-12 text-right font-mono">
             {angle}

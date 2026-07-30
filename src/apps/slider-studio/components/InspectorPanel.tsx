@@ -959,6 +959,7 @@ export default function InspectorPanel({
                   value={selectedLayer.animation.parallaxDepth || 0}
                   onChange={e => updateAnimField('parallaxDepth', Number(e.target.value))}
                   className="w-full accent-teal-600 dark:accent-teal-500 cursor-pointer"
+                  dir="ltr"
                 />
               </div>
             </div>
