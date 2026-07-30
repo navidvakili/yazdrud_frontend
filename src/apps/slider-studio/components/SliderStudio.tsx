@@ -49,6 +49,7 @@ import AddonParticleCanvas from './AddonParticleCanvas';
 import TemplateLibraryModal from './TemplateLibraryModal';
 import CodeExportModal from './CodeExportModal';
 import InteractivePreviewModal from './InteractivePreviewModal';
+import { regenerateSlideIds, localizeSlideImages } from '../utils/templateUtils';
 
 interface SliderStudioProps {
   initialProject?: SliderProject | null;
@@ -120,6 +121,8 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
 
   // Modals state
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState<boolean>(false);
+  const [isLocalizingTemplate, setIsLocalizingTemplate] = useState(false);
+  const [localizingMessage, setLocalizingMessage] = useState('');
   const [isExportModalOpen, setIsExportModalOpen] = useState<boolean>(false);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState<boolean>(false);
 
@@ -300,6 +303,36 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
 
     setProject({ ...project, slides: [...project.slides, newSlide] });
     setActiveSlideId(newSlideId);
+  };
+
+  // Add Template Slides (append to existing project with localized images)
+  const handleAddTemplateSlides = async (templateProj: SliderProject) => {
+    setIsLocalizingTemplate(true);
+    setLocalizingMessage('در حال دریافت و ذخیره تصاویر قالب...');
+
+    try {
+      // 1. Regenerate all IDs to avoid collisions
+      const freshSlides = regenerateSlideIds(templateProj.slides);
+
+      // 2. Download external images & upload them to the server
+      const localizedSlides = await localizeSlideImages(freshSlides);
+
+      // 3. Append slides to the current project
+      const updatedSlides = [...project.slides, ...localizedSlides];
+      setProject({ ...project, slides: updatedSlides });
+
+      // 4. Activate the first newly added slide
+      const firstNewSlide = localizedSlides[0];
+      if (firstNewSlide) {
+        setActiveSlideId(firstNewSlide.id);
+        setSelectedLayerId(firstNewSlide.layers[0]?.id || null);
+      }
+    } catch (err) {
+      console.error('Failed to add template slides:', err);
+    } finally {
+      setIsLocalizingTemplate(false);
+      setLocalizingMessage('');
+    }
   };
 
   // Move Layer Up in the list (earlier index → appears higher)
@@ -1102,6 +1135,7 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
           setActiveSlideId(proj.slides[0].id);
           setSelectedLayerId(proj.slides[0].layers[0]?.id || null);
         }}
+        onAddTemplateSlides={handleAddTemplateSlides}
         currentProject={project}
       />
 
@@ -1160,6 +1194,36 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
                   تأیید حذف
                 </button>
               </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Template Loading Overlay */}
+      <AnimatePresence>
+        {isLocalizingTemplate && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-gray-200 dark:border-slate-700 p-8 max-w-sm w-full mx-4 flex flex-col items-center gap-4"
+            >
+              <div className="relative w-14 h-14">
+                <div className="absolute inset-0 rounded-full border-4 border-teal-200 dark:border-teal-800" />
+                <div className="absolute inset-0 rounded-full border-4 border-teal-600 dark:border-teal-400 border-t-transparent animate-spin" />
+              </div>
+              <p className="text-sm font-bold text-slate-900 dark:text-white text-center">
+                {localizingMessage}
+              </p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 text-center">
+                تصاویر قالب در حال ذخیره بر روی سرور می‌باشد. لطفاً صبر کنید...
+              </p>
             </motion.div>
           </motion.div>
         )}

@@ -20,6 +20,7 @@ interface TemplateLibraryModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSelectProject: (proj: SliderProject) => void;
+  onAddTemplateSlides: (proj: SliderProject) => void;
   currentProject: SliderProject;
 }
 
@@ -27,6 +28,7 @@ export default function TemplateLibraryModal({
   isOpen,
   onClose,
   onSelectProject,
+  onAddTemplateSlides,
   currentProject
 }: TemplateLibraryModalProps) {
   const [copied, setCopied] = useState(false);
@@ -182,13 +184,13 @@ export default function TemplateLibraryModal({
 
                     <button
                       onClick={() => {
-                        onSelectProject(proj);
+                        onAddTemplateSlides(proj);
                         onClose();
                       }}
                       className="w-full py-2.5 rounded-xl bg-teal-600 dark:bg-teal-500 hover:bg-teal-700 dark:hover:bg-teal-400 text-white dark:text-slate-950 font-black text-xs transition-all cursor-pointer flex items-center justify-center gap-2"
                     >
                       <FolderPlus className="w-4 h-4" />
-                      <span>بارگذاری این پروژه در ادیتور</span>
+                      <span>افزودن به پروژه فعلی</span>
                     </button>
                   </div>
                 );
