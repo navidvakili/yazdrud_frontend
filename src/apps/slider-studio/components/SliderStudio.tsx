@@ -257,7 +257,7 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
         outDuration: 0.5,
         outDelay: 5.0,
         hoverEffect: type === 'button' ? 'glow' : 'none',
-        parallaxDepth: 20
+        parallaxDepth: 0
       },
       interactions: []
     };
