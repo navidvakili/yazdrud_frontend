@@ -2,7 +2,7 @@
 // Slider Studio & Visual Editor Types
 // ============================================================
 
-export type LayerType = 'text' | 'image' | 'button' | 'video' | 'svg' | 'shape' | 'group' | 'customHtml';
+export type LayerType = 'text' | 'image' | 'button' | 'video' | 'rectangle' | 'svg' | 'shape' | 'group' | 'customHtml';
 
 export type AnimationEasing = 'linear' | 'easeIn' | 'easeOut' | 'easeInOut' | 'bounce' | 'elastic';
 

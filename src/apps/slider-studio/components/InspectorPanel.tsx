@@ -41,6 +41,8 @@ interface InspectorPanelProps {
   slide: Slide | null;
   onUpdateSlide: (updated: Slide) => void;
   allSlides: { id: string; title: string }[];
+  canvasWidth: number;
+  canvasHeight: number;
 }
 
 export default function InspectorPanel({
@@ -49,7 +51,9 @@ export default function InspectorPanel({
   onDeleteLayer,
   slide,
   onUpdateSlide,
-  allSlides
+  allSlides,
+  canvasWidth,
+  canvasHeight
 }: InspectorPanelProps) {
   const [activeTab, setActiveTab] = useState<'style' | 'anim' | 'interaction' | 'parallax' | 'responsive'>('style');
   const [activeBreakpoint, setActiveBreakpoint] = useState<BreakpointWidth>('1240');
@@ -593,6 +597,10 @@ export default function InspectorPanel({
                     <Video className="w-4 h-4" />
                   </button>
                 </div>
+              ) : selectedLayer.type === 'rectangle' ? (
+                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-center text-slate-500 dark:text-slate-400 text-[11px]">
+                  این لایه رنگ است و محتوای متنی ندارد
+                </div>
               ) : (
                 <input
                   type="text"
@@ -807,6 +815,23 @@ export default function InspectorPanel({
                   />
                 </div>
               </div>
+
+              {/* Fill Slide Button */}
+              <button
+                onClick={() => {
+                  onUpdateLayer({
+                    ...selectedLayer,
+                    x: 0,
+                    y: 0,
+                    width: canvasWidth,
+                    height: canvasHeight
+                  });
+                }}
+                className="w-full py-2 rounded-xl bg-teal-50 dark:bg-teal-500/10 hover:bg-teal-100 dark:hover:bg-teal-500/20 text-teal-700 dark:text-teal-300 font-extrabold text-[11px] flex items-center justify-center gap-1.5 cursor-pointer border border-teal-200 dark:border-teal-500/30 transition-all"
+              >
+                <Maximize2 className="w-3.5 h-3.5" />
+                <span>پر کردن اسلاید</span>
+              </button>
             </div>
 
             {/* Background & Border */}
@@ -1002,6 +1027,7 @@ export default function InspectorPanel({
                   onChange={e => updateAnimField('inPreset', e.target.value as AnimationPreset)}
                   className="w-full p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-slate-900 dark:text-white font-sans text-xs cursor-pointer"
                 >
+                  <option value="none">بدون انیمیشن</option>
                   <option value="fadeIn">Fade In (محو شدن)</option>
                   <option value="slideUp">Slide Up (حرکت از پایین)</option>
                   <option value="slideDown">Slide Down (حرکت از بالا)</option>

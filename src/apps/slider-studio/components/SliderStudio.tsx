@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Type,
@@ -239,8 +239,77 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
           || INITIAL_SLIDER_PROJECTS[0].slides[0].layers[0]?.id
           || null
       );
+      // Clear undo/redo history on project load
+      historyRef.current = [];
+      futureRef.current = [];
+      setUndoRedoVersion(v => v + 1);
     }
   }, [initialProject]);
+
+  // ── Undo / Redo ───────────────────────────────────────────────
+  const MAX_HISTORY = 50;
+  const historyRef = useRef<SliderProject[]>([]);
+  const futureRef = useRef<SliderProject[]>([]);
+  const lastHistoryTimeRef = useRef(0);
+  const [undoRedoVersion, setUndoRedoVersion] = useState(0);
+
+  const canUndo = historyRef.current.length > 0;
+  const canRedo = futureRef.current.length > 0;
+
+  const updateProject = useCallback((newProject: SliderProject) => {
+    const now = Date.now();
+    // Coalesce rapid changes (within 400ms) into one history entry
+    if (now - lastHistoryTimeRef.current < 400 && historyRef.current.length > 0) {
+      // Replace the last history entry instead of adding a new one
+      historyRef.current[historyRef.current.length - 1] = project;
+    } else {
+      historyRef.current = [...historyRef.current.slice(-(MAX_HISTORY - 1)), project];
+    }
+    lastHistoryTimeRef.current = now;
+    futureRef.current = [];
+    setProject(newProject);
+    setUndoRedoVersion(v => v + 1);
+  }, [project]);
+
+  const handleUndo = useCallback(() => {
+    if (historyRef.current.length === 0) return;
+    const prev = historyRef.current[historyRef.current.length - 1];
+    historyRef.current = historyRef.current.slice(0, -1);
+    futureRef.current = [...futureRef.current, project];
+    lastHistoryTimeRef.current = 0; // reset coalesce timer
+    setProject(prev);
+    setUndoRedoVersion(v => v + 1);
+  }, [project]);
+
+  const handleRedo = useCallback(() => {
+    if (futureRef.current.length === 0) return;
+    const next = futureRef.current[futureRef.current.length - 1];
+    futureRef.current = futureRef.current.slice(0, -1);
+    historyRef.current = [...historyRef.current, project];
+    lastHistoryTimeRef.current = 0; // reset coalesce timer
+    setProject(next);
+    setUndoRedoVersion(v => v + 1);
+  }, [project]);
+
+  // Keyboard shortcuts for undo/redo
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+        e.preventDefault();
+        if (e.shiftKey) {
+          handleRedo();
+        } else {
+          handleUndo();
+        }
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
+        e.preventDefault();
+        handleRedo();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [handleUndo, handleRedo]);
 
   // Confirmation dialog state
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -341,7 +410,7 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
     const animChanged = existing && JSON.stringify(existing.animation) !== JSON.stringify(updated.animation);
     const updatedLayers = activeSlide.layers.map(l => (l.id === updated.id ? updated : l));
     const updatedSlides = project.slides.map(s => (s.id === activeSlide.id ? { ...s, layers: updatedLayers } : s));
-    setProject({ ...project, slides: updatedSlides });
+    updateProject({ ...project, slides: updatedSlides });
     // Reset timeline when animation settings change while playing,
     // so the user immediately sees the new delay/easing take effect
     if (animChanged && isPlaying) {
@@ -352,7 +421,7 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
   // Slide Update Handler
   const handleUpdateSlide = (updated: Slide) => {
     const updatedSlides = project.slides.map(s => (s.id === updated.id ? updated : s));
-    setProject({ ...project, slides: updatedSlides });
+    updateProject({ ...project, slides: updatedSlides });
     // Also sync selectedLayer if the updated slide is now the active one
     if (updated.id === activeSlideId) {
       if (selectedLayerId && !updated.layers.find(l => l.id === selectedLayerId)) {
@@ -367,22 +436,24 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
     let newContent = 'متن جدید';
     if (type === 'button') newContent = 'دکمه اقدام به عمل';
 
-    // For image/video, don't add default content — open MediaManager instead
-    if (type === 'image' || type === 'video') {
+    // For image/video/rectangle, don't add default content
+    if (type === 'image' || type === 'video' || type === 'rectangle') {
       newContent = '';
     }
 
     const newLayer: Layer = {
       id: newLayerId,
-      name: `لایه ${type.toUpperCase()} ${activeSlide.layers.length + 1}`,
+      name: type === 'rectangle'
+        ? `لایه رنگ ${activeSlide.layers.length + 1}`
+        : `لایه ${type.toUpperCase()} ${activeSlide.layers.length + 1}`,
       type,
-      x: 150 + activeSlide.layers.length * 20,
-      y: 150 + activeSlide.layers.length * 20,
-      width: type === 'button' ? 200 : type === 'image' || type === 'video' ? 360 : 300,
-      height: type === 'button' ? 55 : type === 'image' || type === 'video' ? 240 : 80,
+      x: type === 'rectangle' ? 0 : 150 + activeSlide.layers.length * 20,
+      y: type === 'rectangle' ? 0 : 150 + activeSlide.layers.length * 20,
+      width: type === 'rectangle' ? canvasWidth : type === 'button' ? 200 : type === 'image' || type === 'video' ? 360 : 300,
+      height: type === 'rectangle' ? project.height : type === 'button' ? 55 : type === 'image' || type === 'video' ? 240 : 80,
       rotation: 0,
       opacity: 1,
-      zIndex: activeSlide.layers.length + 10,
+      zIndex: activeSlide.layers.length + 1,
       locked: false,
       visible: true,
       content: newContent,
@@ -393,7 +464,7 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
       textAlign: 'right',
       alignVertical: 'center',
       color: type === 'button' ? '#0f172a' : '#ffffff',
-      backgroundColor: type === 'button' ? '#38bdf8' : 'transparent',
+      backgroundColor: type === 'button' ? '#38bdf8' : type === 'rectangle' ? '#1e293b' : 'transparent',
       backgroundOpacity: 100,
       borderRadius: type === 'button' ? 16 : 0,
       borderWidth: 0,
@@ -414,9 +485,10 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
       interactions: []
     };
 
-    const updatedLayers = [...activeSlide.layers, newLayer];
+    // Unshift so new layer appears at top of tree (front)
+    const updatedLayers = [newLayer, ...activeSlide.layers];
     const updatedSlides = project.slides.map(s => (s.id === activeSlide.id ? { ...s, layers: updatedLayers } : s));
-    setProject({ ...project, slides: updatedSlides });
+    updateProject({ ...project, slides: updatedSlides });
     setSelectedLayerId(newLayerId);
 
     // Open MediaManager for image/video layers
@@ -431,7 +503,7 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
   const doDeleteLayer = (layerId: string) => {
     const updatedLayers = activeSlide.layers.filter(l => l.id !== layerId);
     const updatedSlides = project.slides.map(s => (s.id === activeSlide.id ? { ...s, layers: updatedLayers } : s));
-    setProject({ ...project, slides: updatedSlides });
+    updateProject({ ...project, slides: updatedSlides });
     if (selectedLayerId === layerId) {
       setSelectedLayerId(updatedLayers[0]?.id || null);
     }
@@ -440,7 +512,7 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
   const doDeleteSlide = (slideId: string) => {
     if (project.slides.length <= 1) return;
     const updatedSlides = project.slides.filter(s => s.id !== slideId);
-    setProject({ ...project, slides: updatedSlides });
+    updateProject({ ...project, slides: updatedSlides });
     if (activeSlideId === slideId) {
       const newActiveId = updatedSlides[0]?.id || project.slides[0].id;
       setActiveSlideId(newActiveId);
@@ -482,7 +554,7 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
       layers: []
     };
 
-    setProject({ ...project, slides: [...project.slides, newSlide] });
+    updateProject({ ...project, slides: [...project.slides, newSlide] });
     setActiveSlideId(newSlideId);
   };
 
@@ -500,7 +572,7 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
 
       // 3. Append slides to the current project
       const updatedSlides = [...project.slides, ...localizedSlides];
-      setProject({ ...project, slides: updatedSlides });
+      updateProject({ ...project, slides: updatedSlides });
 
       // 4. Activate the first newly added slide
       const firstNewSlide = localizedSlides[0];
@@ -522,10 +594,12 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
     const idx = layers.findIndex(l => l.id === layerId);
     if (idx > 0) {
       [layers[idx], layers[idx - 1]] = [layers[idx - 1], layers[idx]];
+      // Top of tree (idx 0) = highest zIndex (front), bottom = lowest (back)
+      const reindexed = layers.map((l, i) => ({ ...l, zIndex: layers.length - i }));
       const updatedSlides = project.slides.map(s =>
-        s.id === activeSlide.id ? { ...s, layers } : s
+        s.id === activeSlide.id ? { ...s, layers: reindexed } : s
       );
-      setProject({ ...project, slides: updatedSlides });
+      updateProject({ ...project, slides: updatedSlides });
     }
   };
 
@@ -535,10 +609,12 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
     const idx = layers.findIndex(l => l.id === layerId);
     if (idx < layers.length - 1) {
       [layers[idx], layers[idx + 1]] = [layers[idx + 1], layers[idx]];
+      // Top of tree (idx 0) = highest zIndex (front), bottom = lowest (back)
+      const reindexed = layers.map((l, i) => ({ ...l, zIndex: layers.length - i }));
       const updatedSlides = project.slides.map(s =>
-        s.id === activeSlide.id ? { ...s, layers } : s
+        s.id === activeSlide.id ? { ...s, layers: reindexed } : s
       );
-      setProject({ ...project, slides: updatedSlides });
+      updateProject({ ...project, slides: updatedSlides });
     }
   };
 
@@ -565,10 +641,13 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
     const layers = [...activeSlide.layers];
     const [removed] = layers.splice(drag.fromIndex, 1);
     layers.splice(toIndex, 0, removed);
+    // Recalculate zIndex: top of tree (idx 0) = highest zIndex (front),
+    // bottom of tree = lowest zIndex (back)
+    const reindexed = layers.map((l, idx) => ({ ...l, zIndex: layers.length - idx }));
     const updatedSlides = project.slides.map(s =>
-      s.id === activeSlide.id ? { ...s, layers } : s
+      s.id === activeSlide.id ? { ...s, layers: reindexed } : s
     );
-    setProject({ ...project, slides: updatedSlides });
+    updateProject({ ...project, slides: updatedSlides });
     dragItemRef.current = null;
     setDragOverIndex(null);
   };
@@ -591,7 +670,7 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
     const slides = [...project.slides];
     const [removed] = slides.splice(drag.fromIndex, 1);
     slides.splice(toIndex, 0, removed);
-    setProject({ ...project, slides });
+    updateProject({ ...project, slides });
     dragItemRef.current = null;
     setDragOverIndex(null);
   };
@@ -894,7 +973,27 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
         </div>
 
         {/* Right Header Actions */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
+          {/* Undo / Redo */}
+          <button
+            onClick={handleUndo}
+            disabled={!canUndo}
+            className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-800 text-gray-600 dark:text-gray-300 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+            title="واگرد (Ctrl+Z)"
+          >
+            <RotateCw className="w-4 h-4 scale-x-[-1]" />
+          </button>
+          <button
+            onClick={handleRedo}
+            disabled={!canRedo}
+            className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-800 text-gray-600 dark:text-gray-300 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+            title="ازنو (Ctrl+Shift+Z / Ctrl+Y)"
+          >
+            <RotateCw className="w-4 h-4" />
+          </button>
+
+          <div className="w-px h-6 bg-gray-200 dark:bg-slate-700 mx-1" />
+
           <button
             onClick={() => setIsTemplateModalOpen(true)}
             className="px-3.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-gray-200 dark:border-slate-700 font-bold text-xs transition-colors flex items-center gap-1.5 cursor-pointer"
@@ -953,6 +1052,13 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
           >
             <Video className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
             <span>ویدیو</span>
+          </button>
+          <button
+            onClick={() => handleAddLayer('rectangle')}
+            className="px-3 py-1 rounded-xl bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold flex items-center gap-1 cursor-pointer border border-gray-200 dark:border-slate-800 shadow-xs"
+          >
+            <Square className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+            <span>رنگ</span>
           </button>
         </div>
 
@@ -1086,6 +1192,7 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
                     {layer.type === 'image' && <ImageIcon className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400 shrink-0" />}
                     {layer.type === 'button' && <Square className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />}
                     {layer.type === 'video' && <Video className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400 shrink-0" />}
+                    {layer.type === 'rectangle' && <Square className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />}
                     <span className="truncate">{layer.name}</span>
                   </div>
 
@@ -1211,6 +1318,7 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
                   <motion.div
                     key={layer.id}
                     onMouseDown={e => handleMouseDownLayer(e, layer)}
+                    initial={false}
                     style={{
                       position: 'absolute',
                       left: `${layer.x}px`,
@@ -1221,6 +1329,7 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
                       fontFamily: layer.fontFamily,
                       fontWeight: layer.fontWeight,
                       color: layer.color,
+                      opacity: layer.animation.inPreset === 'none' ? (layer.opacity ?? 1) : undefined,
                       borderRadius: `${layer.borderRadius}px`,
                       padding: layer.padding,
                       zIndex: layer.zIndex,
@@ -1283,6 +1392,8 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
                           muted
                           className="w-full h-full object-cover rounded-[inherit] pointer-events-none"
                         />
+                      ) : layer.type === 'rectangle' ? (
+                        <div className="w-full h-full" />
                       ) : (
                         <div
                           className="w-full h-full flex relative z-[1]"
@@ -1407,6 +1518,8 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
           slide={activeSlide}
           onUpdateSlide={handleUpdateSlide}
           allSlides={project.slides.map(s => ({ id: s.id, title: s.title }))}
+          canvasWidth={canvasWidth}
+          canvasHeight={canvasHeight}
         />
         )}
       </div>
@@ -1430,7 +1543,7 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
         isOpen={isTemplateModalOpen}
         onClose={() => setIsTemplateModalOpen(false)}
         onSelectProject={proj => {
-          setProject(proj);
+          updateProject(proj);
           setActiveSlideId(proj.slides[0].id);
           setSelectedLayerId(proj.slides[0].layers[0]?.id || null);
         }}

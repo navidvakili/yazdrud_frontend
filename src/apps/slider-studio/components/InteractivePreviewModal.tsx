@@ -463,6 +463,8 @@ export default function InteractivePreviewModal({
               const getInitialAnimation = () => {
                 const base = { rotate: layer.rotation };
                 switch (animInPreset) {
+                  case 'none':
+                    return { ...base, opacity: layer.opacity ?? 1 };
                   case 'fadeIn':
                     return { ...base, opacity: 0 };
                   case 'slideUp':
