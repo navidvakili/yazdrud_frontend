@@ -28,7 +28,8 @@ import {
   AlignVerticalJustifyStart,
   AlignVerticalJustifyCenter,
   AlignVerticalJustifyEnd,
-  Sun
+  Sun,
+  Video
 } from 'lucide-react';
 import { MediaManager } from '@/src/shared-components';
 import type { Layer, LayerType, AnimationPreset, AnimationEasing, InteractionTrigger, InteractionActionType, LayerInteraction, Slide, SlideBackground, BreakpointWidth } from '@/src/shared-types/slider-studio';
@@ -556,6 +557,23 @@ export default function InspectorPanel({
                     title="انتخاب تصویر از مدیریت رسانه"
                   >
                     <ImageIcon className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : selectedLayer.type === 'video' ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={selectedLayer.content}
+                    onChange={e => updateField('content', e.target.value)}
+                    className="flex-1 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-slate-900 dark:text-white font-mono text-[11px] focus:border-teal-500 focus:outline-none"
+                    placeholder="https://..."
+                  />
+                  <button
+                    onClick={() => setMediaPickerTarget('layer')}
+                    className="shrink-0 p-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 dark:bg-teal-500 dark:hover:bg-teal-400 text-white dark:text-slate-950 transition-colors cursor-pointer"
+                    title="انتخاب ویدئو از مدیریت رسانه"
+                  >
+                    <Video className="w-4 h-4" />
                   </button>
                 </div>
               ) : (
@@ -1268,8 +1286,8 @@ export default function InspectorPanel({
         open={mediaPickerTarget === 'layer'}
         onClose={() => setMediaPickerTarget(null)}
         onSelect={handleMediaSelect}
-        filter="image"
-        title="انتخاب تصویر لایه"
+        filter="all"
+        title="انتخاب رسانه لایه"
       />
     </>
   );

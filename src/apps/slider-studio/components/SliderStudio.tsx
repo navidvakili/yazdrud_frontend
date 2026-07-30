@@ -49,6 +49,7 @@ import AddonParticleCanvas from './AddonParticleCanvas';
 import TemplateLibraryModal from './TemplateLibraryModal';
 import CodeExportModal from './CodeExportModal';
 import InteractivePreviewModal from './InteractivePreviewModal';
+import { MediaManager } from '@/src/shared-components';
 import { regenerateSlideIds, localizeSlideImages } from '../utils/templateUtils';
 
 interface SliderStudioProps {
@@ -110,6 +111,10 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
 
   // Mouse position for parallax (normalized -1..1)
   const [mousePos, setMousePos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+
+  // Media picker for layer content
+  const [mediaPickerTarget, setMediaPickerTarget] = useState<'image' | 'video' | null>(null);
+  const [pendingMediaLayerId, setPendingMediaLayerId] = useState<string | null>(null);
 
   // Reset timeline to 0 when playback starts (sync before paint to avoid flash)
   useLayoutEffect(() => {
@@ -205,9 +210,12 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
   const handleAddLayer = (type: LayerType) => {
     const newLayerId = `layer-${Date.now()}`;
     let newContent = 'متن جدید';
-    if (type === 'image') newContent = 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&q=80&w=600';
     if (type === 'button') newContent = 'دکمه اقدام به عمل';
-    if (type === 'video') newContent = 'https://assets.mixkit.co/videos/preview/mixkit-futuristic-technology-digital-grid-41235-large.mp4';
+
+    // For image/video, don't add default content — open MediaManager instead
+    if (type === 'image' || type === 'video') {
+      newContent = '';
+    }
 
     const newLayer: Layer = {
       id: newLayerId,
@@ -255,6 +263,12 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
     const updatedSlides = project.slides.map(s => (s.id === activeSlide.id ? { ...s, layers: updatedLayers } : s));
     setProject({ ...project, slides: updatedSlides });
     setSelectedLayerId(newLayerId);
+
+    // Open MediaManager for image/video layers
+    if (type === 'image' || type === 'video') {
+      setPendingMediaLayerId(newLayerId);
+      setMediaPickerTarget(type);
+    }
   };
 
   // ---- Actual mutation helpers (used by confirm callbacks) ----
@@ -1309,6 +1323,27 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Media Manager for layer content */}
+      <MediaManager
+        open={mediaPickerTarget !== null}
+        onClose={() => {
+          setMediaPickerTarget(null);
+          setPendingMediaLayerId(null);
+        }}
+        onSelect={(url: string) => {
+          if (pendingMediaLayerId) {
+            const layer = activeSlide.layers.find(l => l.id === pendingMediaLayerId);
+            if (layer) {
+              handleUpdateLayer({ ...layer, content: url });
+            }
+          }
+          setMediaPickerTarget(null);
+          setPendingMediaLayerId(null);
+        }}
+        filter={mediaPickerTarget === 'image' ? 'image' : 'all'}
+        title={mediaPickerTarget === 'image' ? 'انتخاب تصویر لایه' : 'انتخاب ویدئوی لایه'}
+      />
     </div>
   );
 }
