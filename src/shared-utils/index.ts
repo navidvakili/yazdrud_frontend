@@ -1,4 +1,4 @@
-export { API, APISendFiles, downloadFile, getFileViewUrl, getAvatarUrl, getBrowserFingerprint } from './functions';
+export { API, APISendFiles, downloadFile, getFileViewUrl, getAvatarUrl, getBrowserFingerprint, decodeHtmlEntities } from './functions';
 export { networkObserver } from './networkObserver';
 export {
   toPersianDigits,

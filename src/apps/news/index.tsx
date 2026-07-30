@@ -11,8 +11,10 @@ import {
   Share2, FileText, Download, MessageSquare, BarChart2, Layers,
   CheckCircle2, X, Send, SlidersHorizontal, LayoutGrid, List,
   Flame, AlertCircle, ExternalLink, Info, Loader2, Upload, Image,
+  ChevronRight, ChevronLeft,
 } from 'lucide-react';
 import type { NewsItem, NewsCategory, User, PhotoReportImage } from '@/src/shared-types';
+import { decodeHtmlEntities } from '@/src/shared-utils';
 import ToastNotification from '@/src/shared-components/ToastNotification';
 import WysiwygEditor from '@/src/shared-components/WysiwygEditor';
 import TagInput from '@/src/shared-components/TagInput';
@@ -187,14 +189,18 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
 
   const handleTogglePin = async (itemId: number, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
+    const item = newsList.find(n => n.id === itemId);
+    const wasPinned = item?.is_pinned;
     try {
-      await togglePin(itemId);
+      const res = await togglePin(itemId);
       setNewsList(prev => prev.map(n => n.id === itemId ? { ...n, is_pinned: !n.is_pinned } : n));
       if (activeReaderItem?.id === itemId) {
         setActiveReaderItem(prev => prev ? { ...prev, is_pinned: !prev.is_pinned } : null);
       }
+      showToast(res.message || (wasPinned ? 'از خبر ویژه حذف شد' : 'به خبر ویژه اضافه شد'), 'success');
     } catch (err) {
       console.error('Toggle pin error:', err);
+      showToast(err.message || 'خطا در تغییر وضعیت خبر ویژه', 'error');
     }
   };
 
@@ -222,7 +228,7 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
       setEditingNewsId(data.id);
       setFormTitle(data.title);
       setFormSummary(data.summary || '');
-      setFormContent(data.content || '');
+      setFormContent(decodeHtmlEntities(data.content || ''));
       setFormCategoryId(data.category_id ? Number(data.category_id) : (categories.length > 0 ? categories[0].id : null));
       setFormStatus(data.status);
       setFormIsPinned(data.is_pinned);
@@ -236,7 +242,7 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
       setEditingNewsId(item.id);
       setFormTitle(item.title);
       setFormSummary(item.summary || '');
-      setFormContent(item.content || '');
+      setFormContent(decodeHtmlEntities(item.content || ''));
       setFormCategoryId(item.category_id ? Number(item.category_id) : (categories.length > 0 ? categories[0].id : null));
       setFormStatus(item.status);
       setFormIsPinned(item.is_pinned);
@@ -401,6 +407,19 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
   const totalViews = newsList.reduce((sum, n) => sum + n.views_count, 0);
   const totalLikes = newsList.reduce((sum, n) => sum + n.likes_count, 0);
   const pinnedCount = newsList.filter(n => n.is_pinned).length;
+
+  // ===== Smart pagination helper =====
+  const getPageNumbers = (current: number, total: number): (number | 'ellipsis')[] => {
+    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+    const pages: (number | 'ellipsis')[] = [1];
+    if (current > 3) pages.push('ellipsis');
+    const start = Math.max(2, current - 1);
+    const end = Math.min(total - 1, current + 1);
+    for (let i = start; i <= end; i++) pages.push(i);
+    if (current < total - 2) pages.push('ellipsis');
+    if (total > 1) pages.push(total);
+    return pages;
+  };
 
   // Load analytics when tab is analytics
   useEffect(() => {
@@ -882,6 +901,11 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
                       </td>
                       <td className="py-3.5 px-4 text-center" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-center gap-1">
+                          <button onClick={e => handleTogglePin(item.id, e)} className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                            item.is_pinned ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400' : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400'
+                          }`} title={item.is_pinned ? 'برداشتن از ویژه' : 'سنجاق به ویژه'}>
+                            <Pin className="w-4 h-4" />
+                          </button>
                           <button onClick={() => handleOpenReader(item)} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300" title="مطالعه">
                             <Eye className="w-4 h-4" />
                           </button>
@@ -908,18 +932,42 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
 
           {/* Pagination */}
           {!loading && totalPages > 1 && (
-            <div className="flex items-center justify-center gap-2">
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                <button
-                  key={page}
-                  onClick={() => setCurrentPage(page)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                    page === currentPage ? 'bg-teal-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200'
-                  }`}
-                >
-                  {page}
-                </button>
-              ))}
+            <div className="flex items-center justify-center gap-1.5">
+              {/* Previous */}
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+
+              {getPageNumbers(currentPage, totalPages).map((page, idx) =>
+                page === 'ellipsis' ? (
+                  <span key={`e-${idx}`} className="px-1.5 text-gray-400 dark:text-gray-500 text-xs font-bold">...</span>
+                ) : (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`min-w-[32px] px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      page === currentPage
+                        ? 'bg-teal-600 text-white shadow-sm'
+                        : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                    }`}
+                  >
+                    {page}
+                  </button>
+                )
+              )}
+
+              {/* Next */}
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
             </div>
           )}
 
@@ -1833,7 +1881,7 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
 
                 <div
                   className="text-xs sm:text-sm text-gray-800 dark:text-gray-200 leading-relaxed space-y-4 font-sans prose-content"
-                  dangerouslySetInnerHTML={{ __html: activeReaderItem.content }}
+                  dangerouslySetInnerHTML={{ __html: decodeHtmlEntities(activeReaderItem.content || '') }}
                 />
 
                 {/* Tags */}

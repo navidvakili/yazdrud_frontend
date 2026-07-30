@@ -205,6 +205,18 @@ export const getFileViewUrl = async (URL: string): Promise<{ url: string; conten
 // ========== Utility Functions ==========
 
 /**
+ * Decode HTML entities (e.g. `&amp;lt;p&amp;gt;` → `<p>`)
+ * so that content with double-encoded HTML can be safely rendered
+ * via dangerouslySetInnerHTML or set in the Tiptap editor.
+ */
+export const decodeHtmlEntities = (text: string): string => {
+  if (typeof window === 'undefined' || !text) return text;
+  const txt = document.createElement('textarea');
+  txt.innerHTML = text;
+  return txt.value;
+};
+
+/**
  * ساخت آدرس کامل آواتار کاربر از روی فایل امضا
  */
 export const getAvatarUrl = (sign: string | null | undefined): string => {
