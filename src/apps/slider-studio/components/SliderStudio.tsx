@@ -29,6 +29,8 @@ import {
   FolderPlus,
   Grid,
   Zap,
+  CheckCircle2,
+  ArrowRight,
   MousePointer,
   HelpCircle,
   Clock,
@@ -43,9 +45,17 @@ import TemplateLibraryModal from './TemplateLibraryModal';
 import CodeExportModal from './CodeExportModal';
 import InteractivePreviewModal from './InteractivePreviewModal';
 
-export default function SliderStudio() {
+interface SliderStudioProps {
+  initialProject?: SliderProject | null;
+  onSave?: (project: SliderProject) => void;
+  onBack?: () => void;
+}
+
+export default function SliderStudio({ initialProject, onSave, onBack }: SliderStudioProps) {
   // Project State
-  const [project, setProject] = useState<SliderProject>(INITIAL_SLIDER_PROJECTS[0]);
+  const [project, setProject] = useState<SliderProject>(
+    () => initialProject || INITIAL_SLIDER_PROJECTS[0]
+  );
   const [activeSlideId, setActiveSlideId] = useState<string>(INITIAL_SLIDER_PROJECTS[0].slides[0].id);
   const [selectedLayerId, setSelectedLayerId] = useState<string | null>(
     INITIAL_SLIDER_PROJECTS[0].slides[0].layers[0]?.id || null
@@ -225,8 +235,30 @@ export default function SliderStudio() {
     >
       {/* 1. TOP STUDIO HEADER TOOLBAR */}
       <div className="h-14 border-b border-gray-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/90 flex items-center justify-between px-4 z-20 shadow-xs">
-        {/* Brand Logo & Name */}
+        {/* Brand Logo & Name + Back/Save */}
         <div className="flex items-center gap-3">
+          {(onBack || onSave) && (
+            <div className="flex items-center gap-1.5 ml-3 pl-3 border-l border-gray-200 dark:border-slate-700">
+              {onBack && (
+                <button
+                  onClick={onBack}
+                  className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-800 text-gray-600 dark:text-gray-300 transition-colors cursor-pointer"
+                  title="بازگشت"
+                >
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              )}
+              {onSave && (
+                <button
+                  onClick={() => onSave(project)}
+                  className="px-4 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-black text-xs transition-all shadow-md shadow-teal-500/20 flex items-center gap-1.5 cursor-pointer"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>ذخیره اسلایدر</span>
+                </button>
+              )}
+            </div>
+          )}
           <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-teal-600 to-emerald-600 dark:from-teal-500 dark:to-indigo-500 flex items-center justify-center font-black text-lg text-white shadow-md shadow-teal-500/20">
             Q
           </div>

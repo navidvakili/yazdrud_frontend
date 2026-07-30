@@ -27,6 +27,18 @@ const API_BASE = import.meta.env.DEV
   : '/api';
 
 /**
+ * دریافت پروژه اسلایدر جاری (تکی)
+ * اگر پروژه‌ای وجود نداشته باشد، در بک‌اند به صورت خودکار ساخته می‌شود
+ */
+export async function fetchCurrentProject() {
+  const res = await fetch(`${API_BASE}/admin/slider-studio/current`, {
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) throw new Error('خطا در دریافت پروژه جاری');
+  return res.json();
+}
+
+/**
  * دریافت لیست پروژه‌های اسلایدر
  */
 export async function fetchProjects() {
