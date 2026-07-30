@@ -38,6 +38,7 @@ import {
   GripVertical,
   AlertTriangle,
   Move,
+  RotateCw,
   X
 } from 'lucide-react';
 import type { SliderProject, Slide, Layer, LayerType, BreakpointWidth } from '@/src/shared-types/slider-studio';
@@ -125,6 +126,27 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
   // Dragging layer state
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const dragStartRef = useRef<{ x: number; y: number; layerX: number; layerY: number } | null>(null);
+
+  // Resize state
+  const [isResizing, setIsResizing] = useState<boolean>(false);
+  const resizeStartRef = useRef<{
+    x: number;
+    y: number;
+    startWidth: number;
+    startHeight: number;
+    startX: number;
+    startY: number;
+    handle: string; // 'nw' | 'n' | 'ne' | 'w' | 'e' | 'sw' | 's' | 'se'
+  } | null>(null);
+
+  // Rotate state
+  const [isRotating, setIsRotating] = useState<boolean>(false);
+  const rotateStartRef = useRef<{
+    centerX: number;
+    centerY: number;
+    startAngle: number;
+    startRotation: number;
+  } | null>(null);
 
   // Active slide reference
   const activeSlide: Slide =
@@ -374,21 +396,93 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
     };
   };
 
-  const handleMouseMoveCanvas = (e: React.MouseEvent) => {
-    if (!isDragging || !dragStartRef.current || !selectedLayer || selectedLayer.locked) return;
-    const deltaX = e.clientX - dragStartRef.current.x;
-    const deltaY = e.clientY - dragStartRef.current.y;
-
-    handleUpdateLayer({
-      ...selectedLayer,
-      x: Math.round(dragStartRef.current.layerX + deltaX),
-      y: Math.round(dragStartRef.current.layerY + deltaY)
-    });
-  };
-
   const handleMouseUpCanvas = () => {
     setIsDragging(false);
+    setIsResizing(false);
+    setIsRotating(false);
     dragStartRef.current = null;
+    resizeStartRef.current = null;
+    rotateStartRef.current = null;
+  };
+
+  // Resize handler
+  const handleMouseDownResize = (e: React.MouseEvent, layer: Layer, handle: string) => {
+    if (layer.locked) return;
+    e.stopPropagation();
+    e.preventDefault();
+    setSelectedLayerId(layer.id);
+    setIsResizing(true);
+    resizeStartRef.current = {
+      x: e.clientX,
+      y: e.clientY,
+      startWidth: layer.width,
+      startHeight: layer.height,
+      startX: layer.x,
+      startY: layer.y,
+      handle,
+    };
+  };
+
+  // Rotate handler
+  const handleMouseDownRotate = (e: React.MouseEvent, layer: Layer) => {
+    if (layer.locked) return;
+    e.stopPropagation();
+    e.preventDefault();
+    setSelectedLayerId(layer.id);
+    setIsRotating(true);
+    const centerX = layer.x + layer.width / 2;
+    const centerY = layer.y + layer.height / 2;
+    const startAngle = Math.atan2(e.clientY - centerY, e.clientX - centerX) * (180 / Math.PI);
+    rotateStartRef.current = {
+      centerX,
+      centerY,
+      startAngle,
+      startRotation: layer.rotation,
+    };
+  };
+
+  // Updated mouse move to handle all three operations
+  const handleMouseMoveCanvas = (e: React.MouseEvent) => {
+    // --- Move (drag) ---
+    if (isDragging && dragStartRef.current && selectedLayer && !selectedLayer.locked) {
+      const deltaX = e.clientX - dragStartRef.current.x;
+      const deltaY = e.clientY - dragStartRef.current.y;
+      handleUpdateLayer({
+        ...selectedLayer,
+        x: Math.round(dragStartRef.current.layerX + deltaX),
+        y: Math.round(dragStartRef.current.layerY + deltaY),
+      });
+      return;
+    }
+
+    // --- Resize ---
+    if (isResizing && resizeStartRef.current && selectedLayer && !selectedLayer.locked) {
+      const rs = resizeStartRef.current;
+      const deltaX = e.clientX - rs.x;
+      const deltaY = e.clientY - rs.y;
+      let newX = rs.startX;
+      let newY = rs.startY;
+      let newW = rs.startWidth;
+      let newH = rs.startHeight;
+
+      const handle = rs.handle;
+      if (handle.includes('e')) newW = Math.max(20, rs.startWidth + deltaX);
+      if (handle.includes('w')) { newW = Math.max(20, rs.startWidth - deltaX); newX = rs.startX + rs.startWidth - newW; }
+      if (handle.includes('s')) newH = Math.max(20, rs.startHeight + deltaY);
+      if (handle.includes('n')) { newH = Math.max(20, rs.startHeight - deltaY); newY = rs.startY + rs.startHeight - newH; }
+
+      handleUpdateLayer({ ...selectedLayer, x: Math.round(newX), y: Math.round(newY), width: Math.round(newW), height: Math.round(newH) });
+      return;
+    }
+
+    // --- Rotate ---
+    if (isRotating && rotateStartRef.current && selectedLayer && !selectedLayer.locked) {
+      const rs = rotateStartRef.current;
+      const angle = Math.atan2(e.clientY - rs.centerY, e.clientX - rs.centerX) * (180 / Math.PI);
+      const newRotation = rs.startRotation + (angle - rs.startAngle);
+      handleUpdateLayer({ ...selectedLayer, rotation: Math.round(newRotation) });
+      return;
+    }
   };
 
   // ---- Animation Playback Helpers ----
@@ -816,6 +910,20 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
 
                 const animState = computeLayerPlaybackState(layer);
 
+                const HANDLE_SIZE = 10;
+
+                // Resize handle positions relative to layer
+                const handles = [
+                  { id: 'nw', x: 0, y: 0, cursor: 'nwse-resize' },
+                  { id: 'n',  x: '50%', y: 0, cursor: 'ns-resize', transform: 'translateX(-50%)' },
+                  { id: 'ne', x: '100%', y: 0, cursor: 'nesw-resize', transform: 'translate(-100%, 0)' },
+                  { id: 'w',  x: 0, y: '50%', cursor: 'ew-resize', transform: 'translateY(-50%)' },
+                  { id: 'e',  x: '100%', y: '50%', cursor: 'ew-resize', transform: 'translate(-100%, -50%)' },
+                  { id: 'sw', x: 0, y: '100%', cursor: 'nesw-resize', transform: 'translate(0, -100%)' },
+                  { id: 's',  x: '50%', y: '100%', cursor: 'ns-resize', transform: 'translate(-50%, -100%)' },
+                  { id: 'se', x: '100%', y: '100%', cursor: 'nwse-resize', transform: 'translate(-100%, -100%)' },
+                ];
+
                 return (
                   <motion.div
                     key={layer.id}
@@ -834,16 +942,15 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
                       borderRadius: `${layer.borderRadius}px`,
                       padding: layer.padding,
                       zIndex: layer.zIndex,
-                      boxShadow: layer.shadow
+                      boxShadow: layer.shadow,
                     }}
                     animate={animState}
                     transition={isPlaying
                       ? { duration: 0.05, ease: 'linear' }
                       : { duration: 0 }
                     }
-                    className={`group/layer flex items-center justify-center cursor-move select-none ${
-                      isSelected ? 'ring-2 ring-teal-400 ring-offset-2 ring-offset-slate-900 shadow-2xl' : ''
-                    }`}
+                    className={`group/layer flex items-center justify-center cursor-move select-none`}
+                    onClick={e => e.stopPropagation()}
                   >
                     {/* Layer Content View */}
                     {layer.type === 'image' ? (
@@ -866,30 +973,72 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
                       </div>
                     )}
 
-                    {/* Inline Selected Controls Toolbar */}
+                    {/* ===== FreeTransform Bounding Box (when selected) ===== */}
                     {isSelected && (
-                      <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-white dark:bg-slate-900 border border-teal-500/50 p-1 rounded-xl flex items-center gap-1 text-[10px] text-slate-800 dark:text-white shadow-xl z-50">
-                        <button
-                          onClick={e => {
-                            e.stopPropagation();
-                            handleDeleteLayer(layer.id);
+                      <>
+                        {/* Resize handles */}
+                        {handles.map(h => (
+                          <div
+                            key={h.id}
+                            onMouseDown={e => handleMouseDownResize(e, layer, h.id)}
+                            style={{
+                              position: 'absolute',
+                              left: typeof h.x === 'number' ? `${h.x}px` : h.x,
+                              top: typeof h.y === 'number' ? `${h.y}px` : h.y,
+                              width: HANDLE_SIZE,
+                              height: HANDLE_SIZE,
+                              transform: h.transform || 'none',
+                              marginLeft: typeof h.x === 'number' ? -HANDLE_SIZE / 2 : 0,
+                              marginTop: typeof h.y === 'number' ? -HANDLE_SIZE / 2 : 0,
+                              cursor: h.cursor,
+                            }}
+                            className="bg-white border-2 border-teal-500 rounded-sm shadow-md z-50 hover:scale-125 transition-transform"
+                          />
+                        ))}
+
+                        {/* Rotation handle (above top-center) */}
+                        <div
+                          onMouseDown={e => handleMouseDownRotate(e, layer)}
+                          style={{
+                            position: 'absolute',
+                            left: '50%',
+                            top: `${-HANDLE_SIZE - 18}px`,
+                            transform: 'translateX(-50%)',
+                            cursor: 'grab',
                           }}
-                          className="p-1 hover:bg-rose-50 dark:hover:bg-rose-500/20 text-rose-500 dark:text-rose-400 rounded-lg cursor-pointer"
-                          title="حذف"
+                          className="flex flex-col items-center z-50"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={e => {
-                            e.stopPropagation();
-                            handleUpdateLayer({ ...layer, locked: !layer.locked });
-                          }}
-                          className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg cursor-pointer"
-                          title="قفل"
+                          {/* Dashed line connecting rotate handle to box */}
+                          <div className="w-px h-3 bg-teal-400" />
+                          <div className="w-5 h-5 rounded-full bg-teal-500 border-2 border-white shadow-md flex items-center justify-center hover:bg-teal-400 transition-colors">
+                            <RotateCw className="w-3 h-3 text-white" />
+                          </div>
+                        </div>
+
+                        {/* Inline Selected Controls Toolbar */}
+                        <div
+                          onMouseDown={e => e.stopPropagation()}
+                          className="absolute -top-10 left-1/2 -translate-x-1/2 bg-white dark:bg-slate-900 border border-teal-500/50 p-1 rounded-xl flex items-center gap-1 text-[10px] text-slate-800 dark:text-white shadow-xl z-50"
                         >
-                          <Lock className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
+                          <button
+                            onClick={e => { e.stopPropagation(); handleDeleteLayer(layer.id); }}
+                            className="p-1 hover:bg-rose-50 dark:hover:bg-rose-500/20 text-rose-500 dark:text-rose-400 rounded-lg cursor-pointer"
+                            title="حذف"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={e => { e.stopPropagation(); handleUpdateLayer({ ...layer, locked: !layer.locked }); }}
+                            className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg cursor-pointer"
+                            title="قفل"
+                          >
+                            <Lock className="w-3.5 h-3.5" />
+                          </button>
+                          <span className="text-[10px] text-teal-600 dark:text-teal-400 font-mono font-bold px-1 select-none">
+                            {layer.width}×{layer.height}
+                          </span>
+                        </div>
+                      </>
                     )}
                   </motion.div>
                 );
