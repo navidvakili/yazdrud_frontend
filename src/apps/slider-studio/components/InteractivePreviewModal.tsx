@@ -381,7 +381,7 @@ export default function InteractivePreviewModal({
                           alignItems: layer.alignVertical === 'top' ? 'flex-start' : layer.alignVertical === 'bottom' ? 'flex-end' : 'center',
                           justifyContent: layer.textAlign === 'right' ? 'right' : layer.textAlign === 'left' ? 'left' : 'center',
                           textAlign: layer.textAlign || 'center',
-                          ...(layer.type === 'button' ? { fontWeight: 900, gap: '0.5rem' } : {}),
+                          ...(layer.type === 'button' ? { gap: '0.5rem' } : {}),
                         }}
                       >
                         {layer.type === 'button' ? (
