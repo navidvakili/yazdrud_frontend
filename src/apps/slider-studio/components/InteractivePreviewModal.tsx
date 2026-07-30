@@ -374,12 +374,24 @@ export default function InteractivePreviewModal({
                         muted
                         className="w-full h-full object-cover rounded-[inherit]"
                       />
-                    ) : layer.type === 'button' ? (
-                      <button className="w-full h-full font-black text-center flex items-center justify-center gap-2">
-                        {layer.content}
-                      </button>
                     ) : (
-                      <div className="w-full h-full leading-snug flex items-center justify-center">{layer.content}</div>
+                      <div
+                        className="w-full h-full flex relative z-[1]"
+                        style={{
+                          alignItems: layer.alignVertical === 'top' ? 'flex-start' : layer.alignVertical === 'bottom' ? 'flex-end' : 'center',
+                          justifyContent: layer.textAlign === 'right' ? 'flex-end' : layer.textAlign === 'left' ? 'flex-start' : 'center',
+                          textAlign: layer.textAlign || 'center',
+                          ...(layer.type === 'button' ? { fontWeight: 900, gap: '0.5rem' } : {}),
+                        }}
+                      >
+                        {layer.type === 'button' ? (
+                          <button className="w-full h-full cursor-pointer" style={{ background: 'none', border: 'none', color: 'inherit' }}>
+                            {layer.content}
+                          </button>
+                        ) : (
+                          <div className="w-full h-full leading-snug">{layer.content}</div>
+                        )}
+                      </div>
                     )}
                   </div>
                 </motion.div>

@@ -218,6 +218,7 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
       fontWeight: 'bold',
       fontStyle: 'normal',
       textAlign: 'right',
+      alignVertical: 'center',
       color: type === 'button' ? '#0f172a' : '#ffffff',
       backgroundColor: type === 'button' ? '#38bdf8' : 'transparent',
       backgroundOpacity: 100,
@@ -1016,7 +1017,14 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
                           className="w-full h-full object-cover rounded-[inherit] pointer-events-none"
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-center font-bold">
+                        <div
+                          className="w-full h-full flex font-bold relative z-[1]"
+                          style={{
+                            alignItems: layer.alignVertical === 'top' ? 'flex-start' : layer.alignVertical === 'bottom' ? 'flex-end' : 'center',
+                            justifyContent: layer.textAlign === 'right' ? 'flex-end' : layer.textAlign === 'left' ? 'flex-start' : 'center',
+                            textAlign: layer.textAlign || 'center',
+                          }}
+                        >
                           {layer.content}
                         </div>
                       )}

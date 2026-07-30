@@ -82,6 +82,7 @@ export interface Layer {
   fontWeight: string | number;
   fontStyle: 'normal' | 'italic';
   textAlign: 'right' | 'center' | 'left' | 'justify';
+  alignVertical?: 'top' | 'center' | 'bottom';
   color: string;
   backgroundColor: string;
   backgroundGradient?: string;

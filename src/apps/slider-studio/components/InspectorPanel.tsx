@@ -21,7 +21,14 @@ import {
   Smartphone,
   Tablet,
   Monitor,
-  ImageIcon
+  ImageIcon,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  AlignVerticalJustifyStart,
+  AlignVerticalJustifyCenter,
+  AlignVerticalJustifyEnd,
+  Sun
 } from 'lucide-react';
 import { MediaManager } from '@/src/shared-components';
 import type { Layer, LayerType, AnimationPreset, AnimationEasing, InteractionTrigger, InteractionActionType, LayerInteraction, Slide, SlideBackground, BreakpointWidth } from '@/src/shared-types/slider-studio';
@@ -629,6 +636,73 @@ export default function InspectorPanel({
                     </select>
                   </div>
                 </div>
+
+                {/* Horizontal & Vertical Alignment */}
+                <div>
+                  <label className="text-[10px] text-slate-500 dark:text-slate-400 mb-1 block">تراز افقی</label>
+                  <div className="flex gap-1 bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-1">
+                    <button
+                      onClick={() => updateField('textAlign', 'right')}
+                      className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                        selectedLayer.textAlign === 'right' ? 'bg-teal-600 text-white dark:bg-teal-500 dark:text-slate-950' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
+                      }`}
+                    >
+                      <AlignRight className="w-3.5 h-3.5" />
+                      <span>راست</span>
+                    </button>
+                    <button
+                      onClick={() => updateField('textAlign', 'center')}
+                      className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                        selectedLayer.textAlign === 'center' ? 'bg-teal-600 text-white dark:bg-teal-500 dark:text-slate-950' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
+                      }`}
+                    >
+                      <AlignCenter className="w-3.5 h-3.5" />
+                      <span>وسط</span>
+                    </button>
+                    <button
+                      onClick={() => updateField('textAlign', 'left')}
+                      className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                        selectedLayer.textAlign === 'left' ? 'bg-teal-600 text-white dark:bg-teal-500 dark:text-slate-950' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
+                      }`}
+                    >
+                      <AlignLeft className="w-3.5 h-3.5" />
+                      <span>چپ</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[10px] text-slate-500 dark:text-slate-400 mb-1 block">تراز عمودی</label>
+                  <div className="flex gap-1 bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-1">
+                    <button
+                      onClick={() => updateField('alignVertical', 'top')}
+                      className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                        (selectedLayer.alignVertical ?? 'center') === 'top' ? 'bg-teal-600 text-white dark:bg-teal-500 dark:text-slate-950' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
+                      }`}
+                    >
+                      <AlignVerticalJustifyStart className="w-3.5 h-3.5" />
+                      <span>بالا</span>
+                    </button>
+                    <button
+                      onClick={() => updateField('alignVertical', 'center')}
+                      className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                        (selectedLayer.alignVertical ?? 'center') === 'center' ? 'bg-teal-600 text-white dark:bg-teal-500 dark:text-slate-950' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
+                      }`}
+                    >
+                      <AlignVerticalJustifyCenter className="w-3.5 h-3.5" />
+                      <span>وسط</span>
+                    </button>
+                    <button
+                      onClick={() => updateField('alignVertical', 'bottom')}
+                      className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                        (selectedLayer.alignVertical ?? 'center') === 'bottom' ? 'bg-teal-600 text-white dark:bg-teal-500 dark:text-slate-950' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
+                      }`}
+                    >
+                      <AlignVerticalJustifyEnd className="w-3.5 h-3.5" />
+                      <span>پایین</span>
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -823,6 +897,54 @@ export default function InspectorPanel({
                   value={selectedLayer.borderRadius}
                   onChange={e => updateField('borderRadius', Number(e.target.value))}
                   className="w-full p-2 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-slate-900 dark:text-white font-mono"
+                />
+              </div>
+            </div>
+
+            {/* Shadow Settings */}
+            <div className="p-3 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-gray-200 dark:border-slate-800/80 space-y-3">
+              <div className="font-extrabold text-teal-600 dark:text-teal-400 flex items-center gap-1 text-[11px]">
+                <Sun className="w-3.5 h-3.5" />
+                <span>تنظیمات سایه</span>
+              </div>
+
+              <div>
+                <label className="text-[10px] text-slate-500 dark:text-slate-400">نوع سایه</label>
+                <select
+                  value={(() => {
+                    const s = selectedLayer.shadow;
+                    if (s === 'none') return 'none';
+                    if (s === '0 2px 4px rgba(0,0,0,0.1)') return 'soft';
+                    if (s === '0 4px 8px rgba(0,0,0,0.15)') return 'medium';
+                    if (s === '0 10px 20px rgba(0,0,0,0.25)') return 'hard';
+                    return 'custom';
+                  })()}
+                  onChange={e => {
+                    const val = e.target.value;
+                    if (val === 'none') updateField('shadow', 'none');
+                    else if (val === 'soft') updateField('shadow', '0 2px 4px rgba(0,0,0,0.1)');
+                    else if (val === 'medium') updateField('shadow', '0 4px 8px rgba(0,0,0,0.15)');
+                    else if (val === 'hard') updateField('shadow', '0 10px 20px rgba(0,0,0,0.25)');
+                    else if (val === 'custom') updateField('shadow', '0 0 15px rgba(59,130,246,0.5)');
+                  }}
+                  className="w-full p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-slate-900 dark:text-white font-sans text-xs cursor-pointer"
+                >
+                  <option value="none">بدون سایه</option>
+                  <option value="soft">نرم (Soft)</option>
+                  <option value="medium">متوسط (Medium)</option>
+                  <option value="hard">سخت (Hard)</option>
+                  <option value="custom">سفارشی</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-[10px] text-slate-500 dark:text-slate-400">مقدار دلخواه CSS</label>
+                <input
+                  type="text" dir="ltr"
+                  value={selectedLayer.shadow === 'none' ? '' : selectedLayer.shadow}
+                  onChange={e => updateField('shadow', e.target.value || 'none')}
+                  placeholder="مثال: 0 0 15px rgba(59,130,246,0.5)"
+                  className="w-full p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-slate-900 dark:text-white font-mono text-[11px]"
                 />
               </div>
             </div>
