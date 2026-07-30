@@ -108,6 +108,8 @@ export const APISendFiles = async <T = any>(URL: string, formData: FormData): Pr
       errorBody = { message: `HTTP error! status: ${response.status}` };
     }
     const error = new Error(errorBody?.message || `HTTP error! status: ${response.status}`);
+    (error as any).status = response.status;
+    (error as any).errors = errorBody?.errors;
     (error as any).response = { data: errorBody, status: response.status };
     throw error;
   }

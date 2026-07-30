@@ -126,7 +126,18 @@ export default function MediaManager({
 
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err: any) {
-      setError(err.message || 'خطا در آپلود فایل');
+      const apiMessage = err.message || '';
+      // Check both direct errors (from API function) and response.data.errors (from APISendFiles prior fix)
+      const errors = err.errors || err.response?.data?.errors;
+      let displayMessage = apiMessage;
+      if (errors && typeof errors === 'object') {
+        const firstKey = Object.keys(errors)[0];
+        const firstErr = Array.isArray(errors[firstKey]) ? errors[firstKey][0] : null;
+        if (firstErr) displayMessage = firstErr;
+      } else if (apiMessage === 'The given data was invalid.') {
+        displayMessage = 'فرمت فایل مجاز نیست. فرمت‌های مجاز: تصویر (jpg,png,webp) و ویدئو (mp4,webm,mov)';
+      }
+      setError(displayMessage);
     } finally {
       setUploading(false);
       setUploadProgress(0);

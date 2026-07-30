@@ -116,6 +116,9 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
   const [mediaPickerTarget, setMediaPickerTarget] = useState<'image' | 'video' | null>(null);
   const [pendingMediaLayerId, setPendingMediaLayerId] = useState<string | null>(null);
 
+  // Saving state
+  const [isSaving, setIsSaving] = useState(false);
+
   // Reset timeline to 0 when playback starts (sync before paint to avoid flash)
   useLayoutEffect(() => {
     if (isPlaying) {
@@ -667,11 +670,31 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
               )}
               {onSave && (
                 <button
-                  onClick={() => onSave(project)}
-                  className="px-4 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-black text-xs transition-all shadow-md shadow-teal-500/20 flex items-center gap-1.5 cursor-pointer"
+                  onClick={async () => {
+                    setIsSaving(true);
+                    try {
+                      await (onSave(project) as unknown as Promise<void>);
+                    } finally {
+                      setIsSaving(false);
+                    }
+                  }}
+                  disabled={isSaving}
+                  className="px-4 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 disabled:cursor-not-allowed text-white font-black text-xs transition-all shadow-md shadow-emerald-500/20 flex items-center gap-1.5 cursor-pointer"
                 >
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>ذخیره اسلایدر</span>
+                  {isSaving ? (
+                    <>
+                      <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                      <span>در حال ذخیره...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>ذخیره اسلایدر</span>
+                    </>
+                  )}
                 </button>
               )}
             </div>
