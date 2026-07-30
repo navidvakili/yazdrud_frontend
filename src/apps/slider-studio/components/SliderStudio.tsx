@@ -622,8 +622,10 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
 
   const dragItemRef = useRef<{ type: 'layer' | 'slide'; id: string; fromIndex: number } | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [dragOverPosition, setDragOverPosition] = useState<'before' | 'after'>('before');
 
-  // Layer drag-and-drop
+  // ---- Layer drag-and-drop ----
+
   const handleLayerDragStart = (layerId: string, index: number) => {
     dragItemRef.current = { type: 'layer', id: layerId, fromIndex: index };
   };
@@ -631,16 +633,23 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
   const handleLayerDragOver = (e: React.DragEvent, index: number) => {
     e.preventDefault();
     setDragOverIndex(index);
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const midY = rect.top + rect.height / 2;
+    setDragOverPosition(e.clientY < midY ? 'before' : 'after');
   };
 
   const handleLayerDrop = (e: React.DragEvent, toIndex: number) => {
     e.preventDefault();
     const drag = dragItemRef.current;
     if (!drag || drag.type !== 'layer') return;
-    if (drag.fromIndex === toIndex) return;
+    const actualIndex = dragOverPosition === 'after' ? toIndex + 1 : toIndex;
+    if (drag.fromIndex === actualIndex) return;
+    // If dropping after but the target is after the source, adjust
+    let adjustedIndex = actualIndex;
+    if (drag.fromIndex < actualIndex) adjustedIndex--;
     const layers = [...activeSlide.layers];
     const [removed] = layers.splice(drag.fromIndex, 1);
-    layers.splice(toIndex, 0, removed);
+    layers.splice(adjustedIndex, 0, removed);
     // Recalculate zIndex: top of tree (idx 0) = highest zIndex (front),
     // bottom of tree = lowest zIndex (back)
     const reindexed = layers.map((l, idx) => ({ ...l, zIndex: layers.length - idx }));
@@ -650,9 +659,11 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
     updateProject({ ...project, slides: updatedSlides });
     dragItemRef.current = null;
     setDragOverIndex(null);
+    setDragOverPosition('before');
   };
 
-  // Slide drag-and-drop
+  // ---- Slide drag-and-drop ----
+
   const handleSlideDragStart = (slideId: string, index: number) => {
     dragItemRef.current = { type: 'slide', id: slideId, fromIndex: index };
   };
@@ -660,19 +671,26 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
   const handleSlideDragOver = (e: React.DragEvent, index: number) => {
     e.preventDefault();
     setDragOverIndex(index);
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const midX = rect.left + rect.width / 2;
+    setDragOverPosition(e.clientX < midX ? 'before' : 'after');
   };
 
   const handleSlideDrop = (e: React.DragEvent, toIndex: number) => {
     e.preventDefault();
     const drag = dragItemRef.current;
     if (!drag || drag.type !== 'slide') return;
-    if (drag.fromIndex === toIndex) return;
+    const actualIndex = dragOverPosition === 'after' ? toIndex + 1 : toIndex;
+    if (drag.fromIndex === actualIndex) return;
+    let adjustedIndex = actualIndex;
+    if (drag.fromIndex < actualIndex) adjustedIndex--;
     const slides = [...project.slides];
     const [removed] = slides.splice(drag.fromIndex, 1);
-    slides.splice(toIndex, 0, removed);
+    slides.splice(adjustedIndex, 0, removed);
     updateProject({ ...project, slides });
     dragItemRef.current = null;
     setDragOverIndex(null);
+    setDragOverPosition('before');
   };
 
   // Canvas Mouse Down Drag
@@ -1099,14 +1117,15 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
                 onDragStart={() => handleSlideDragStart(s.id, idx)}
                 onDragOver={e => handleSlideDragOver(e, idx)}
                 onDrop={e => handleSlideDrop(e, idx)}
-                onDragEnd={() => { dragItemRef.current = null; setDragOverIndex(null); }}
+                onDragEnd={() => { dragItemRef.current = null; setDragOverIndex(null); setDragOverPosition('before'); }}
                 className={`relative group/slidetab flex items-center gap-0.5 px-2 py-1 rounded-xl font-bold transition-all cursor-pointer select-none ${
                   activeSlideId === s.id
                     ? 'bg-teal-600 dark:bg-teal-500 text-white dark:text-slate-950 font-black shadow-xs'
                     : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-gray-200 dark:border-slate-800'
                 }`}
               >
-                {isDragOver && <div className="absolute right-0 top-1 bottom-1 w-[3px] bg-teal-500 rounded-full -mr-0.5 z-10 shadow-sm shadow-teal-400/50" />}
+              {isDragOver && dragOverPosition === 'before' && <div className="absolute right-0 top-1 bottom-1 w-[3px] bg-teal-500 rounded-full -mr-0.5 z-10 shadow-sm shadow-teal-400/50" />}
+              {isDragOver && dragOverPosition === 'after' && <div className="absolute left-0 top-1 bottom-1 w-[3px] bg-teal-500 rounded-full -ml-0.5 z-10 shadow-sm shadow-teal-400/50" />}
                 <span className="cursor-grab active:cursor-grabbing opacity-40 hover:opacity-100 transition-opacity" title="درگ برای جابجایی">
                   <GripVertical className="w-3 h-3" />
                 </span>
@@ -1175,7 +1194,7 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
                   onDragStart={() => handleLayerDragStart(layer.id, idx)}
                   onDragOver={e => handleLayerDragOver(e, idx)}
                   onDrop={e => handleLayerDrop(e, idx)}
-                  onDragEnd={() => { dragItemRef.current = null; setDragOverIndex(null); }}
+                  onDragEnd={() => { dragItemRef.current = null; setDragOverIndex(null); setDragOverPosition('before'); }}
                   onClick={() => setSelectedLayerId(layer.id)}
                   className={`relative p-2.5 rounded-2xl flex items-center justify-between text-xs cursor-pointer transition-all ${
                     isSelected
@@ -1183,7 +1202,8 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
                       : 'hover:bg-slate-100 dark:hover:bg-slate-800/60 text-slate-700 dark:text-slate-300 border border-transparent'
                   }`}
                 >
-                  {isDragOver && <div className="absolute top-0 left-2 right-2 h-[3px] bg-teal-500 rounded-full -translate-y-1/2 z-10 shadow-sm shadow-teal-400/50" />}
+                  {isDragOver && dragOverPosition === 'before' && <div className="absolute top-0 left-2 right-2 h-[3px] bg-teal-500 rounded-full -translate-y-1/2 z-10 shadow-sm shadow-teal-400/50" />}
+                  {isDragOver && dragOverPosition === 'after' && <div className="absolute bottom-0 left-2 right-2 h-[3px] bg-teal-500 rounded-full translate-y-1/2 z-10 shadow-sm shadow-teal-400/50" />}
                   <div className="flex items-center gap-1.5 truncate">
                     <span className="text-slate-300 dark:text-slate-600 cursor-grab active:cursor-grabbing" title="درگ برای جابجایی">
                       <GripVertical className="w-3.5 h-3.5" />
@@ -1251,6 +1271,17 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
                 </div>
               );
             })}
+            {/* Bottom drop zone for layers */}
+            <div
+              onDragOver={e => { e.preventDefault(); setDragOverIndex(filteredLayers.length); setDragOverPosition('after'); }}
+              onDrop={e => handleLayerDrop(e, filteredLayers.length - 1)}
+              onDragEnd={() => { dragItemRef.current = null; setDragOverIndex(null); setDragOverPosition('before'); }}
+              className={`relative h-4 rounded-2xl transition-colors ${dragOverIndex === filteredLayers.length ? 'bg-teal-100/50 dark:bg-teal-500/10' : ''}`}
+            >
+              {dragOverIndex === filteredLayers.length && (
+                <div className="absolute bottom-0 left-2 right-2 h-[3px] bg-teal-500 rounded-full translate-y-1/2 z-10 shadow-sm shadow-teal-400/50" />
+              )}
+            </div>
           </div>
         </div>
         )}
