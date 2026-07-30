@@ -69,4 +69,5 @@ export const MODULE_PERMISSIONS: Record<string, { view: string; create?: string;
   sessions:     { view: 'sessions.view',     delete: 'sessions.delete' },
   'county-projects': { view: 'county-projects.view', edit: 'county-projects.edit' },
   'hero-slides': { view: 'hero-slides.view', edit: 'hero-slides.edit' },
+  'slider-studio': { view: 'slider-studio.view', edit: 'slider-studio.edit' },
 };
