@@ -1385,7 +1385,7 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
                         ? { scale: 1.08 }
                         : {}
                     }
-                    className={`group/layer cursor-move select-none`}
+                    className={`group/layer cursor-move select-none overflow-hidden`}
                     onClick={e => e.stopPropagation()}
                   >
                     {/* Parallax inner wrapper */}
