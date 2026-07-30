@@ -25,7 +25,7 @@ export const INITIAL_SLIDER_PROJECTS: SliderProject[] = [
           type: 'gradient',
           color: '#0f172a',
           gradient: 'linear-gradient(135deg, #e11d48 0%, #7c3aed 50%, #2563eb 100%)',
-          imageUrl: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&q=80&w=1600',
+          imageUrl: '/assets/bg-einstein.jpg',
           particlesPreset: 'stars'
         },
         layers: [
@@ -159,7 +159,7 @@ export const INITIAL_SLIDER_PROJECTS: SliderProject[] = [
             zIndex: 20,
             locked: false,
             visible: true,
-            content: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&q=80&w=900',
+            content: '/assets/layer-einstein-main.jpg',
             fontFamily: 'sans-serif',
             fontSize: 16,
             fontWeight: 'normal',
@@ -266,7 +266,7 @@ export const INITIAL_SLIDER_PROJECTS: SliderProject[] = [
           type: 'gradient',
           color: '#090d16',
           gradient: 'linear-gradient(135deg, #0284c7 0%, #d946ef 50%, #f43f5e 100%)',
-          imageUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=1600'
+          imageUrl: '/assets/bg-owl.jpg'
         },
         layers: [
           {
@@ -441,7 +441,7 @@ export const INITIAL_SLIDER_PROJECTS: SliderProject[] = [
             zIndex: 18,
             locked: false,
             visible: true,
-            content: 'https://images.unsplash.com/photo-1615663245857-ac93bb7c39e7?auto=format&fit=crop&q=80&w=700',
+            content: '/assets/layer-owl-middle.jpg',
             fontFamily: 'sans-serif',
             fontSize: 14,
             fontWeight: 'normal',
@@ -480,7 +480,7 @@ export const INITIAL_SLIDER_PROJECTS: SliderProject[] = [
             zIndex: 5,
             locked: false,
             visible: true,
-            content: 'https://images.unsplash.com/photo-1543549790-8b5f4a028cfb?auto=format&fit=crop&q=80&w=900',
+            content: '/assets/layer-owl-bg.jpg',
             fontFamily: 'sans-serif',
             fontSize: 14,
             fontWeight: 'normal',
