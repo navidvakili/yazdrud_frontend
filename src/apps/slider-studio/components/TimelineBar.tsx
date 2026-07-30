@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Play, Pause, Square, RotateCcw, Clock, Layers, Sparkles } from 'lucide-react';
 import type { Layer, Slide } from '@/src/shared-types/slider-studio';
 
@@ -43,6 +43,53 @@ export default function TimelineBar({
   // Convert time to percentage on ruler
   const getPercent = (sec: number) => Math.min(100, Math.max(0, (sec / maxDuration) * 100));
 
+  // ── Drag-to-resize timeline bars ─────────────────────────────────
+  const [dragState, setDragState] = useState<{ layerId: string; handle: 'left' | 'right' } | null>(null);
+  const trackAreaRef = useRef<HTMLDivElement>(null);
+  const slideRef = useRef(slide);
+  slideRef.current = slide;
+  const updateRef = useRef(onUpdateLayer);
+  updateRef.current = onUpdateLayer;
+  const maxDurRef = useRef(maxDuration);
+  maxDurRef.current = maxDuration;
+
+  useEffect(() => {
+    if (!dragState) return;
+    const handleMouseMove = (e: MouseEvent) => {
+      const el = trackAreaRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const time = Math.max(0, Math.min(maxDurRef.current, maxDurRef.current * (1 - mx / rect.width)));
+      const layer = slideRef.current.layers.find(l => l.id === dragState.layerId);
+      if (!layer) return;
+      const inDelay = layer.animation.inDelay || 0;
+      const inDuration = layer.animation.inDuration || 0.8;
+      if (dragState.handle === 'left') {
+        // Dragging left edge → changes duration
+        const newDuration = Math.max(0.1, Math.min(time - inDelay, maxDurRef.current - inDelay));
+        updateRef.current({
+          ...layer,
+          animation: { ...layer.animation, inDuration: Number(newDuration.toFixed(2)) }
+        });
+      } else {
+        // Dragging right edge → changes delay
+        const newDelay = Math.max(0, Math.min(time, maxDurRef.current - inDuration));
+        updateRef.current({
+          ...layer,
+          animation: { ...layer.animation, inDelay: Number(newDelay.toFixed(2)) }
+        });
+      }
+    };
+    const handleMouseUp = () => setDragState(null);
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [dragState]);
+
   return (
     <div className="bg-white dark:bg-slate-950 border-t border-gray-200 dark:border-slate-800 text-slate-800 dark:text-white font-sans text-xs select-none flex flex-col h-56 rtl text-right transition-colors">
       {/* Timeline Header Controls */}
@@ -86,32 +133,13 @@ export default function TimelineBar({
       </div>
 
       {/* Main Timeline Tracks Area */}
-      <div className="flex-1 flex overflow-hidden relative">
-        {/* Left Track Names Column */}
-        <div className="w-56 bg-slate-50 dark:bg-slate-900/70 border-l border-gray-200 dark:border-slate-800 overflow-y-auto">
-          {slide.layers.map(layer => {
-            const isSelected = selectedLayerId === layer.id;
-            return (
-              <div
-                key={layer.id}
-                onClick={() => onSelectLayer(layer.id)}
-                className={`h-10 px-3 flex items-center justify-between border-b border-gray-200 dark:border-slate-800/60 cursor-pointer transition-colors ${
-                  isSelected ? 'bg-teal-50 dark:bg-teal-500/20 text-teal-700 dark:text-teal-300 font-bold border-l-2 border-l-teal-600 dark:border-l-teal-400' : 'hover:bg-slate-100 dark:hover:bg-slate-800/60 text-slate-700 dark:text-slate-300'
-                }`}
-              >
-                <span className="truncate text-[11px]">{layer.name}</span>
-                <span className="text-[9px] font-mono px-1.5 py-0.5 rounded-md bg-white dark:bg-slate-950 text-slate-600 dark:text-slate-400 border border-gray-200 dark:border-slate-800">
-                  {layer.animation.inPreset}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Right Time Grid & Bars */}
-        <div className="flex-1 overflow-x-auto relative flex flex-col bg-white dark:bg-slate-950">
-          {/* Time Ruler Top Header */}
-          <div className="h-7 border-b border-gray-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/40 relative flex items-center font-mono text-[10px] text-slate-500">
+      <div className="flex-1 flex flex-col overflow-hidden relative">
+        {/* Fixed header row: left spacer + time ruler */}
+        <div className="flex shrink-0">
+          <div className="w-56 shrink-0 bg-slate-50 dark:bg-slate-900/70 border-l border-gray-200 dark:border-slate-800">
+            <div className="h-7 border-b border-gray-200 dark:border-slate-800" />
+          </div>
+          <div className="flex-1 h-7 border-b border-gray-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/40 relative flex items-center font-mono text-[10px] text-slate-500 overflow-hidden">
             {Array.from({ length: Math.ceil(maxDuration) + 1 }).map((_, i) => (
               <div
                 key={i}
@@ -122,7 +150,10 @@ export default function TimelineBar({
               </div>
             ))}
           </div>
+        </div>
 
+        {/* Unified scrollable area for both layer labels and tracks */}
+        <div ref={trackAreaRef} className="flex-1 overflow-y-auto relative">
           {/* Time Scrubber Red Cursor Line */}
           <div
             style={{ right: `${getPercent(currentTime)}%` }}
@@ -131,41 +162,85 @@ export default function TimelineBar({
             <div className="w-3 h-3 bg-rose-500 rounded-full -mr-1.25 -mt-1 shadow-lg" />
           </div>
 
-          {/* Layer Tracks */}
-          <div className="flex-1 overflow-y-auto relative">
-            {slide.layers.map(layer => {
-              const isSelected = selectedLayerId === layer.id;
-              const delay = layer.animation.inDelay || 0;
-              const duration = layer.animation.inDuration || 0.8;
-
-              const leftPercent = getPercent(delay);
-              const widthPercent = getPercent(duration);
-
-              return (
-                <div
-                  key={layer.id}
-                  onClick={() => onSelectLayer(layer.id)}
-                  className={`h-10 border-b border-gray-200 dark:border-slate-800/40 relative flex items-center cursor-pointer ${
-                    isSelected ? 'bg-slate-100/80 dark:bg-slate-900/60' : ''
-                  }`}
-                >
-                  {/* Duration Bar */}
+          <div className="flex relative min-h-full">
+            {/* Left Track Labels */}
+            <div className="w-56 shrink-0 bg-slate-50 dark:bg-slate-900/70 border-l border-gray-200 dark:border-slate-800 relative z-10">
+              {slide.layers.map(layer => {
+                const isSelected = selectedLayerId === layer.id;
+                return (
                   <div
-                    style={{
-                      right: `${leftPercent}%`,
-                      width: `${widthPercent}%`
-                    }}
-                    className={`h-6 rounded-lg transition-all flex items-center justify-between px-2 text-[10px] font-mono shadow-xs ${
-                      isSelected
-                        ? 'bg-gradient-to-l from-teal-500 to-cyan-400 text-slate-950 font-black border border-teal-300'
-                        : 'bg-indigo-600 text-white dark:bg-indigo-600/60 dark:text-indigo-100 border border-indigo-400 dark:border-indigo-500/40'
+                    key={layer.id}
+                    onClick={() => onSelectLayer(layer.id)}
+                    className={`h-10 px-3 flex items-center justify-between border-b border-gray-200 dark:border-slate-800/60 cursor-pointer transition-colors ${
+                      isSelected ? 'bg-teal-50 dark:bg-teal-500/20 text-teal-700 dark:text-teal-300 font-bold border-l-2 border-l-teal-600 dark:border-l-teal-400' : 'hover:bg-slate-100 dark:hover:bg-slate-800/60 text-slate-700 dark:text-slate-300'
                     }`}
                   >
-                    <span className="truncate">{duration.toFixed(1)}s</span>
+                    <span className="truncate text-[11px]">{layer.name}</span>
+                    <span className="text-[9px] font-mono px-1.5 py-0.5 rounded-md bg-white dark:bg-slate-950 text-slate-600 dark:text-slate-400 border border-gray-200 dark:border-slate-800">
+                      {layer.animation.inPreset}
+                    </span>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
+
+            {/* Right Tracks */}
+            <div className="flex-1 relative bg-white dark:bg-slate-950">
+              {slide.layers.map(layer => {
+                const isSelected = selectedLayerId === layer.id;
+                const delay = layer.animation.inDelay || 0;
+                const duration = layer.animation.inDuration || 0.8;
+                const leftPercent = getPercent(delay);
+                const widthPercent = getPercent(duration);
+
+                return (
+                  <div
+                    key={layer.id}
+                    onClick={() => onSelectLayer(layer.id)}
+                    className={`h-10 border-b border-gray-200 dark:border-slate-800/40 relative flex items-center cursor-pointer ${
+                      isSelected ? 'bg-slate-100/80 dark:bg-slate-900/60' : ''
+                    }`}
+                  >
+                    {/* Duration Bar */}
+                    <div
+                      style={{
+                        right: `${leftPercent}%`,
+                        width: `${widthPercent}%`
+                      }}
+                      className={`group h-6 rounded-lg transition-all flex items-center justify-between px-1 text-[10px] font-mono shadow-xs relative ${
+                        isSelected
+                          ? 'bg-gradient-to-l from-teal-500 to-cyan-400 text-slate-950 font-black border border-teal-300'
+                          : 'bg-indigo-600 text-white dark:bg-indigo-600/60 dark:text-indigo-100 border border-indigo-400 dark:border-indigo-500/40'
+                      }`}
+                    >
+                      {/* Left drag handle — changes duration */}
+                      <div
+                        onMouseDown={e => {
+                          e.stopPropagation();
+                          setDragState({ layerId: layer.id, handle: 'left' });
+                        }}
+                        className="absolute left-0 top-0 bottom-0 w-3 cursor-ew-resize flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <div className="w-0.5 h-4 rounded-full bg-white/80" />
+                      </div>
+
+                      <span className="truncate mx-3 pointer-events-none select-none">{duration.toFixed(1)}s</span>
+
+                      {/* Right drag handle — changes delay */}
+                      <div
+                        onMouseDown={e => {
+                          e.stopPropagation();
+                          setDragState({ layerId: layer.id, handle: 'right' });
+                        }}
+                        className="absolute right-0 top-0 bottom-0 w-3 cursor-ew-resize flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <div className="w-0.5 h-4 rounded-full bg-white/80" />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
