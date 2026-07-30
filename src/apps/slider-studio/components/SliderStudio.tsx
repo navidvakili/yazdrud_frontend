@@ -1006,6 +1006,7 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
                 <span
                   onClick={() => setActiveSlideId(s.id)}
                   className="cursor-pointer"
+                  title={s.title || `اسلاید ${idx + 1}`}
                 >اسلاید {idx + 1}</span>
                 {project.slides.length > 1 && (
                   <button
