@@ -108,6 +108,9 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [showTimeline, setShowTimeline] = useState<boolean>(true);
 
+  // Mouse position for parallax (normalized -1..1)
+  const [mousePos, setMousePos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+
   // Reset timeline to 0 when playback starts (sync before paint to avoid flash)
   useLayoutEffect(() => {
     if (isPlaying) {
@@ -941,7 +944,17 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
         <div className="flex-1 bg-slate-200/80 dark:bg-slate-950 overflow-auto p-8 flex items-center justify-center relative">
           {/* Slide Stage Container */}
           <div
+            data-stage-container
             onClick={() => setSelectedLayerId(null)}
+            onMouseMove={e => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              const cx = rect.left + rect.width / 2;
+              const cy = rect.top + rect.height / 2;
+              setMousePos({
+                x: Math.max(-1, Math.min(1, (e.clientX - cx) / (rect.width / 2))),
+                y: Math.max(-1, Math.min(1, (e.clientY - cy) / (rect.height / 2))),
+              });
+            }}
             style={{
               width: `${canvasWidth}px`,
               height: `${canvasHeight}px`,
@@ -1024,6 +1037,15 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
                     className={`group/layer cursor-move select-none`}
                     onClick={e => e.stopPropagation()}
                   >
+                    {/* Parallax inner wrapper */}
+                    <div style={{
+                      width: '100%',
+                      height: '100%',
+                      ...(layer.animation.parallaxDepth ? {
+                        transform: `translate(${mousePos.x * (layer.animation.parallaxDepth / 100) * 40}px, ${mousePos.y * (layer.animation.parallaxDepth / 100) * 40}px)`,
+                        transition: 'transform 0.15s ease-out',
+                      } : {}),
+                    }}>
                     {/* Layer Background */}
                     {(layer.backgroundColor !== 'transparent' || layer.backgroundGradient) && (
                       <div
@@ -1066,6 +1088,7 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
                         </div>
                       )}
                     </div>
+                    </div>{/* end parallax wrapper */}
 
                     {/* ===== FreeTransform Bounding Box (when selected) ===== */}
                     {isSelected && (

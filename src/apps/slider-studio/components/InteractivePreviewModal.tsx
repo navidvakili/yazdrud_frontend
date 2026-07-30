@@ -32,6 +32,7 @@ export default function InteractivePreviewModal({
   const [isPlaying, setIsPlaying] = useState(true);
   const [deviceSize, setDeviceSize] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const [keyCounter, setKeyCounter] = useState(0);
+  const [mousePos, setMousePos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
   const activeSlide: Slide = project.slides[currentSlideIndex] || project.slides[0];
 
@@ -227,6 +228,15 @@ export default function InteractivePreviewModal({
             return variants[t] || variants.fade;
           })()}
           onClick={handleSlideClick}
+          onMouseMove={e => {
+            const rect = e.currentTarget.getBoundingClientRect();
+            const cx = rect.left + rect.width / 2;
+            const cy = rect.top + rect.height / 2;
+            setMousePos({
+              x: Math.max(-1, Math.min(1, (e.clientX - cx) / (rect.width / 2))),
+              y: Math.max(-1, Math.min(1, (e.clientY - cy) / (rect.height / 2))),
+            });
+          }}
           transition={{ duration: 0.6, ease: 'easeInOut' }}
           style={{
             width: `${viewportWidths[deviceSize]}px`,
@@ -354,6 +364,15 @@ export default function InteractivePreviewModal({
                   }}
                   className="transition-all duration-200"
                 >
+                  {/* Parallax inner */}
+                  <div style={{
+                    width: '100%',
+                    height: '100%',
+                    ...(layer.animation.parallaxDepth ? {
+                      transform: `translate(${mousePos.x * (layer.animation.parallaxDepth / 100) * 40}px, ${mousePos.y * (layer.animation.parallaxDepth / 100) * 40}px)`,
+                      transition: 'transform 0.15s ease-out',
+                    } : {}),
+                  }}>
                   {/* Layer Background */}
                   {(layer.backgroundColor !== 'transparent' || layer.backgroundGradient) && (
                     <div
@@ -403,6 +422,7 @@ export default function InteractivePreviewModal({
                       </div>
                     )}
                   </div>
+                  </div>{/* end parallax */}
                 </motion.div>
               );
             })}
