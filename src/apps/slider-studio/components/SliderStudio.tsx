@@ -217,6 +217,45 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
     setActiveSlideId(newSlideId);
   };
 
+  // Delete Slide
+  const handleDeleteSlide = (slideId: string) => {
+    if (project.slides.length <= 1) return; // Don't delete the last slide
+    const updatedSlides = project.slides.filter(s => s.id !== slideId);
+    setProject({ ...project, slides: updatedSlides });
+    if (activeSlideId === slideId) {
+      const newActiveId = updatedSlides[0]?.id || project.slides[0].id;
+      setActiveSlideId(newActiveId);
+      const newSlide = updatedSlides.find(s => s.id === newActiveId);
+      setSelectedLayerId(newSlide?.layers[0]?.id || null);
+    }
+  };
+
+  // Move Layer Up in the list (earlier index → appears higher)
+  const handleMoveLayerUp = (layerId: string) => {
+    const layers = [...activeSlide.layers];
+    const idx = layers.findIndex(l => l.id === layerId);
+    if (idx > 0) {
+      [layers[idx], layers[idx - 1]] = [layers[idx - 1], layers[idx]];
+      const updatedSlides = project.slides.map(s =>
+        s.id === activeSlide.id ? { ...s, layers } : s
+      );
+      setProject({ ...project, slides: updatedSlides });
+    }
+  };
+
+  // Move Layer Down in the list (later index → appears lower)
+  const handleMoveLayerDown = (layerId: string) => {
+    const layers = [...activeSlide.layers];
+    const idx = layers.findIndex(l => l.id === layerId);
+    if (idx < layers.length - 1) {
+      [layers[idx], layers[idx + 1]] = [layers[idx + 1], layers[idx]];
+      const updatedSlides = project.slides.map(s =>
+        s.id === activeSlide.id ? { ...s, layers } : s
+      );
+      setProject({ ...project, slides: updatedSlides });
+    }
+  };
+
   // Canvas Mouse Down Drag
   const handleMouseDownLayer = (e: React.MouseEvent, layer: Layer) => {
     if (layer.locked) return;
@@ -415,17 +454,27 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
           <span className="text-slate-500 font-bold text-[11px]">مدیریت اسلایدها:</span>
           <div className="flex items-center gap-1">
             {project.slides.map((s, idx) => (
-              <button
-                key={s.id}
-                onClick={() => setActiveSlideId(s.id)}
-                className={`px-3 py-1 rounded-xl font-bold transition-all cursor-pointer ${
-                  activeSlideId === s.id
-                    ? 'bg-teal-600 dark:bg-teal-500 text-white dark:text-slate-950 font-black shadow-xs'
-                    : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-gray-200 dark:border-slate-800'
-                }`}
-              >
-                اسلاید {idx + 1}
-              </button>
+              <div key={s.id} className="relative group/slidetab">
+                <button
+                  onClick={() => setActiveSlideId(s.id)}
+                  className={`px-3 py-1 rounded-xl font-bold transition-all cursor-pointer ${
+                    activeSlideId === s.id
+                      ? 'bg-teal-600 dark:bg-teal-500 text-white dark:text-slate-950 font-black shadow-xs'
+                      : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-gray-200 dark:border-slate-800'
+                  }`}
+                >
+                  اسلاید {idx + 1}
+                </button>
+                {project.slides.length > 1 && (
+                  <button
+                    onClick={e => { e.stopPropagation(); handleDeleteSlide(s.id); }}
+                    className="absolute -top-1.5 -left-1.5 p-0.5 rounded-full bg-rose-500 text-white opacity-0 group-hover/slidetab:opacity-100 hover:bg-rose-600 transition-all cursor-pointer shadow-md"
+                    title="حذف اسلاید"
+                  >
+                    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                  </button>
+                )}
+              </div>
             ))}
             <button
               onClick={handleAddSlide}
@@ -493,6 +542,7 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
                         handleUpdateLayer({ ...layer, visible: !layer.visible });
                       }}
                       className="p-1 hover:text-slate-900 dark:hover:text-white cursor-pointer"
+                      title="نمایش/مخفی"
                     >
                       {layer.visible ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5 text-rose-500" />}
                     </button>
@@ -502,8 +552,39 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
                         handleUpdateLayer({ ...layer, locked: !layer.locked });
                       }}
                       className="p-1 hover:text-slate-900 dark:hover:text-white cursor-pointer"
+                      title="قفل/باز"
                     >
                       <Lock className={`w-3.5 h-3.5 ${layer.locked ? 'text-amber-500' : ''}`} />
+                    </button>
+                    <button
+                      onClick={e => {
+                        e.stopPropagation();
+                        handleMoveLayerUp(layer.id);
+                      }}
+                      className="p-1 hover:text-slate-900 dark:hover:text-white cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                      title="جابجایی به بالا"
+                    >
+                      <ChevronUp className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={e => {
+                        e.stopPropagation();
+                        handleMoveLayerDown(layer.id);
+                      }}
+                      className="p-1 hover:text-slate-900 dark:hover:text-white cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                      title="جابجایی به پایین"
+                    >
+                      <ChevronDown className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={e => {
+                        e.stopPropagation();
+                        handleDeleteLayer(layer.id);
+                      }}
+                      className="p-1 hover:bg-rose-50 dark:hover:bg-rose-500/20 text-rose-500 dark:text-rose-400 rounded-lg cursor-pointer"
+                      title="حذف لایه"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>
