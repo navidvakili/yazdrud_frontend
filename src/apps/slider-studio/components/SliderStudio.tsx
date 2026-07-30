@@ -1002,17 +1002,34 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
                           style={{
                             position: 'absolute',
                             left: '50%',
-                            top: `${-HANDLE_SIZE - 18}px`,
+                            top: `${-HANDLE_SIZE - 32}px`,
                             transform: 'translateX(-50%)',
                             cursor: 'grab',
+                            touchAction: 'none',
                           }}
-                          className="flex flex-col items-center z-50"
+                          className="flex flex-col items-center z-50 group/rotate"
                         >
                           {/* Dashed line connecting rotate handle to box */}
-                          <div className="w-px h-3 bg-teal-400" />
-                          <div className="w-5 h-5 rounded-full bg-teal-500 border-2 border-white shadow-md flex items-center justify-center hover:bg-teal-400 transition-colors">
-                            <RotateCw className="w-3 h-3 text-white" />
+                          <div className="w-px h-6 bg-teal-400/60 group-hover/rotate:bg-teal-400 transition-colors" />
+                          {/* Visible handle */}
+                          <div className="w-9 h-9 rounded-full bg-teal-500 border-2 border-white shadow-lg flex items-center justify-center hover:bg-teal-400 hover:scale-110 active:scale-95 transition-all">
+                            <RotateCw className="w-5 h-5 text-white" />
                           </div>
+                          {/* Extended invisible hit area */}
+                          <div
+                            style={{
+                              position: 'absolute',
+                              left: '50%',
+                              top: '50%',
+                              transform: 'translate(-50%, -50%)',
+                              width: 48,
+                              height: 48,
+                              borderRadius: '50%',
+                              cursor: 'grab',
+                              touchAction: 'none',
+                            }}
+                            onMouseDown={e => handleMouseDownRotate(e, layer)}
+                          />
                         </div>
 
                         {/* Inline Selected Controls Toolbar */}

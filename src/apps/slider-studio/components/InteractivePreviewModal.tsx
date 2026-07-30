@@ -14,7 +14,7 @@ import {
   Volume2,
   Maximize2
 } from 'lucide-react';
-import type { SliderProject, Slide } from '@/src/shared-types/slider-studio';
+import type { SliderProject, Slide, BreakpointWidth } from '@/src/shared-types/slider-studio';
 import AddonParticleCanvas from './AddonParticleCanvas';
 
 interface InteractivePreviewModalProps {
@@ -208,7 +208,7 @@ export default function InteractivePreviewModal({
             .map(layer => {
               // Calculate responsive overrides if present
               const override = layer.responsiveOverrides?.[
-                deviceSize === 'tablet' ? '900' : deviceSize === 'mobile' ? '480' : '1240'
+                (deviceSize === 'tablet' ? '900' : deviceSize === 'mobile' ? '576' : '1240') as BreakpointWidth
               ];
 
               if (override?.hidden) return null;
@@ -225,23 +225,24 @@ export default function InteractivePreviewModal({
 
               // Animation variants
               const getInitialAnimation = () => {
+                const base = { rotate: layer.rotation };
                 switch (animInPreset) {
                   case 'fadeIn':
-                    return { opacity: 0 };
+                    return { ...base, opacity: 0 };
                   case 'slideUp':
-                    return { opacity: 0, y: layerY + 80 };
+                    return { ...base, opacity: 0, y: layerY + 80 };
                   case 'slideDown':
-                    return { opacity: 0, y: layerY - 80 };
+                    return { ...base, opacity: 0, y: layerY - 80 };
                   case 'slideLeft':
-                    return { opacity: 0, x: layerX + 120 };
+                    return { ...base, opacity: 0, x: layerX + 120 };
                   case 'slideRight':
-                    return { opacity: 0, x: layerX - 120 };
+                    return { ...base, opacity: 0, x: layerX - 120 };
                   case 'zoomIn':
-                    return { opacity: 0, scale: 0.4 };
+                    return { ...base, opacity: 0, scale: 0.4 };
                   case 'zoomOut':
-                    return { opacity: 0, scale: 1.5 };
+                    return { ...base, opacity: 0, scale: 1.5 };
                   default:
-                    return { opacity: 0 };
+                    return { ...base, opacity: 0 };
                 }
               };
 
@@ -249,7 +250,7 @@ export default function InteractivePreviewModal({
                 <motion.div
                   key={layer.id}
                   initial={getInitialAnimation()}
-                  animate={{ opacity: layer.opacity, x: 0, y: 0, scale: 1 }}
+                  animate={{ opacity: layer.opacity, x: 0, y: 0, scale: 1, rotate: layer.rotation }}
                   transition={{
                     duration: animDuration,
                     delay: animDelay,
@@ -291,7 +292,6 @@ export default function InteractivePreviewModal({
                     borderRadius: `${layer.borderRadius * scaleFactor}px`,
                     padding: layer.padding,
                     zIndex: layer.zIndex,
-                    transform: `rotate(${layer.rotation}deg)`,
                     boxShadow: layer.shadow,
                     cursor: layer.interactions.length > 0 ? 'pointer' : 'default'
                   }}
