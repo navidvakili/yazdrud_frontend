@@ -79,7 +79,7 @@ const COLLAB_COLORS: CollaboratorInfo[] = [
   { name: 'کاربر ۴', color: '#ef4444' },
   { name: 'کاربر ۵', color: '#8b5cf6' },
   { name: 'کاربر ۶', color: '#ec4899' },
-  { name: 'کاربر ۷', color: '#14b8a6' },
+  { name: 'کاربر ۷', color: '#236DB6' },
   { name: 'کاربر ۸', color: '#f97316' },
 ];
 

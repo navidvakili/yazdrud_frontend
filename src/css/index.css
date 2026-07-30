@@ -20,6 +20,18 @@
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
   --color-gray-750: #161618;
   --color-gray-850: #111113;
+  /* Brand color palette — نیما */
+  --color-teal-50: #eef3fa;
+  --color-teal-100: #d4e2f2;
+  --color-teal-200: #b0cae7;
+  --color-teal-300: #36D1C4;
+  --color-teal-400: #1EB8BE;
+  --color-teal-500: #236DB6;
+  --color-teal-600: #143E86;
+  --color-teal-700: #0f2d6e;
+  --color-teal-800: #0a1f4a;
+  --color-teal-900: #061533;
+  --color-teal-950: #030d1f;
 }
 
 @layer base {
@@ -50,17 +62,17 @@
     --color-gray-900: #fafafc;
     --color-gray-950: #fcfcfe;
 
-    --color-teal-50: #112222;
-    --color-teal-100: #113333;
-    --color-teal-200: #114444;
-    --color-teal-300: #116666;
-    --color-teal-400: #2dd4bf;
-    --color-teal-500: #14b8a6;
-    --color-teal-600: #0d9488;
-    --color-teal-700: #0f766e;
-    --color-teal-800: #115e59;
-    --color-teal-900: #134e4a;
-    --color-teal-950: #042f2e;
+    --color-teal-50: #0a1f33;
+    --color-teal-100: #0d2842;
+    --color-teal-200: #0f3354;
+    --color-teal-300: #36D1C4;
+    --color-teal-400: #1EB8BE;
+    --color-teal-500: #236DB6;
+    --color-teal-600: #143E86;
+    --color-teal-700: #1a2d6e;
+    --color-teal-800: #0f1f4a;
+    --color-teal-900: #0a1533;
+    --color-teal-950: #050d1f;
   }
 
   .dark .bg-white {
@@ -166,7 +178,7 @@
 
 /* Glow transitions */
 .glow-primary {
-  box-shadow: 0 0 15px rgba(20, 184, 166, 0.1);
+  box-shadow: 0 0 15px rgba(20, 62, 134, 0.15);
 }
 
 /* Slide-in from right (for mobile sidebar — RTL layout) */
@@ -288,18 +300,18 @@
 
 /* Blockquote */
 .wysiwyg-editor .tiptap-editor blockquote {
-  border-right: 4px solid #14b8a6;
+  border-right: 4px solid #236DB6;
   padding-right: 1rem;
   margin: 1rem 0;
   color: #6b7280;
-  background: rgba(20, 184, 166, 0.05);
+  background: rgba(35, 109, 182, 0.05);
   border-radius: 0 0.75rem 0.75rem 0;
   padding: 0.75rem 1rem;
 }
 
 .dark .wysiwyg-editor .tiptap-editor blockquote {
   color: #9ca3af;
-  background: rgba(20, 184, 166, 0.1);
+  background: rgba(35, 109, 182, 0.1);
 }
 
 /* Lists */
@@ -333,13 +345,13 @@
 
 /* Link */
 .wysiwyg-editor .tiptap-editor a {
-  color: #0d9488;
+  color: #143E86;
   text-decoration: underline;
   cursor: pointer;
 }
 
 .wysiwyg-editor .tiptap-editor a:hover {
-  color: #0f766e;
+  color: #236DB6;
 }
 
 /* Highlight */
@@ -360,7 +372,7 @@
 }
 
 .wysiwyg-editor .tiptap-editor img.ProseMirror-selectednode {
-  outline: 2px solid #14b8a6;
+  outline: 2px solid #236DB6;
   outline-offset: 2px;
 }
 
@@ -395,7 +407,7 @@
 }
 
 .wysiwyg-editor .tiptap-editor td.selectedCell {
-  background: rgba(20, 184, 166, 0.1);
+  background: rgba(35, 109, 182, 0.1);
 }
 
 /* Collaboration Cursors */
@@ -425,7 +437,7 @@
 
 /* Selection highlight */
 .wysiwyg-editor .ProseMirror .selection {
-  background: rgba(20, 184, 166, 0.15);
+  background: rgba(35, 109, 182, 0.15);
 }
 
 /* ===== Rendered HTML Content (Reader Modal) ===== */
@@ -444,7 +456,7 @@
 }
 
 .prose-content a {
-  color: #0d9488;
+  color: #143E86;
   text-decoration: underline;
 }
 
@@ -476,10 +488,10 @@
 .prose-content li { margin: 0.25rem 0; }
 
 .prose-content blockquote {
-  border-right: 4px solid #14b8a6;
+  border-right: 4px solid #236DB6;
   padding: 0.75rem 1rem;
   margin: 1rem 0;
-  background: rgba(20, 184, 166, 0.05);
+  background: rgba(35, 109, 182, 0.05);
   border-radius: 0.5rem;
   color: #4b5563;
   font-weight: 500;
@@ -487,7 +499,7 @@
 
 .dark .prose-content blockquote {
   color: #9ca3af;
-  background: rgba(20, 184, 166, 0.1);
+  background: rgba(35, 109, 182, 0.1);
 }
 
 .prose-content table {

@@ -229,13 +229,13 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
               {/* Logo & Header */}
               <div className="text-center mb-7">
                 <div className="flex justify-center mb-4">
-                  <img src="/logo_nika.png" alt="نیکا" className="h-14 w-auto" />
+                  <img src="/logo_nima.png" alt="نیما" className="h-14 w-auto" />
                 </div>
                 <h2 className="text-xl font-black text-gray-900">
                   ورود به سامانه
                 </h2>
                 <p className="text-xs text-gray-500 mt-1.5">
-                  سامانه مدیریت محتوا <span className="text-teal-600 font-bold">کارانت</span>
+                  سامانه مدیریت محتوا <span className="text-teal-600 font-bold">نیما</span>
                 </p>
               </div>
 
@@ -315,17 +315,17 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
                   disabled={isLoading}
                   className="w-full py-3.5 rounded-xl font-bold text-sm transition-all duration-300 shadow-lg flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
                   style={{
-                    backgroundColor: '#0d9488',
+                    backgroundColor: '#143E86',
                     color: 'white',
-                    boxShadow: '0 8px 24px -4px rgba(13, 148, 136, 0.25)',
+                    boxShadow: '0 8px 24px -4px rgba(20, 62, 134, 0.25)',
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#0f766e';
-                    e.currentTarget.style.boxShadow = '0 10px 30px -4px rgba(13, 148, 136, 0.4)';
+                    e.currentTarget.style.backgroundColor = '#0f2d6e';
+                    e.currentTarget.style.boxShadow = '0 10px 30px -4px rgba(20, 62, 134, 0.4)';
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = '#0d9488';
-                    e.currentTarget.style.boxShadow = '0 8px 24px -4px rgba(13, 148, 136, 0.25)';
+                    e.currentTarget.style.backgroundColor = '#143E86';
+                    e.currentTarget.style.boxShadow = '0 8px 24px -4px rgba(20, 62, 134, 0.25)';
                   }}
                 >
                   {isLoading ? (
@@ -345,7 +345,7 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
               {/* Footer */}
               <div className="mt-6 text-center">
                 <p className="text-[10px] text-gray-400 leading-relaxed">
-                  سامانه مدیریت محتوای کارانت
+                  سامانه مدیریت محتوای نیما
                 </p>
                 <a
                   href="https://karanet.info"
@@ -364,7 +364,7 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
         <div
           className="lg:col-span-6 flex flex-col justify-center px-6 sm:px-10 lg:px-16 py-10 order-2 lg:order-2"
           style={{
-            background: 'linear-gradient(135deg, #0d9488 0%, #115e59 50%, #134e4a 100%)',
+            background: 'linear-gradient(135deg, #143E86 0%, #0f2d6e 50%, #0a1f4a 100%)',
           }}
         >
           <motion.div
@@ -376,16 +376,16 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
             {/* Badge */}
             <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-teal-500/30 text-teal-100 text-xs font-bold mb-5 backdrop-blur-md">
               <ShieldCheck className="w-4 h-4 shrink-0 text-teal-300" />
-              <span>سامانه مدیریت محتوای کارانت</span>
+              <span>سامانه مدیریت محتوای نیما</span>
             </div>
 
             {/* Headline */}
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white leading-tight sm:leading-snug mb-4">
-              سامانه مدیریت محتوای کارانت
+              سامانه مدیریت محتوای نیما
             </h1>
 
             <p className="text-teal-50/70 text-sm sm:text-base leading-7 sm:leading-8 mb-8 text-justify">
-              سامانه مدیریت محتوای کارانت، بستری امن و هوشمند برای مدیریت محتوا، اخبار و خدمات سازمانی.
+              سامانه مدیریت محتوای نیما، بستری امن و هوشمند برای مدیریت محتوا، اخبار و خدمات سازمانی.
               مدیران و ویرایشگران محتوا می‌توانند به سادگی مطالب، صفحات و خدمات را مدیریت کنند.
             </p>
 
@@ -414,7 +414,7 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
                 KR
               </div>
               <div className="flex flex-col">
-                <span className="text-xs text-white font-bold">شرکت کارانت</span>
+                <span className="text-xs text-white font-bold">شرکت فناوری اطلاعات کارانت</span>
                 <span className="text-[10px] text-teal-200/50">سامانه مدیریت محتوا</span>
               </div>
             </div>

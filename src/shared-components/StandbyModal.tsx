@@ -84,7 +84,7 @@ export default function StandbyModal({ isStandby, user, onUnlock, onExit }: Stan
 
                             {/* Logo */}
                             <div className="flex justify-center mb-4">
-                                <img src="/logo_nika.png" alt="نیکا" className="h-14 w-auto" />
+                                <img src="/logo_nima.png" alt="نیما" className="h-14 w-auto" />
                             </div>
 
                             {/* Title */}

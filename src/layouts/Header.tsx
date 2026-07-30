@@ -47,12 +47,12 @@ export default function Header({
         >
           <Menu className="w-5 h-5" />
         </button>
-        <img src="/logo_nika.png" alt="نیکا" className="h-9 w-auto" />
+        <img src="/logo_nima.png" alt="نیما" className="h-9 w-auto" />
         <div>
           <h1 className="font-black text-sm text-gray-900 dark:text-white">
-            نرم‌افزار یکپارچهٔ آموزشی <span className="text-teal-600 dark:text-teal-400">نیکا</span>
+            نرم‌افزار یکپارچه مدیریت محتوای <span className="text-teal-600 dark:text-teal-400">نیما</span>
           </h1>
-          <p className="text-[10px] text-gray-400 animate-pulse">پنل یکپارچه مدیریت امور آموزش عالی</p>
+          <p className="text-[10px] text-gray-400 animate-pulse">سامانه یکپارچه مدیریت محتوا</p>
         </div>
       </div>
 

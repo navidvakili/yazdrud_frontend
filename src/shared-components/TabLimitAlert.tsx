@@ -35,7 +35,7 @@ export default function TabLimitAlert({
               ظرفیت تب‌های مرکز کار پر شده است!
             </h4>
             <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed font-sans font-medium">
-              نرم‌افزار یکپارچهٔ آموزشی نیکا (ویژه دانشگاه علم و هنر) حداکثر مجهز به <strong>{MAX_TABS} تب باز همزمان</strong> را مجاز می‌شناسد. لطفاً جهت باز کردن بخش جدید علمی، ابتدا یکی از تب‌های غیرضروری را به کمک کلید ضربدر ببندید.
+              نرم‌افزار یکپارچه مدیریت محتوای نیما حداکثر مجهز به <strong>{MAX_TABS} تب باز همزمان</strong> را مجاز می‌شناسد. لطفاً جهت باز کردن بخش جدید، ابتدا یکی از تب‌های غیرضروری را به کمک کلید ضربدر ببندید.
             </p>
 
             <div className="pt-3 border-t border-red-500/10 dark:border-red-500/5 space-y-2">

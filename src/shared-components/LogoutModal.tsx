@@ -29,7 +29,7 @@ export default function LogoutModal({ showLogoutModal, setShowLogoutModal, handl
               خروج از حساب کاربری
             </h4>
             <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed font-sans font-medium">
-              آیا مایل به خروج از حساب کاربری نرم‌افزار یکپارچهٔ آموزشی <span className="text-teal-600 dark:text-teal-400">نیکا</span> هستید؟
+              آیا مایل به خروج از حساب کاربری نرم‌افزار یکپارچه مدیریت محتوای <span className="text-teal-600 dark:text-teal-400">نیما</span> هستید؟
             </p>
 
             <div className="pt-3 border-t border-red-500/10 dark:border-red-500/5 space-y-2">
