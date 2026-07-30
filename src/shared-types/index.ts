@@ -38,6 +38,11 @@ export interface NewsAttachment {
   url: string;
 }
 
+export interface PhotoReportImage {
+  url: string;
+  title?: string | null;
+}
+
 export interface NewsComment {
   id: number;
   news_id?: number;
@@ -67,6 +72,8 @@ export interface NewsItem {
   likes_count: number;
   is_pinned: boolean;
   comments_enabled: boolean;
+  is_photo_report: boolean;
+  photo_report_images: PhotoReportImage[];
   comments_count: number;
   comments?: NewsComment[];
   status: 'published' | 'draft' | 'archived';

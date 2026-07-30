@@ -10,9 +10,9 @@ import {
   Trash2, Calendar, User as UserIcon, Tag, Clock, Sparkles,
   Share2, FileText, Download, MessageSquare, BarChart2, Layers,
   CheckCircle2, X, Send, SlidersHorizontal, LayoutGrid, List,
-  Flame, AlertCircle, ExternalLink, Info, Loader2, Upload,
+  Flame, AlertCircle, ExternalLink, Info, Loader2, Upload, Image,
 } from 'lucide-react';
-import type { NewsItem, NewsCategory, User } from '@/src/shared-types';
+import type { NewsItem, NewsCategory, User, PhotoReportImage } from '@/src/shared-types';
 import ToastNotification from '@/src/shared-components/ToastNotification';
 import WysiwygEditor from '@/src/shared-components/WysiwygEditor';
 import TagInput from '@/src/shared-components/TagInput';
@@ -84,6 +84,10 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
   const [showMediaSelector, setShowMediaSelector] = useState(false);
   const [formTags, setFormTags] = useState<string[]>([]);
   const [formCommentsEnabled, setFormCommentsEnabled] = useState(true);
+  const [formIsPhotoReport, setFormIsPhotoReport] = useState(false);
+  const [formPhotoReportImages, setFormPhotoReportImages] = useState<PhotoReportImage[]>([]);
+  const [showPhotoImageSelector, setShowPhotoImageSelector] = useState(false);
+  const [photoImageIndex, setPhotoImageIndex] = useState<number | null>(null);
   const [formMessage, setFormMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [formLoading, setFormLoading] = useState(false);
 
@@ -223,6 +227,8 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
       setFormStatus(data.status);
       setFormIsPinned(data.is_pinned);
       setFormCommentsEnabled(data.comments_enabled);
+      setFormIsPhotoReport(data.is_photo_report ?? false);
+      setFormPhotoReportImages(data.photo_report_images ?? []);
       setFormImageUrl(data.image_url || '');
       setFormTags(data.tags || []);
     } catch (err: any) {
@@ -235,6 +241,8 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
       setFormStatus(item.status);
       setFormIsPinned(item.is_pinned);
       setFormCommentsEnabled(item.comments_enabled);
+      setFormIsPhotoReport((item as any).is_photo_report ?? false);
+      setFormPhotoReportImages((item as any).photo_report_images ?? []);
       setFormImageUrl(item.image_url || '');
       setFormTags(item.tags || []);
       showToast(err.message || 'خطا در بارگذاری جزئیات خبر', 'error');
@@ -252,6 +260,8 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
     setFormStatus('published');
     setFormIsPinned(false);
     setFormCommentsEnabled(true);
+    setFormIsPhotoReport(false);
+    setFormPhotoReportImages([]);
     setFormImageUrl('');
     setFormTags([]);
     setFormMessage(null);
@@ -278,6 +288,8 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
         target_audience: 'all' as const,
         is_pinned: formIsPinned,
         comments_enabled: formCommentsEnabled,
+        is_photo_report: formIsPhotoReport,
+        photo_report_images: formIsPhotoReport ? formPhotoReportImages : undefined,
         tags: tagArray,
       };
 
@@ -728,6 +740,13 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
                       </div>
                     )}
 
+                    {item.is_photo_report && (
+                      <div className="absolute top-3 left-3 px-3 py-1 rounded-full bg-indigo-500 text-white font-black text-[10px] shadow-md flex items-center gap-1">
+                        <Image className="w-3 h-3" />
+                        <span>گزارش تصویری</span>
+                      </div>
+                    )}
+
                     <div className="absolute bottom-3 right-3 px-3 py-1 rounded-xl bg-teal-600/90 text-white font-bold text-[11px] backdrop-blur-md shadow-xs">
                       {item.category_name || 'عمومی'}
                     </div>
@@ -839,6 +858,7 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
                       <td className="py-3.5 px-4 font-extrabold text-gray-900 dark:text-white max-w-xs truncate">
                         <div className="flex items-center gap-2">
                           {item.is_pinned && <Pin className="w-3.5 h-3.5 text-amber-500 shrink-0" />}
+                          {item.is_photo_report && <Image className="w-3.5 h-3.5 text-indigo-500 shrink-0" aria-label="گزارش تصویری" />}
                           <span>{item.title}</span>
                         </div>
                       </td>
@@ -971,8 +991,14 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
 
                 <div>
                   <label className="block text-xs font-extrabold text-gray-700 dark:text-gray-300 mb-1.5">
-                    متن کامل خبر <span className="text-red-500">*</span>
+                    متن کامل خبر {!formIsPhotoReport && <span className="text-red-500">*</span>}
                   </label>
+                  {formIsPhotoReport && (
+                    <p className="text-[10px] text-indigo-500 font-semibold mb-2 flex items-center gap-1">
+                      <Image className="w-3 h-3" />
+                      در گزارش تصویری، متن اختیاری است. گالری تصاویر در اولویت نمایش قرار می‌گیرد.
+                    </p>
+                  )}
                   <WysiwygEditor
                     content={formContent}
                     onChange={setFormContent}
@@ -1050,6 +1076,81 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
                   <p className="text-[10px] text-gray-400 mt-1 mr-6">در صورت غیرفعال بودن، بخش نظرات در نمایش عمومی خبر نمایش داده نمی‌شود.</p>
                 </div>
 
+                <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input type="checkbox" checked={formIsPhotoReport} onChange={e => setFormIsPhotoReport(e.target.checked)} className="rounded text-teal-600 focus:ring-teal-500 h-4 w-4" />
+                    <span className="text-xs font-bold text-gray-800 dark:text-gray-200 flex items-center gap-1">
+                      <Image className="w-3.5 h-3.5 text-indigo-500" />
+                      گزارش تصویری
+                    </span>
+                  </label>
+                  <p className="text-[10px] text-gray-400 mt-1 mr-6">در گزارش تصویری، گالری تصاویر جایگزین متن اصلی می‌شود.</p>
+                </div>
+
+                {formIsPhotoReport && (
+                  <div className="pt-2 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-gray-600 dark:text-gray-400">تصاویر گزارش</span>
+                      <button
+                        type="button"
+                        onClick={() => { setPhotoImageIndex(null); setShowPhotoImageSelector(true); }}
+                        className="px-3 py-1.5 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 text-[10px] font-bold hover:bg-indigo-500/20 transition-all cursor-pointer flex items-center gap-1"
+                      >
+                        <Plus className="w-3 h-3" />
+                        افزودن تصویر
+                      </button>
+                    </div>
+                    {formPhotoReportImages.length === 0 && (
+                      <p className="text-[10px] text-gray-400 text-center py-4 border border-dashed border-gray-200 dark:border-gray-700 rounded-xl">
+                        هنوز تصویری انتخاب نشده است
+                      </p>
+                    )}
+                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                      {formPhotoReportImages.map((img, idx) => (
+                        <div key={idx} className="flex items-center gap-2 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-2">
+                          <div className="w-14 h-14 rounded-lg overflow-hidden shrink-0 bg-gray-100 dark:bg-gray-800">
+                            <img src={img.url} alt={img.title || ''} className="w-full h-full object-cover" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <input
+                              type="text"
+                              value={img.title || ''}
+                              onChange={e => {
+                                const updated = [...formPhotoReportImages];
+                                updated[idx] = { ...updated[idx], title: e.target.value };
+                                setFormPhotoReportImages(updated);
+                              }}
+                              placeholder="توضیح تصویر..."
+                              className="w-full px-2 py-1 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-[10px] text-gray-800 dark:text-gray-200 focus:outline-none focus:border-indigo-500"
+                            />
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => { setPhotoImageIndex(idx); setShowPhotoImageSelector(true); }}
+                              className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-teal-500 transition-colors cursor-pointer"
+                              title="تغییر تصویر"
+                            >
+                              <Upload className="w-3 h-3" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const updated = formPhotoReportImages.filter((_, i) => i !== idx);
+                                setFormPhotoReportImages(updated);
+                              }}
+                              className="p-1.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 text-red-400 hover:text-red-500 transition-colors cursor-pointer"
+                              title="حذف تصویر"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <div className="pt-2">
                   <label className="block text-[11px] font-bold text-gray-600 dark:text-gray-400 mb-1">تصویر شاخص</label>
                   <div className="space-y-2">
@@ -1113,6 +1214,25 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
         }}
         filter="image"
         title="انتخاب تصویر شاخص"
+      />
+
+      {/* Media Manager for photo report images */}
+      <MediaManager
+        open={showPhotoImageSelector}
+        onClose={() => setShowPhotoImageSelector(false)}
+        onSelect={(url) => {
+          if (photoImageIndex !== null) {
+            // Replace existing image
+            const updated = [...formPhotoReportImages];
+            updated[photoImageIndex] = { ...updated[photoImageIndex], url };
+            setFormPhotoReportImages(updated);
+          } else {
+            // Add new image
+            setFormPhotoReportImages([...formPhotoReportImages, { url, title: '' }]);
+          }
+        }}
+        filter="image"
+        title="انتخاب تصویر برای گزارش تصویری"
       />
 
       {/* ===== TAB 3: CATEGORIES ===== */}
