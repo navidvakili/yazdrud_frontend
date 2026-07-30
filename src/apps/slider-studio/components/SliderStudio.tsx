@@ -1021,7 +1021,7 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
                           className="w-full h-full flex font-bold relative z-[1]"
                           style={{
                             alignItems: layer.alignVertical === 'top' ? 'flex-start' : layer.alignVertical === 'bottom' ? 'flex-end' : 'center',
-                            justifyContent: layer.textAlign === 'right' ? 'flex-end' : layer.textAlign === 'left' ? 'flex-start' : 'center',
+                            justifyContent: layer.textAlign === 'right' ? 'right' : layer.textAlign === 'left' ? 'left' : 'center',
                             textAlign: layer.textAlign || 'center',
                           }}
                         >
