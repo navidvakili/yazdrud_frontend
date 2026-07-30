@@ -16,6 +16,7 @@ export default function SliderStudioApp() {
   const [projectData, setProjectData] = useState<SliderProject | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // ===== Toast =====
   const [toast, setToast] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
@@ -40,12 +41,21 @@ export default function SliderStudioApp() {
             const data = typeof project.project_data === 'string'
               ? JSON.parse(project.project_data)
               : project.project_data;
+            // Ensure createdAt/updatedAt for SliderProject type
+            if (!data.createdAt) data.createdAt = project.created_at || '';
+            if (!data.updatedAt) data.updatedAt = project.updated_at || '';
             setProjectData(data);
+          } else {
+            setError('داده‌های پروژه معتبر نیست');
           }
+        } else {
+          setError('پروژه‌ای یافت نشد');
         }
       } catch (err: any) {
         if (cancelled) return;
-        showToast(err.message || 'خطا در بارگذاری پروژه', 'error');
+        const msg = err.message || 'خطا در بارگذاری پروژه';
+        setError(msg);
+        showToast(msg, 'error');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -83,11 +93,7 @@ export default function SliderStudioApp() {
   return (
     <div className="h-full flex flex-col bg-gray-50 dark:bg-slate-950 text-slate-900 dark:text-white rtl">
       {toast && (
-        <ToastNotification
-          message={toast.text}
-          type={toast.type}
-          onClose={() => setToast(null)}
-        />
+        <ToastNotification toast={toast} />
       )}
 
       {/* ===== Content ===== */}
@@ -96,6 +102,22 @@ export default function SliderStudioApp() {
           <div className="flex items-center justify-center h-full">
             <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
             <span className="mr-3 text-sm text-gray-500">در حال بارگذاری اسلایدر...</span>
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center h-full gap-4 px-4">
+            <div className="rounded-full bg-red-100 dark:bg-red-900/30 p-4">
+              <Loader2 className="w-8 h-8 text-red-500" />
+            </div>
+            <h2 className="text-lg font-bold text-gray-700 dark:text-gray-300">خطا در بارگذاری اسلایدر</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 text-center max-w-md">
+              {error}
+            </p>
+            <button
+              onClick={() => { setError(null); setLoading(true); window.location.reload(); }}
+              className="px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-sm font-bold transition-colors cursor-pointer"
+            >
+              تلاش مجدد
+            </button>
           </div>
         ) : (
           <SliderStudioEditor

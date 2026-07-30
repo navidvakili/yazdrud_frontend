@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Type,
@@ -56,10 +56,32 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
   const [project, setProject] = useState<SliderProject>(
     () => initialProject || INITIAL_SLIDER_PROJECTS[0]
   );
-  const [activeSlideId, setActiveSlideId] = useState<string>(INITIAL_SLIDER_PROJECTS[0].slides[0].id);
-  const [selectedLayerId, setSelectedLayerId] = useState<string | null>(
-    INITIAL_SLIDER_PROJECTS[0].slides[0].layers[0]?.id || null
+  const [activeSlideId, setActiveSlideId] = useState<string>(
+    () => initialProject?.slides[0]?.id || INITIAL_SLIDER_PROJECTS[0].slides[0].id
   );
+  const [selectedLayerId, setSelectedLayerId] = useState<string | null>(
+    () => {
+      const firstSlide = initialProject?.slides[0];
+      return firstSlide?.layers[0]?.id
+        || INITIAL_SLIDER_PROJECTS[0].slides[0].layers[0]?.id
+        || null;
+    }
+  );
+
+  // Sync state when initialProject changes (e.g. after async load)
+  useEffect(() => {
+    if (initialProject) {
+      setProject(initialProject);
+      setActiveSlideId(
+        initialProject.slides[0]?.id || INITIAL_SLIDER_PROJECTS[0].slides[0].id
+      );
+      setSelectedLayerId(
+        initialProject.slides[0]?.layers[0]?.id
+          || INITIAL_SLIDER_PROJECTS[0].slides[0].layers[0]?.id
+          || null
+      );
+    }
+  }, [initialProject]);
 
   // Timeline & Playback State
   const [currentTime, setCurrentTime] = useState<number>(0);

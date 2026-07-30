@@ -6,7 +6,10 @@
  * دریافت توکن احراز هویت از localStorage
  */
 function getAuthHeaders(): Record<string, string> {
-  const token = localStorage.getItem('auth_token') || localStorage.getItem('token') || '';
+  const token = localStorage.getItem('portal_token')
+    || localStorage.getItem('auth_token')
+    || localStorage.getItem('token')
+    || '';
   return token
     ? {
         'Authorization': `Bearer ${token}`,
