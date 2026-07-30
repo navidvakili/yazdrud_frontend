@@ -1286,9 +1286,11 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
         </div>
         )}
 
-        {/* CENTER CANVAS STAGE */}
-        <div className="flex-1 bg-slate-200/80 dark:bg-slate-950 overflow-auto p-8 flex items-center justify-center relative"
+        {/* CENTER CANVAS STAGE — scrollable when layers overflow */}
+        <div className="flex-1 bg-slate-200/80 dark:bg-slate-950 relative overflow-hidden"
              onClick={() => setSelectedLayerId(null)}>
+          {/* Scrollable viewport */}
+          <div className="absolute inset-0 overflow-auto p-8 flex items-start justify-center">
           {/* Slide Stage Container */}
           <div
             data-stage-container
@@ -1308,7 +1310,7 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
               background:
                 activeSlide.background.gradient || activeSlide.background.color || '#0f172a'
             }}
-            className="relative rounded-3xl overflow-hidden shadow-2xl border-2 border-gray-300 dark:border-slate-800 transition-all duration-300"
+            className="relative rounded-3xl shadow-2xl border-2 border-gray-300 dark:border-slate-800 shrink-0"
           >
             {/* Background Image - full when type is 'image', overlay otherwise */}
             {activeSlide.background.imageUrl && activeSlide.background.type === 'image' && (
@@ -1539,6 +1541,8 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
                 );
               })}
           </div>
+          {/* END scrollable viewport */}
+        </div>
         </div>
 
         {/* RIGHT SIDEBAR: INSPECTOR PANEL */}
