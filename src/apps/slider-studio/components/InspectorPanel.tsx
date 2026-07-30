@@ -121,7 +121,7 @@ export default function InspectorPanel({
             <div>
               <label className="text-[10px] text-slate-500 dark:text-slate-400">مدت زمان نمایش (ثانیه)</label>
               <input
-                type="number"
+                type="number" dir="ltr"
                 step="0.5"
                 min="1"
                 value={slide.duration}
@@ -588,7 +588,7 @@ export default function InspectorPanel({
                   <div>
                     <label className="text-[10px] text-slate-500 dark:text-slate-400">اندازه فونت (px)</label>
                     <input
-                      type="number"
+                      type="number" dir="ltr"
                       value={selectedLayer.fontSize}
                       onChange={e => updateField('fontSize', Number(e.target.value))}
                       className="w-full p-2 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-slate-900 dark:text-white font-mono text-xs"
@@ -643,7 +643,7 @@ export default function InspectorPanel({
                 <div>
                   <label className="text-[10px] text-slate-500 dark:text-slate-400">موقعیت X</label>
                   <input
-                    type="number"
+                    type="number" dir="ltr"
                     value={selectedLayer.x}
                     onChange={e => updateField('x', Number(e.target.value))}
                     className="w-full p-2 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-slate-900 dark:text-white"
@@ -652,7 +652,7 @@ export default function InspectorPanel({
                 <div>
                   <label className="text-[10px] text-slate-500 dark:text-slate-400">موقعیت Y</label>
                   <input
-                    type="number"
+                    type="number" dir="ltr"
                     value={selectedLayer.y}
                     onChange={e => updateField('y', Number(e.target.value))}
                     className="w-full p-2 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-slate-900 dark:text-white"
@@ -661,7 +661,7 @@ export default function InspectorPanel({
                 <div>
                   <label className="text-[10px] text-slate-500 dark:text-slate-400">عرض (Width)</label>
                   <input
-                    type="number"
+                    type="number" dir="ltr"
                     value={selectedLayer.width}
                     onChange={e => updateField('width', Number(e.target.value))}
                     className="w-full p-2 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-slate-900 dark:text-white"
@@ -670,7 +670,7 @@ export default function InspectorPanel({
                 <div>
                   <label className="text-[10px] text-slate-500 dark:text-slate-400">ارتفاع (Height)</label>
                   <input
-                    type="number"
+                    type="number" dir="ltr"
                     value={selectedLayer.height}
                     onChange={e => updateField('height', Number(e.target.value))}
                     className="w-full p-2 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-slate-900 dark:text-white"
@@ -682,7 +682,7 @@ export default function InspectorPanel({
                 <div>
                   <label className="text-[10px] text-slate-500 dark:text-slate-400">چرخش (درجه)</label>
                   <input
-                    type="number"
+                    type="number" dir="ltr"
                     value={selectedLayer.rotation}
                     onChange={e => updateField('rotation', Number(e.target.value))}
                     className="w-full p-2 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-slate-900 dark:text-white"
@@ -691,7 +691,7 @@ export default function InspectorPanel({
                 <div>
                   <label className="text-[10px] text-slate-500 dark:text-slate-400">ترتیب لایه (Z-Index)</label>
                   <input
-                    type="number"
+                    type="number" dir="ltr"
                     value={selectedLayer.zIndex}
                     onChange={e => updateField('zIndex', Number(e.target.value))}
                     className="w-full p-2 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-slate-900 dark:text-white"
@@ -707,25 +707,123 @@ export default function InspectorPanel({
                 <span>رنگ پس‌زمینه و شعاع گردی</span>
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
+              {/* Layer Background Type Selector */}
+              <div>
+                <label className="text-[10px] text-slate-500 dark:text-slate-400">نوع پس‌زمینه</label>
+                <select
+                  value={
+                    selectedLayer.backgroundColor === 'transparent' && !selectedLayer.backgroundGradient
+                      ? 'transparent'
+                      : selectedLayer.backgroundGradient
+                      ? 'gradient'
+                      : 'color'
+                  }
+                  onChange={e => {
+                    const val = e.target.value;
+                    if (val === 'transparent') {
+                      onUpdateLayer({ ...selectedLayer, backgroundColor: 'transparent', backgroundGradient: undefined });
+                    } else if (val === 'color') {
+                      onUpdateLayer({ ...selectedLayer, backgroundColor: '#1e293b', backgroundGradient: undefined });
+                    } else {
+                      onUpdateLayer({ ...selectedLayer, backgroundColor: '#0f172a', backgroundGradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' });
+                    }
+                  }}
+                  className="w-full p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-slate-900 dark:text-white font-sans text-xs cursor-pointer"
+                >
+                  <option value="transparent">بدون (شفاف)</option>
+                  <option value="color">رنگ ثابت</option>
+                  <option value="gradient">گرادینت</option>
+                </select>
+              </div>
+
+              {/* Solid Color Picker */}
+              {selectedLayer.backgroundColor !== 'transparent' && !selectedLayer.backgroundGradient && (
                 <div>
                   <label className="text-[10px] text-slate-500 dark:text-slate-400">رنگ پس‌زمینه</label>
-                  <input
-                    type="text"
-                    value={selectedLayer.backgroundColor}
-                    onChange={e => updateField('backgroundColor', e.target.value)}
-                    className="w-full p-2 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-slate-900 dark:text-white font-mono text-[11px]"
-                  />
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={selectedLayer.backgroundColor}
+                      onChange={e => updateField('backgroundColor', e.target.value)}
+                      className="w-8 h-8 rounded-lg cursor-pointer bg-transparent border-0 shrink-0"
+                    />
+                    <input
+                      type="text"
+                      value={selectedLayer.backgroundColor}
+                      onChange={e => updateField('backgroundColor', e.target.value)}
+                      className="flex-1 p-2 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-slate-900 dark:text-white font-mono text-[11px]"
+                    />
+                  </div>
                 </div>
+              )}
+
+              {/* Gradient Picker */}
+              {selectedLayer.backgroundGradient && (
                 <div>
-                  <label className="text-[10px] text-slate-500 dark:text-slate-400">شعاع گردی (px)</label>
+                  <label className="text-[10px] text-slate-500 dark:text-slate-400">گرادینت پس‌زمینه</label>
+                  <div className="mt-1">
+                    <GradientPicker
+                      value={selectedLayer.backgroundGradient}
+                      onChange={(css) => updateField('backgroundGradient', css)}
+                    />
+                  </div>
+                  {/* Fallback color for gradient */}
+                  <div className="mt-2">
+                    <label className="text-[10px] text-slate-500 dark:text-slate-400">رنگ جایگزین</label>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <input
+                        type="color"
+                        value={selectedLayer.backgroundColor === 'transparent' ? '#0f172a' : selectedLayer.backgroundColor}
+                        onChange={e => updateField('backgroundColor', e.target.value)}
+                        className="w-8 h-8 rounded-lg cursor-pointer bg-transparent border-0 shrink-0"
+                      />
+                      <input
+                        type="text"
+                        value={selectedLayer.backgroundColor === 'transparent' ? '#0f172a' : selectedLayer.backgroundColor}
+                        onChange={e => updateField('backgroundColor', e.target.value)}
+                        className="flex-1 p-2 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-slate-900 dark:text-white font-mono text-[11px]"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Background Opacity Slider */}
+              {selectedLayer.backgroundColor !== 'transparent' && (
+                <div>
+                  <label className="text-[10px] text-slate-500 dark:text-slate-400">شفافیت پس‌زمینه: {selectedLayer.backgroundOpacity ?? 100}%</label>
                   <input
-                    type="number"
-                    value={selectedLayer.borderRadius}
-                    onChange={e => updateField('borderRadius', Number(e.target.value))}
-                    className="w-full p-2 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-slate-900 dark:text-white font-mono"
+                    type="range"
+                    dir="ltr"
+                    min="0"
+                    max="100"
+                    value={selectedLayer.backgroundOpacity ?? 100}
+                    onChange={e => updateField('backgroundOpacity', Number(e.target.value))}
+                    className="w-full h-2 rounded-full appearance-none cursor-pointer bg-slate-200 dark:bg-slate-700 accent-teal-600"
                   />
                 </div>
+              )}
+
+              {/* Preview Swatch */}
+              <div>
+                <label className="text-[10px] text-slate-500 dark:text-slate-400">پیش‌نمایش</label>
+                <div
+                  className="w-full h-8 rounded-xl border border-gray-300 dark:border-slate-700"
+                  style={{
+                    background: selectedLayer.backgroundGradient || selectedLayer.backgroundColor,
+                    opacity: (selectedLayer.backgroundOpacity ?? 100) / 100,
+                  }}
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] text-slate-500 dark:text-slate-400">شعاع گردی (px)</label>
+                <input
+                  type="number" dir="ltr"
+                  value={selectedLayer.borderRadius}
+                  onChange={e => updateField('borderRadius', Number(e.target.value))}
+                  className="w-full p-2 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-slate-900 dark:text-white font-mono"
+                />
               </div>
             </div>
           </div>
@@ -762,7 +860,7 @@ export default function InspectorPanel({
                 <div>
                   <label className="text-[10px] text-slate-500 dark:text-slate-400">مدت زمان (ثانیه)</label>
                   <input
-                    type="number"
+                    type="number" dir="ltr"
                     step="0.1"
                     value={selectedLayer.animation.inDuration}
                     onChange={e => updateAnimField('inDuration', Number(e.target.value))}
@@ -772,7 +870,7 @@ export default function InspectorPanel({
                 <div>
                   <label className="text-[10px] text-slate-500 dark:text-slate-400">تأخیر شروع (ثانیه)</label>
                   <input
-                    type="number"
+                    type="number" dir="ltr"
                     step="0.1"
                     value={selectedLayer.animation.inDelay}
                     onChange={e => updateAnimField('inDelay', Number(e.target.value))}

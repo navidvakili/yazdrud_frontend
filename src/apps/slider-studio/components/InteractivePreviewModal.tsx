@@ -337,36 +337,51 @@ export default function InteractivePreviewModal({
                     fontFamily: layer.fontFamily,
                     fontWeight: layer.fontWeight,
                     color: layer.color,
-                    backgroundColor: layer.backgroundColor,
                     borderRadius: `${layer.borderRadius * scaleFactor}px`,
                     padding: layer.padding,
                     zIndex: layer.zIndex,
                     boxShadow: layer.shadow,
                     cursor: layer.interactions.length > 0 ? 'pointer' : 'default'
                   }}
-                  className="flex items-center justify-center transition-all duration-200"
+                  className="transition-all duration-200"
                 >
-                  {layer.type === 'image' ? (
-                    <img
-                      src={layer.content}
-                      alt={layer.name}
-                      className="w-full h-full object-cover rounded-[inherit]"
+                  {/* Layer Background */}
+                  {(layer.backgroundColor !== 'transparent' || layer.backgroundGradient) && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        background: layer.backgroundGradient || layer.backgroundColor,
+                        borderRadius: `${layer.borderRadius * scaleFactor}px`,
+                        opacity: layer.backgroundOpacity !== undefined ? layer.backgroundOpacity / 100 : 1,
+                        pointerEvents: 'none',
+                      }}
                     />
-                  ) : layer.type === 'video' ? (
-                    <video
-                      src={layer.content}
-                      autoPlay
-                      loop
-                      muted
-                      className="w-full h-full object-cover rounded-[inherit]"
-                    />
-                  ) : layer.type === 'button' ? (
-                    <button className="w-full h-full font-black text-center flex items-center justify-center gap-2">
-                      {layer.content}
-                    </button>
-                  ) : (
-                    <div className="w-full h-full leading-snug">{layer.content}</div>
                   )}
+                  {/* Layer Content */}
+                  <div className="w-full h-full flex items-center justify-center relative z-[1]">
+                    {layer.type === 'image' ? (
+                      <img
+                        src={layer.content}
+                        alt={layer.name}
+                        className="w-full h-full object-cover rounded-[inherit]"
+                      />
+                    ) : layer.type === 'video' ? (
+                      <video
+                        src={layer.content}
+                        autoPlay
+                        loop
+                        muted
+                        className="w-full h-full object-cover rounded-[inherit]"
+                      />
+                    ) : layer.type === 'button' ? (
+                      <button className="w-full h-full font-black text-center flex items-center justify-center gap-2">
+                        {layer.content}
+                      </button>
+                    ) : (
+                      <div className="w-full h-full leading-snug flex items-center justify-center">{layer.content}</div>
+                    )}
+                  </div>
                 </motion.div>
               );
             })}

@@ -220,6 +220,7 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
       textAlign: 'right',
       color: type === 'button' ? '#0f172a' : '#ffffff',
       backgroundColor: type === 'button' ? '#38bdf8' : 'transparent',
+      backgroundOpacity: 100,
       borderRadius: type === 'button' ? 16 : 0,
       borderWidth: 0,
       borderColor: 'transparent',
@@ -972,7 +973,6 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
                       fontFamily: layer.fontFamily,
                       fontWeight: layer.fontWeight,
                       color: layer.color,
-                      backgroundColor: layer.backgroundColor,
                       borderRadius: `${layer.borderRadius}px`,
                       padding: layer.padding,
                       zIndex: layer.zIndex,
@@ -983,29 +983,44 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
                       ? { duration: 0.05, ease: 'linear' }
                       : { duration: 0 }
                     }
-                    className={`group/layer flex items-center justify-center cursor-move select-none`}
+                    className={`group/layer cursor-move select-none`}
                     onClick={e => e.stopPropagation()}
                   >
-                    {/* Layer Content View */}
-                    {layer.type === 'image' ? (
-                      <img
-                        src={layer.content}
-                        alt={layer.name}
-                        className="w-full h-full object-cover rounded-[inherit] pointer-events-none"
+                    {/* Layer Background */}
+                    {(layer.backgroundColor !== 'transparent' || layer.backgroundGradient) && (
+                      <div
+                        style={{
+                          position: 'absolute',
+                          inset: 0,
+                          background: layer.backgroundGradient || layer.backgroundColor,
+                          borderRadius: 'inherit',
+                          opacity: layer.backgroundOpacity !== undefined ? layer.backgroundOpacity / 100 : 1,
+                          pointerEvents: 'none',
+                        }}
                       />
-                    ) : layer.type === 'video' ? (
-                      <video
-                        src={layer.content}
-                        autoPlay
-                        loop
-                        muted
-                        className="w-full h-full object-cover rounded-[inherit] pointer-events-none"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-center font-bold">
-                        {layer.content}
-                      </div>
                     )}
+                    {/* Layer Content View */}
+                    <div className="w-full h-full flex items-center justify-center relative z-[1]">
+                      {layer.type === 'image' ? (
+                        <img
+                          src={layer.content}
+                          alt={layer.name}
+                          className="w-full h-full object-cover rounded-[inherit] pointer-events-none"
+                        />
+                      ) : layer.type === 'video' ? (
+                        <video
+                          src={layer.content}
+                          autoPlay
+                          loop
+                          muted
+                          className="w-full h-full object-cover rounded-[inherit] pointer-events-none"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-center font-bold">
+                          {layer.content}
+                        </div>
+                      )}
+                    </div>
 
                     {/* ===== FreeTransform Bounding Box (when selected) ===== */}
                     {isSelected && (
