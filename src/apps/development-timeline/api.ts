@@ -7,11 +7,9 @@ import { API } from '@/src/shared-utils/functions';
 export interface DevelopmentTimelineItem {
   id: number;
   title: string;
-  description: string | null;
-  year: string;
   icon: string | null;
-  image_url: string | null;
-  type: 'road' | 'urban' | 'both';
+  value: string | null;
+  value_index: string | null;
   sort_order: number;
   is_active: boolean;
   created_at: string;

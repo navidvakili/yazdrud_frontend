@@ -4,12 +4,12 @@
 // CRUD کامل برای آیتم‌های تایم‌لاین توسعه عمران شهری و جاده‌ای
 // ============================================================
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
-  Plus, Search, Edit3, Trash2, Route, Building2, Globe,
+  Plus, Search, Edit3, Trash2,
   CheckCircle2, AlertCircle, Loader2, X, Save, Eye, EyeOff,
-  GripVertical, Clock,
+  GripVertical, ChevronDown,
 } from 'lucide-react';
 import ToastNotification from '@/src/shared-components/ToastNotification';
 import {
@@ -26,28 +26,169 @@ interface DevelopmentTimelineManagementProps {
   moduleId?: string;
 }
 
-const typeLabels: Record<string, string> = {
-  road: 'راه‌سازی',
-  urban: 'عمران شهری',
-  both: 'هر دو',
-};
+// ── Icon picker popover state ──────────────────────────────
+const ICON_PICKER_ID = 'dev-timeline-icon-picker';
 
-const typeIcons: Record<string, any> = {
-  road: Route,
-  urban: Building2,
-  both: Globe,
-};
+// ── Predefined FontAwesome Icons ──────────────────────────
+const PREDEFINED_ICONS = [
+  { fa: 'fa-solid fa-road',        label: 'جاده',          color: '#B76E4C' },
+  { fa: 'fa-solid fa-city',        label: 'شهر',           color: '#1F3A5F' },
+  { fa: 'fa-solid fa-building',    label: 'ساختمان',       color: '#2A9D8F' },
+  { fa: 'fa-solid fa-home',        label: 'مسکن',          color: '#C98A5A' },
+  { fa: 'fa-solid fa-train',       label: 'قطار',          color: '#4A6FA5' },
+  { fa: 'fa-solid fa-bus',         label: 'اتوبوس',        color: '#E76F51' },
+  { fa: 'fa-solid fa-car',         label: 'خودرو',         color: '#6C757D' },
+  { fa: 'fa-solid fa-tree',        label: 'فضای سبز',      color: '#2D936C' },
+  { fa: 'fa-solid fa-water',       label: 'آب',            color: '#00B4D8' },
+  { fa: 'fa-solid fa-bolt',        label: 'برق',           color: '#FFD166' },
+  { fa: 'fa-solid fa-cogs',        label: 'تجهیزات',       color: '#6C5CE7' },
+  { fa: 'fa-solid fa-hard-hat',    label: 'ساخت‌وساز',     color: '#F4A261' },
+  { fa: 'fa-solid fa-map-marked-alt', label: 'نقشه',       color: '#264653' },
+  { fa: 'fa-solid fa-industry',    label: 'صنعت',          color: '#A8DADC' },
+  { fa: 'fa-solid fa-hospital',    label: 'بیمارستان',     color: '#E63946' },
+  { fa: 'fa-solid fa-school',      label: 'مدرسه',         color: '#7B2D8E' },
+  { fa: 'fa-solid fa-university',  label: 'دانشگاه',       color: '#3D5A80' },
+  { fa: 'fa-solid fa-bridge',      label: 'پل',            color: '#8D6E63' },
+  { fa: 'fa-solid fa-rocket',      label: 'پیشرفت',        color: '#E07A5F' },
+  { fa: 'fa-solid fa-flag',        label: 'افتتاح',        color: '#D62828' },
+];
 
 const emptyForm = {
   title: '',
-  description: '',
-  year: '',
   icon: '',
-  image_url: '',
-  type: 'both' as 'road' | 'urban' | 'both',
-  sort_order: 0,
+  value: '',
+  value_index: '',
   is_active: true,
 };
+
+// ── IconPicker Popover Component ───────────────────────────
+function IconPicker({
+  selected,
+  onSelect,
+  onClear,
+  faToColor,
+  faToLabel,
+}: {
+  selected: string;
+  onSelect: (fa: string) => void;
+  onClear: () => void;
+  faToColor: (fa: string) => string;
+  faToLabel: (fa: string) => string;
+}) {
+  const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLDivElement>(null);
+  const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 });
+
+  // Close on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (
+        triggerRef.current &&
+        !triggerRef.current.contains(e.target as Node)
+      ) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  // Calculate fixed position when opening
+  useEffect(() => {
+    if (open && triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      const w = Math.max(rect.width, 360);
+      // Ensure popover stays within viewport
+      const left = Math.min(rect.left, window.innerWidth - w - 8);
+      setCoords({ top: rect.bottom + 4, left: Math.max(left, 8), width: w });
+    }
+  }, [open]);
+
+  const selectedMeta = PREDEFINED_ICONS.find((i) => i.fa === selected);
+
+  return (
+    <div ref={triggerRef} className="relative">
+      {/* Trigger button */}
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-2 w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm hover:border-gray-300 dark:hover:border-gray-500 transition-colors text-right"
+      >
+        {selected && selectedMeta ? (
+          <>
+            <span
+              className="w-7 h-7 rounded-lg flex items-center justify-center text-white text-xs shadow-sm"
+              style={{ backgroundColor: selectedMeta.color }}
+            >
+              <i className={selected}></i>
+            </span>
+            <span className="text-gray-700 dark:text-gray-300">{selectedMeta.label}</span>
+          </>
+        ) : (
+          <span className="text-gray-400">انتخاب آیکون...</span>
+        )}
+        <ChevronDown className={`w-4 h-4 mr-auto text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {/* Popover panel — fixed position to break out of modal */}
+      {open && (
+        <div
+          style={{
+            position: 'fixed',
+            top: coords.top,
+            left: coords.left,
+            width: coords.width,
+            zIndex: 9999,
+          }}
+          className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl p-4 max-h-80 overflow-y-auto"
+        >
+          <div className="grid grid-cols-4 gap-2">
+            {PREDEFINED_ICONS.map((icon) => (
+              <button
+                key={icon.fa}
+                type="button"
+                onClick={() => {
+                  onSelect(icon.fa);
+                  setOpen(false);
+                }}
+                className={`
+                  relative flex flex-col items-center justify-center gap-1 p-2 rounded-xl border-2 transition-all
+                  ${selected === icon.fa
+                    ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 shadow-md'
+                    : 'border-transparent bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }
+                `}
+                title={icon.label}
+              >
+                <span
+                  className="w-10 h-10 rounded-xl flex items-center justify-center text-white text-lg shadow-sm"
+                  style={{ backgroundColor: icon.color }}
+                >
+                  <i className={icon.fa}></i>
+                </span>
+                <span className="text-[9px] text-gray-500 dark:text-gray-400 leading-tight text-center">{icon.label}</span>
+                {selected === icon.fa && (
+                  <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-indigo-500 rounded-full flex items-center justify-center shadow-sm">
+                    <CheckCircle2 className="w-2.5 h-2.5 text-white" />
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+          {selected && (
+            <button
+              type="button"
+              onClick={() => { onClear(); setOpen(false); }}
+              className="mt-2 w-full text-xs text-red-500 hover:text-red-700 py-1.5 border-t border-gray-200 dark:border-gray-700"
+            >
+              پاک کردن آیکون
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function DevelopmentTimelineManagement(_props: DevelopmentTimelineManagementProps) {
   // ===== Data State =====
@@ -99,14 +240,14 @@ export default function DevelopmentTimelineManagement(_props: DevelopmentTimelin
   const filteredItems = items.filter((item) =>
     !searchQuery ||
     item.title.includes(searchQuery) ||
-    item.year.includes(searchQuery) ||
-    item.description?.includes(searchQuery)
+    item.value?.includes(searchQuery) ||
+    item.value_index?.includes(searchQuery)
   );
 
   // ===== Open Create Modal =====
   const openCreateModal = () => {
     setEditingId(null);
-    setForm({ ...emptyForm, sort_order: items.length + 1 });
+    setForm({ ...emptyForm });
     setFormError('');
     setShowModal(true);
   };
@@ -116,12 +257,9 @@ export default function DevelopmentTimelineManagement(_props: DevelopmentTimelin
     setEditingId(item.id);
     setForm({
       title: item.title,
-      description: item.description || '',
-      year: item.year,
       icon: item.icon || '',
-      image_url: item.image_url || '',
-      type: item.type,
-      sort_order: item.sort_order,
+      value: item.value || '',
+      value_index: item.value_index || '',
       is_active: item.is_active,
     });
     setFormError('');
@@ -132,10 +270,6 @@ export default function DevelopmentTimelineManagement(_props: DevelopmentTimelin
   const validateForm = () => {
     if (!form.title.trim()) {
       setFormError('عنوان الزامی است.');
-      return false;
-    }
-    if (!form.year.trim()) {
-      setFormError('سال یا بازه زمانی الزامی است.');
       return false;
     }
     setFormError('');
@@ -203,17 +337,38 @@ export default function DevelopmentTimelineManagement(_props: DevelopmentTimelin
     }
   };
 
-  // ===== Reorder items =====
-  const moveItem = (index: number, direction: 'up' | 'down') => {
+  // ===== Drag-and-Drop Handlers =====
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const dragOverIndex = useRef<number | null>(null);
+
+  const handleDragStart = (index: number) => {
+    setDragIndex(index);
+    dragOverIndex.current = index;
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    dragOverIndex.current = index;
+  };
+
+  const handleDragEnter = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    dragOverIndex.current = index;
+  };
+
+  const handleDrop = () => {
+    if (dragIndex === null || dragOverIndex.current === null) return;
+    if (dragIndex === dragOverIndex.current) {
+      setDragIndex(null);
+      dragOverIndex.current = null;
+      return;
+    }
+
     const newItems = [...items];
-    const targetIndex = direction === 'up' ? index - 1 : index + 1;
-    if (targetIndex < 0 || targetIndex >= newItems.length) return;
+    const [movedItem] = newItems.splice(dragIndex, 1);
+    newItems.splice(dragOverIndex.current, 0, movedItem);
 
-    const temp = newItems[index];
-    newItems[index] = newItems[targetIndex];
-    newItems[targetIndex] = temp;
-
-    // Update sort_order
+    // Calculate new sort_order
     const updated = newItems.map((item, i) => ({ ...item, sort_order: i + 1 }));
     setItems(updated);
 
@@ -221,12 +376,34 @@ export default function DevelopmentTimelineManagement(_props: DevelopmentTimelin
     updated.forEach((item) => {
       updateTimelineItem(item.id, { sort_order: item.sort_order }).catch(() => {});
     });
+
+    setDragIndex(null);
+    dragOverIndex.current = null;
   };
 
-  // ===== Get Type Icon =====
-  const TypeIcon = (type: string) => {
-    const Icon = typeIcons[type] || Globe;
-    return <Icon className="w-4 h-4" />;
+  const handleDragEnd = () => {
+    setDragIndex(null);
+    dragOverIndex.current = null;
+  };
+
+  // ===== Helpers for icon display =====
+  /** Ensure FontAwesome 6 has the style prefix (for backward compat with old DB data) */
+  const normalizeIconClass = (iconClass: string): string => {
+    if (!iconClass) return '';
+    if (iconClass.includes(' ') || iconClass.startsWith('fa-brands')) return iconClass;
+    return `fa-solid ${iconClass}`;
+  };
+
+  const faToColor = (faClass: string): string => {
+    const normalized = normalizeIconClass(faClass);
+    const found = PREDEFINED_ICONS.find((i) => i.fa === normalized);
+    return found?.color || '#6B7280';
+  };
+
+  const faToLabel = (faClass: string): string => {
+    const normalized = normalizeIconClass(faClass);
+    const found = PREDEFINED_ICONS.find((i) => i.fa === normalized);
+    return found?.label || '';
   };
 
   return (
@@ -275,72 +452,68 @@ export default function DevelopmentTimelineManagement(_props: DevelopmentTimelin
             <table className="w-full">
               <thead>
                 <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase w-12">ترتیب</th>
+                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase w-12">
+                    <GripVertical className="w-3.5 h-3.5 mx-auto" />
+                  </th>
                   <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">عنوان</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">سال</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">نوع</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">مقدار</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">اندیس مقدار</th>
                   <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">وضعیت</th>
                   <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase w-36">عملیات</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                <AnimatePresence mode="popLayout">
-                  {filteredItems.length === 0 ? (
+                {filteredItems.length === 0 ? (
                     <tr>
                       <td colSpan={6} className="px-4 py-12 text-center text-gray-400">
                         {searchQuery ? 'نتیجه‌ای یافت نشد.' : 'هیچ آیتمی ثبت نشده است. برای شروع یک آیتم جدید ایجاد کنید.'}
                       </td>
                     </tr>
                   ) : (
-                    filteredItems.map((item, index) => (
-                      <motion.tr
-                        key={item.id}
-                        layout
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
-                      >
+                    filteredItems.map((item, index) => {
+                      const isDragging = dragIndex === index;
+                      const iconMeta = PREDEFINED_ICONS.find((i) => i.fa === normalizeIconClass(item.icon || ''));
+                      return (
+                        <tr
+                          key={item.id}
+                          draggable
+                          onDragStart={() => handleDragStart(index)}
+                          onDragOver={(e) => handleDragOver(e, index)}
+                          onDragEnter={(e) => handleDragEnter(e, index)}
+                          onDrop={handleDrop}
+                          onDragEnd={handleDragEnd}
+                          className={`
+                            transition-all duration-200 cursor-grab active:cursor-grabbing
+                            ${isDragging ? 'opacity-50 scale-[1.02] shadow-lg bg-indigo-50 dark:bg-indigo-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'}
+                            ${iconMeta ? '' : ''}
+                          `}
+                        >
+                          <td className="px-4 py-3 text-center">
+                            <div className="flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                              <GripVertical className="w-4 h-4" />
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              {item.icon && (
+                                <span
+                                  className="w-7 h-7 rounded-lg flex items-center justify-center text-white text-xs font-bold shrink-0"
+                                  style={{ backgroundColor: faToColor(item.icon) }}
+                                  title={faToLabel(item.icon)}
+                                >
+                                  <i className={normalizeIconClass(item.icon)}></i>
+                                </span>
+                              )}
+                              <div>
+                                <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{item.title}</span>
+                              </div>
+                            </div>
+                          </td>
                         <td className="px-4 py-3">
-                          <div className="flex items-center gap-1">
-                            <button
-                              onClick={() => moveItem(index, 'up')}
-                              disabled={index === 0}
-                              className="p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30"
-                              title="انتقال به بالا"
-                            >
-                              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" /></svg>
-                            </button>
-                            <span className="text-xs text-gray-400 w-4 text-center">{item.sort_order}</span>
-                            <button
-                              onClick={() => moveItem(index, 'down')}
-                              disabled={index === filteredItems.length - 1}
-                              className="p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30"
-                              title="انتقال به پایین"
-                            >
-                              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-                            </button>
-                          </div>
+                          <span className="text-sm text-gray-600 dark:text-gray-400">{item.value || '—'}</span>
                         </td>
                         <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{item.title}</span>
-                          </div>
-                          {item.description && (
-                            <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">{item.description}</p>
-                          )}
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400">
-                            <Clock className="w-3.5 h-3.5" />
-                            <span>{item.year}</span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
-                            {TypeIcon(item.type)}
-                            {typeLabels[item.type]}
-                          </span>
+                          <span className="text-sm text-gray-600 dark:text-gray-400">{item.value_index || '—'}</span>
                         </td>
                         <td className="px-4 py-3">
                           <button
@@ -373,12 +546,16 @@ export default function DevelopmentTimelineManagement(_props: DevelopmentTimelin
                             </button>
                           </div>
                         </td>
-                      </motion.tr>
-                    ))
+                      </tr>
+                    );
+                  })
                   )}
-                </AnimatePresence>
               </tbody>
             </table>
+          </div>
+          <div className="px-4 py-2 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 text-xs text-gray-400 flex items-center gap-2">
+            <GripVertical className="w-3 h-3" />
+            <span>برای تغییر ترتیب، ردیف‌ها را بکشید و رها کنید</span>
           </div>
         </div>
       )}
@@ -479,99 +656,61 @@ export default function DevelopmentTimelineManagement(_props: DevelopmentTimelin
                   />
                 </div>
 
-                {/* Year */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">سال یا بازه زمانی *</label>
-                  <input
-                    type="text"
-                    value={form.year}
-                    onChange={(e) => setForm({ ...form, year: e.target.value })}
-                    placeholder="مثال: ۱۴۰۰-۱۴۰۲ یا ۱۳۹۸"
-                    className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                {/* Icon — Popover Picker */}
+                <div className="relative">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">آیکون</label>
+                  <IconPicker
+                    selected={form.icon}
+                    onSelect={(fa) => setForm({ ...form, icon: form.icon === fa ? '' : fa })}
+                    onClear={() => setForm({ ...form, icon: '' })}
+                    faToColor={faToColor}
+                    faToLabel={faToLabel}
                   />
                 </div>
 
-                {/* Description */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">توضیحات</label>
-                  <textarea
-                    value={form.description}
-                    onChange={(e) => setForm({ ...form, description: e.target.value })}
-                    placeholder="توضیحات مربوط به این مرحله از توسعه..."
-                    rows={3}
-                    className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 resize-none"
-                  />
-                </div>
-
-                {/* Type */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">نوع</label>
-                  <select
-                    value={form.type}
-                    onChange={(e) => setForm({ ...form, type: e.target.value as 'road' | 'urban' | 'both' })}
-                    className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-                  >
-                    <option value="both">هر دو</option>
-                    <option value="road">راه‌سازی</option>
-                    <option value="urban">عمران شهری</option>
-                  </select>
-                </div>
-
-                {/* Icon & Image URL Row */}
+                {/* Value & Value Index */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">آیکون (کلاس FontAwesome)</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">مقدار</label>
                     <input
                       type="text"
-                      value={form.icon}
-                      onChange={(e) => setForm({ ...form, icon: e.target.value })}
-                      placeholder="مثال: fa fa-road"
+                      value={form.value}
+                      onChange={(e) => setForm({ ...form, value: e.target.value })}
+                      placeholder="مثال: ۱۵ کیلومتر"
                       className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">آدرس تصویر</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">اندیس مقدار</label>
                     <input
                       type="text"
-                      value={form.image_url}
-                      onChange={(e) => setForm({ ...form, image_url: e.target.value })}
-                      placeholder="https://..."
+                      value={form.value_index}
+                      onChange={(e) => setForm({ ...form, value_index: e.target.value })}
+                      placeholder="مثال: km-roads"
                       className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                     />
                   </div>
                 </div>
 
-                {/* Sort Order & Active */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ترتیب نمایش</label>
-                    <input
-                      type="number"
-                      value={form.sort_order}
-                      onChange={(e) => setForm({ ...form, sort_order: parseInt(e.target.value) || 0 })}
-                      min={0}
-                      className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">وضعیت</label>
-                    <div className="flex items-center gap-3 mt-2">
-                      <button
-                        onClick={() => setForm({ ...form, is_active: !form.is_active })}
-                        className={`relative w-11 h-6 rounded-full transition-colors ${
-                          form.is_active ? 'bg-indigo-600' : 'bg-gray-300 dark:bg-gray-600'
+                {/* Active Toggle */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">وضعیت</label>
+                  <div className="flex items-center gap-3 mt-2">
+                    <button
+                      onClick={() => setForm({ ...form, is_active: !form.is_active })}
+                      className={`relative w-11 h-6 rounded-full transition-colors ${
+                        form.is_active ? 'bg-indigo-600' : 'bg-gray-300 dark:bg-gray-600'
+                      }`}
+                    >
+                      <span
+                        className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                          form.is_active ? 'translate-x-5' : ''
                         }`}
-                      >
-                        <span
-                          className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
-                            form.is_active ? 'translate-x-5' : ''
-                          }`}
-                        />
-                      </button>
-                      <span className="text-sm text-gray-600 dark:text-gray-400">
-                        {form.is_active ? 'فعال' : 'غیرفعال'}
-                      </span>
-                    </div>
+                      />
+                    </button>
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                      {form.is_active ? 'فعال' : 'غیرفعال'}
+                    </span>
                   </div>
                 </div>
               </div>
