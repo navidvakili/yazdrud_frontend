@@ -918,9 +918,7 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
               width: `${canvasWidth}px`,
               height: `${canvasHeight}px`,
               background:
-                activeSlide.background.type === 'image' || activeSlide.background.type === 'video'
-                  ? 'transparent'
-                  : activeSlide.background.gradient || activeSlide.background.color || '#0f172a'
+                activeSlide.background.gradient || activeSlide.background.color || '#0f172a'
             }}
             className="relative rounded-3xl overflow-hidden shadow-2xl border-2 border-gray-300 dark:border-slate-800 transition-all duration-300"
           >

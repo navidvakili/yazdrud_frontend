@@ -232,9 +232,7 @@ export default function InteractivePreviewModal({
             width: `${viewportWidths[deviceSize]}px`,
             height: `${project.height * scaleFactor}px`,
             background:
-              activeSlide.background.type === 'image' || activeSlide.background.type === 'video'
-                ? 'transparent'
-                : activeSlide.background.gradient || activeSlide.background.color || '#0f172a',
+              activeSlide.background.gradient || activeSlide.background.color || '#0f172a',
             perspective: activeSlide.transition === '3dCube' ? '1200px' : undefined
           }}
           className="relative rounded-3xl overflow-hidden border-2 border-teal-500/30 shadow-2xl transition-all duration-300"

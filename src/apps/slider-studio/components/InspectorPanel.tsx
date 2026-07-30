@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import GradientPicker from './GradientPicker';
 import {
   Type,
   Move,
@@ -196,58 +197,45 @@ export default function InspectorPanel({
 
             {/* Gradient (for 'gradient' type) */}
             {slide.background.type === 'gradient' && (
-              <>
-                <div>
-                  <label className="text-[10px] text-slate-500 dark:text-slate-400">رنگ پایه</label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="color"
-                      value={slide.background.color}
-                      onChange={e => updateSlideBackground({ ...slide.background, color: e.target.value })}
-                      className="w-8 h-8 rounded-lg cursor-pointer bg-transparent border-0"
-                    />
-                    <input
-                      type="text"
-                      value={slide.background.color}
-                      onChange={e => updateSlideBackground({ ...slide.background, color: e.target.value })}
-                      className="w-full p-2 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-slate-900 dark:text-white font-mono text-[11px]"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="text-[10px] text-slate-500 dark:text-slate-400">مقدار گرادینت CSS</label>
-                  <textarea
-                    rows={2}
-                    value={slide.background.gradient}
-                    onChange={e => updateSlideBackground({ ...slide.background, gradient: e.target.value })}
-                    className="w-full p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-slate-900 dark:text-white font-mono text-[11px] focus:border-teal-500 focus:outline-none"
-                    placeholder="linear-gradient(135deg, #0f172a 0%, #1e293b 100%)"
-                  />
-                </div>
-              </>
+              <GradientPicker
+                value={slide.background.gradient || ''}
+                onChange={(css) => updateSlideBackground({ ...slide.background, gradient: css })}
+              />
             )}
 
             {/* Image (for 'image' type) */}
             {slide.background.type === 'image' && (
-              <div>
-                <label className="text-[10px] text-slate-500 dark:text-slate-400">آدرس URL تصویر پس‌زمینه</label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={slide.background.imageUrl || ''}
-                    onChange={e => updateSlideBackground({ ...slide.background, imageUrl: e.target.value })}
-                    className="flex-1 p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-slate-900 dark:text-white font-mono text-[11px] focus:border-teal-500 focus:outline-none"
-                    placeholder="https://..."
-                  />
-                  <button
-                    onClick={() => setMediaPickerTarget('slideBg')}
-                    className="shrink-0 p-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 dark:bg-teal-500 dark:hover:bg-teal-400 text-white dark:text-slate-950 transition-colors cursor-pointer"
-                    title="انتخاب تصویر از مدیریت رسانه"
-                  >
-                    <ImageIcon className="w-4 h-4" />
-                  </button>
+              <>
+                <div>
+                  <label className="text-[10px] text-slate-500 dark:text-slate-400">آدرس URL تصویر پس‌زمینه</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={slide.background.imageUrl || ''}
+                      onChange={e => updateSlideBackground({ ...slide.background, imageUrl: e.target.value })}
+                      className="flex-1 p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-slate-900 dark:text-white font-mono text-[11px] focus:border-teal-500 focus:outline-none"
+                      placeholder="https://..."
+                    />
+                    <button
+                      onClick={() => setMediaPickerTarget('slideBg')}
+                      className="shrink-0 p-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 dark:bg-teal-500 dark:hover:bg-teal-400 text-white dark:text-slate-950 transition-colors cursor-pointer"
+                      title="انتخاب تصویر از مدیریت رسانه"
+                    >
+                      <ImageIcon className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
-              </div>
+                {/* Fallback color/gradient for when image hasn't loaded yet */}
+                <div className="pt-1">
+                  <label className="text-[10px] text-slate-500 dark:text-slate-400">رنگ/گرادینت ذخیره (نمایش در زمان لود نشدن تصویر)</label>
+                  <div className="mt-1.5">
+                    <GradientPicker
+                      value={slide.background.gradient || `linear-gradient(135deg, ${slide.background.color} 0%, ${slide.background.color} 100%)`}
+                      onChange={(css) => updateSlideBackground({ ...slide.background, gradient: css })}
+                    />
+                  </div>
+                </div>
+              </>
             )}
 
             {/* Video (for 'video' type) */}
