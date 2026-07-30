@@ -73,63 +73,132 @@ function splitTextUnits(text: string): string[] {
   return [...text];
 }
 
-// ── Text Animation Sub-components ──────────────────────────────────
+// ── Text Animation Sub-components (currentTime-driven) ────────────
 
-function TypewriterText({ text, duration, delay }: { text: string; duration: number; delay: number }) {
-  const [visibleCount, setVisibleCount] = React.useState(0);
+function TypewriterText({ text, duration, delay, currentTime }: { text: string; duration: number; delay: number; currentTime?: number }) {
   const totalChars = text.length;
-  React.useEffect(() => {
-    if (!text) return;
-    setVisibleCount(0);
-    const startTimer = setTimeout(() => {
-      if (totalChars === 0) return;
-      const charTime = Math.max((duration * 1000) / totalChars, 20);
-      const interval = setInterval(() => {
-        setVisibleCount(prev => { if (prev >= totalChars) { clearInterval(interval); return prev; } return prev + 1; });
-      }, charTime);
-      return () => clearInterval(interval);
-    }, delay * 1000);
-    return () => { clearTimeout(startTimer); };
-  }, [text, duration, delay, totalChars]);
+  let visibleCount: number;
+  if (currentTime !== undefined) {
+    const elapsed = currentTime - delay;
+    if (elapsed <= 0) visibleCount = 0;
+    else if (elapsed >= duration) visibleCount = totalChars;
+    else visibleCount = Math.min(totalChars, Math.floor((elapsed / duration) * totalChars));
+  } else {
+    // fallback when no currentTime — show full text
+    visibleCount = totalChars;
+  }
   return (<span dir="auto"><span>{text.slice(0, visibleCount)}</span>{visibleCount < totalChars && <span className="inline-block w-[2px] h-[1em] bg-current animate-pulse mr-0.5 align-middle" />}</span>);
 }
 
-function SplitWordText({ text, duration, delay }: { text: string; duration: number; delay: number }) {
+function SplitWordText({ text, duration, delay, currentTime }: { text: string; duration: number; delay: number; currentTime?: number }) {
   const words = text.split(' ');
   const stagger = words.length > 1 ? duration / words.length : duration;
-  return (<span className="inline-flex flex-wrap" style={{ gap: '0.25em' }} dir="auto">{words.map((word, i) => (<motion.span key={i} initial={{ opacity: 0, y: 20, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: Math.min(stagger, 0.5), delay: delay + i * stagger, ease: 'easeOut' }} className="inline-block">{word}</motion.span>))}</span>);
+  const perWordDuration = Math.min(stagger, 0.5);
+  return (<span className="inline-flex flex-wrap" style={{ gap: '0.25em' }} dir="auto">{words.map((word, i) => {
+    const wordDelay = delay + i * stagger;
+    const wordEnd = wordDelay + perWordDuration;
+    let opacity = 1, y = 0;
+    if (currentTime !== undefined) {
+      if (currentTime < wordDelay) { opacity = 0; y = 20; }
+      else if (currentTime < wordEnd) {
+        const p = (currentTime - wordDelay) / perWordDuration;
+        opacity = p; y = 20 * (1 - p);
+      }
+      // else fully visible (default values)
+    }
+    return (<span key={i} style={{ opacity, transform: `translateY(${y}px)`, display: 'inline-block', transition: 'none' }}>{word}</span>);
+  })}</span>);
 }
 
-function SplitCharText({ text, duration, delay }: { text: string; duration: number; delay: number }) {
+function SplitCharText({ text, duration, delay, currentTime }: { text: string; duration: number; delay: number; currentTime?: number }) {
   const units = splitTextUnits(text);
   const stagger = units.length > 1 ? duration / units.length : duration;
-  return (<span dir="auto">{units.map((unit, i) => (<motion.span key={i} initial={{ opacity: 0, y: 30, rotateX: -90 }} animate={{ opacity: 1, y: 0, rotateX: 0 }} transition={{ duration: Math.min(stagger, 0.4), delay: delay + i * stagger, ease: 'easeOut' }} className="inline-block" style={{ whiteSpace: 'pre' as const }}>{unit}</motion.span>))}</span>);
+  const perUnitDuration = Math.min(stagger, 0.4);
+  return (<span dir="auto">{units.map((unit, i) => {
+    const unitDelay = delay + i * stagger;
+    const unitEnd = unitDelay + perUnitDuration;
+    let opacity = 1, y = 0, rotateX = 0;
+    if (currentTime !== undefined) {
+      if (currentTime < unitDelay) { opacity = 0; y = 30; rotateX = -90; }
+      else if (currentTime < unitEnd) {
+        const p = (currentTime - unitDelay) / perUnitDuration;
+        opacity = p; y = 30 * (1 - p); rotateX = -90 * (1 - p);
+      }
+    }
+    return (<span key={i} style={{ opacity, transform: `translateY(${y}px) rotateX(${rotateX}deg)`, display: 'inline-block', whiteSpace: 'pre' as const }}>{unit}</span>);
+  })}</span>);
 }
 
-function RevealText({ text, duration, delay }: { text: string; duration: number; delay: number }) {
-  return (<div className="overflow-hidden" style={{ display: 'inline-block' }}><motion.div initial={{ clipPath: 'inset(0 100% 0 0)' }} animate={{ clipPath: 'inset(0 0% 0 0)' }} transition={{ duration, delay, ease: 'easeOut' }}>{text}</motion.div></div>);
+function RevealText({ text, duration, delay, currentTime }: { text: string; duration: number; delay: number; currentTime?: number }) {
+  let progress = 1;
+  if (currentTime !== undefined) {
+    const elapsed = currentTime - delay;
+    if (elapsed <= 0) progress = 0;
+    else if (elapsed >= duration) progress = 1;
+    else progress = elapsed / duration;
+  }
+  return (<div className="overflow-hidden" style={{ display: 'inline-block' }}><div style={{ clipPath: `inset(0 ${(1 - progress) * 100}% 0 0)` }}>{text}</div></div>);
 }
 
-function WaveText({ text, duration, delay }: { text: string; duration: number; delay: number }) {
+function WaveText({ text, duration, delay, currentTime }: { text: string; duration: number; delay: number; currentTime?: number }) {
   const units = splitTextUnits(text);
   const stagger = units.length > 1 ? (duration * 0.6) / units.length : duration;
-  return (<span dir="auto">{units.map((unit, i) => (<motion.span key={i} initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: [40, -15, 0] }} transition={{ duration: 0.6, delay: delay + i * stagger, ease: 'easeOut', times: [0, 0.6, 1] }} className="inline-block" style={{ whiteSpace: 'pre' as const }}>{unit}</motion.span>))}</span>);
+  const perUnitDuration = 0.6;
+  return (<span dir="auto">{units.map((unit, i) => {
+    const unitDelay = delay + i * stagger;
+    const t1 = unitDelay;
+    const t2 = unitDelay + perUnitDuration * 0.6; // peak of bounce
+    const t3 = unitDelay + perUnitDuration;       // end
+    let y = 0;
+    if (currentTime !== undefined) {
+      if (currentTime < t1) { y = 40; }
+      else if (currentTime < t2) {
+        const p = (currentTime - t1) / (t2 - t1);
+        y = 40 + (-15 - 40) * p; // 40 → -15
+      }
+      else if (currentTime < t3) {
+        const p = (currentTime - t2) / (t3 - t2);
+        y = -15 + (15) * p; // -15 → 0
+      }
+    }
+    return (<span key={i} style={{ opacity: currentTime !== undefined && currentTime < t1 ? 0 : 1, transform: `translateY(${y}px)`, display: 'inline-block', whiteSpace: 'pre' as const }}>{unit}</span>);
+  })}</span>);
 }
 
-function FlickerText({ text, duration, delay }: { text: string; duration: number; delay: number }) {
-  return (<motion.span initial={{ opacity: 0 }} animate={{ opacity: [0, 1, 0.2, 1, 0.3, 1] }} transition={{ duration: duration || 1.5, delay, ease: 'linear', times: [0, 0.15, 0.3, 0.5, 0.7, 1] }}>{text}</motion.span>);
+function FlickerText({ text, duration, delay, currentTime }: { text: string; duration: number; delay: number; currentTime?: number }) {
+  let opacity = 1;
+  if (currentTime !== undefined) {
+    const elapsed = currentTime - delay;
+    const d = duration || 1.5;
+    if (elapsed <= 0) opacity = 0;
+    else if (elapsed >= d) opacity = 1;
+    else {
+      const keyframes = [0, 1, 0.2, 1, 0.3, 1];
+      const times = [0, 0.15, 0.3, 0.5, 0.7, 1];
+      const p = elapsed / d;
+      // Find the two keyframes to interpolate between
+      let idx = times.length - 2;
+      for (let j = 0; j < times.length - 1; j++) {
+        if (p >= times[j] && p < times[j + 1]) { idx = j; break; }
+      }
+      const t0 = times[idx], t1 = times[idx + 1];
+      const localP = t1 === t0 ? 0 : (p - t0) / (t1 - t0);
+      opacity = keyframes[idx] + (keyframes[idx + 1] - keyframes[idx]) * localP;
+    }
+  }
+  return (<span style={{ opacity }}>{text}</span>);
 }
 
 const TEXT_ANIM_PRESETS = new Set(['typewriter', 'splitWord', 'splitChar', 'reveal', 'wave', 'flicker']);
 
-function TextAnimContent({ text, preset, duration, delay }: { text: string; preset: string; duration: number; delay: number }) {
+function TextAnimContent({ text, preset, duration, delay, currentTime }: { text: string; preset: string; duration: number; delay: number; currentTime?: number }) {
   switch (preset) {
-    case 'typewriter': return <TypewriterText text={text} duration={duration} delay={delay} />;
-    case 'splitWord':  return <SplitWordText  text={text} duration={duration} delay={delay} />;
-    case 'splitChar':  return <SplitCharText  text={text} duration={duration} delay={delay} />;
-    case 'reveal':     return <RevealText     text={text} duration={duration} delay={delay} />;
-    case 'wave':       return <WaveText       text={text} duration={duration} delay={delay} />;
-    case 'flicker':    return <FlickerText    text={text} duration={duration} delay={delay} />;
+    case 'typewriter': return <TypewriterText text={text} duration={duration} delay={delay} currentTime={currentTime} />;
+    case 'splitWord':  return <SplitWordText  text={text} duration={duration} delay={delay} currentTime={currentTime} />;
+    case 'splitChar':  return <SplitCharText  text={text} duration={duration} delay={delay} currentTime={currentTime} />;
+    case 'reveal':     return <RevealText     text={text} duration={duration} delay={delay} currentTime={currentTime} />;
+    case 'wave':       return <WaveText       text={text} duration={duration} delay={delay} currentTime={currentTime} />;
+    case 'flicker':    return <FlickerText    text={text} duration={duration} delay={delay} currentTime={currentTime} />;
     default:           return <>{text}</>;
   }
 }
@@ -1225,6 +1294,7 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
                               preset={layer.animation.inPreset}
                               duration={layer.animation.inDuration || 0.5}
                               delay={isPlaying ? (layer.animation.inDelay || 0) : 0}
+                              currentTime={currentTime}
                             />
                           ) : (
                             layer.content
