@@ -83,6 +83,10 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
     }
   }, [initialProject]);
 
+  // Sidebar visibility
+  const [showLeftSidebar, setShowLeftSidebar] = useState<boolean>(true);
+  const [showRightSidebar, setShowRightSidebar] = useState<boolean>(true);
+
   // Timeline & Playback State
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
@@ -382,8 +386,32 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
           </button>
         </div>
 
-        {/* Right Slide Switcher */}
+        {/* Sidebar Toggle & Right Slide Switcher */}
         <div className="flex items-center gap-2">
+          {/* Toggle sidebars */}
+          <button
+            onClick={() => setShowLeftSidebar(prev => !prev)}
+            className={`p-1.5 rounded-xl transition-colors cursor-pointer border ${
+              showLeftSidebar
+                ? 'bg-teal-50 dark:bg-teal-500/20 text-teal-700 dark:text-teal-300 border-teal-200 dark:border-teal-500/30'
+                : 'bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 border-gray-200 dark:border-slate-800 hover:text-slate-700 dark:hover:text-slate-300'
+            }`}
+            title="نمایش/مخفی‌سازی پنل لایه‌ها"
+          >
+            <Layers className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => setShowRightSidebar(prev => !prev)}
+            className={`p-1.5 rounded-xl transition-colors cursor-pointer border ${
+              showRightSidebar
+                ? 'bg-teal-50 dark:bg-teal-500/20 text-teal-700 dark:text-teal-300 border-teal-200 dark:border-teal-500/30'
+                : 'bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 border-gray-200 dark:border-slate-800 hover:text-slate-700 dark:hover:text-slate-300'
+            }`}
+            title="نمایش/مخفی‌سازی پنل تنظیمات"
+          >
+            <Settings className="w-4 h-4" />
+          </button>
+          <div className="w-px h-5 bg-gray-200 dark:bg-slate-700 mx-1"></div>
           <span className="text-slate-500 font-bold text-[11px]">مدیریت اسلایدها:</span>
           <div className="flex items-center gap-1">
             {project.slides.map((s, idx) => (
@@ -413,6 +441,7 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
       {/* 3. MAIN WORKSPACE (LEFT TREE, CANVAS STAGE, RIGHT INSPECTOR) */}
       <div className="flex-1 flex overflow-hidden relative">
         {/* LEFT SIDEBAR: LAYER HIERARCHY TREE */}
+        {showLeftSidebar && (
         <div className="w-64 bg-white dark:bg-slate-900 border-l border-gray-200 dark:border-slate-800 flex flex-col h-full text-slate-800 dark:text-slate-200 select-none">
           <div className="p-3 border-b border-gray-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 flex items-center justify-between">
             <div className="flex items-center gap-1.5 text-xs font-black text-slate-900 dark:text-white">
@@ -482,6 +511,7 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
             })}
           </div>
         </div>
+        )}
 
         {/* CENTER CANVAS STAGE */}
         <div className="flex-1 bg-slate-200/80 dark:bg-slate-950 overflow-auto p-8 flex items-center justify-center relative">
@@ -592,12 +622,14 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
         </div>
 
         {/* RIGHT SIDEBAR: INSPECTOR PANEL */}
+        {showRightSidebar && (
         <InspectorPanel
           selectedLayer={selectedLayer}
           onUpdateLayer={handleUpdateLayer}
           onDeleteLayer={handleDeleteLayer}
           allSlides={project.slides.map(s => ({ id: s.id, title: s.title }))}
         />
+        )}
       </div>
 
       {/* 4. BOTTOM ANIMATION TIMELINE ENGINE */}
