@@ -1287,11 +1287,12 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
         )}
 
         {/* CENTER CANVAS STAGE */}
-        <div className="flex-1 bg-slate-200/80 dark:bg-slate-950 overflow-auto p-8 flex items-center justify-center relative">
+        <div className="flex-1 bg-slate-200/80 dark:bg-slate-950 overflow-auto p-8 flex items-center justify-center relative"
+             onClick={() => setSelectedLayerId(null)}>
           {/* Slide Stage Container */}
           <div
             data-stage-container
-            onClick={() => setSelectedLayerId(null)}
+            onClick={e => { e.stopPropagation(); setSelectedLayerId(null); }}
             onMouseMove={e => {
               const rect = e.currentTarget.getBoundingClientRect();
               const cx = rect.left + rect.width / 2;
