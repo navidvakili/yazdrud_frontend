@@ -154,6 +154,18 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
     setProject({ ...project, slides: updatedSlides });
   };
 
+  // Slide Update Handler
+  const handleUpdateSlide = (updated: Slide) => {
+    const updatedSlides = project.slides.map(s => (s.id === updated.id ? updated : s));
+    setProject({ ...project, slides: updatedSlides });
+    // Also sync selectedLayer if the updated slide is now the active one
+    if (updated.id === activeSlideId) {
+      if (selectedLayerId && !updated.layers.find(l => l.id === selectedLayerId)) {
+        setSelectedLayerId(updated.layers[0]?.id || null);
+      }
+    }
+  };
+
   // Add New Layer
   const handleAddLayer = (type: LayerType) => {
     const newLayerId = `layer-${Date.now()}`;
@@ -774,6 +786,7 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
         <div className="flex-1 bg-slate-200/80 dark:bg-slate-950 overflow-auto p-8 flex items-center justify-center relative">
           {/* Slide Stage Container */}
           <div
+            onClick={() => setSelectedLayerId(null)}
             style={{
               width: `${canvasWidth}px`,
               height: `${canvasHeight}px`,
@@ -890,6 +903,8 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
           selectedLayer={selectedLayer}
           onUpdateLayer={handleUpdateLayer}
           onDeleteLayer={handleDeleteLayer}
+          slide={activeSlide}
+          onUpdateSlide={handleUpdateSlide}
           allSlides={project.slides.map(s => ({ id: s.id, title: s.title }))}
         />
         )}

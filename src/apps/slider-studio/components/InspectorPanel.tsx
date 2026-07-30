@@ -21,12 +21,14 @@ import {
   Tablet,
   Monitor
 } from 'lucide-react';
-import type { Layer, LayerType, AnimationPreset, AnimationEasing, InteractionTrigger, InteractionActionType } from '@/src/shared-types/slider-studio';
+import type { Layer, LayerType, AnimationPreset, AnimationEasing, InteractionTrigger, InteractionActionType, Slide, SlideBackground, BreakpointWidth } from '@/src/shared-types/slider-studio';
 
 interface InspectorPanelProps {
   selectedLayer: Layer | null;
   onUpdateLayer: (updated: Layer) => void;
   onDeleteLayer: (layerId: string) => void;
+  slide: Slide | null;
+  onUpdateSlide: (updated: Slide) => void;
   allSlides: { id: string; title: string }[];
 }
 
@@ -34,21 +36,221 @@ export default function InspectorPanel({
   selectedLayer,
   onUpdateLayer,
   onDeleteLayer,
+  slide,
+  onUpdateSlide,
   allSlides
 }: InspectorPanelProps) {
   const [activeTab, setActiveTab] = useState<'style' | 'anim' | 'interaction' | 'parallax' | 'responsive'>('style');
-  const [activeBreakpoint, setActiveBreakpoint] = useState<'1240' | '900' | '480'>('1240');
+  const [activeBreakpoint, setActiveBreakpoint] = useState<BreakpointWidth>('1240');
 
   if (!selectedLayer) {
-    return (
-      <div className="w-80 bg-white dark:bg-slate-900 border-r border-gray-200 dark:border-slate-800 p-6 flex flex-col items-center justify-center text-center text-slate-500 dark:text-slate-400 space-y-3 font-sans rtl transition-colors">
-        <div className="p-4 rounded-3xl bg-slate-50 dark:bg-slate-800/80 text-teal-600 dark:text-teal-400 border border-gray-200 dark:border-slate-700/50 shadow-xs">
-          <Layers className="w-8 h-8" />
+    // ---- Slide-level settings when no layer is selected ----
+    if (!slide) {
+      return (
+        <div className="w-80 bg-white dark:bg-slate-900 border-r border-gray-200 dark:border-slate-800 p-6 flex flex-col items-center justify-center text-center text-slate-500 dark:text-slate-400 space-y-3 font-sans rtl transition-colors">
+          <div className="p-4 rounded-3xl bg-slate-50 dark:bg-slate-800/80 text-teal-600 dark:text-teal-400 border border-gray-200 dark:border-slate-700/50 shadow-xs">
+            <Layers className="w-8 h-8" />
+          </div>
+          <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">هیچ المانی انتخاب نشده است</h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+            برای ویرایش ویژگی‌ها، فونت، انیمیشن و تعاملات، روی یکی از لایه‌های بوم کلیک کنید.
+          </p>
         </div>
-        <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">هیچ المانی انتخاب نشده است</h3>
-        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-          برای ویرایش ویژگی‌ها، فونت، انیمیشن و تعاملات، روی یکی از لایه‌های بوم کلیک کنید.
-        </p>
+      );
+    }
+
+    // Helper updater for slide fields
+    const updateSlideField = (field: keyof Slide, value: any) => {
+      onUpdateSlide({ ...slide, [field]: value });
+    };
+
+    const updateSlideBackground = (bg: SlideBackground) => {
+      onUpdateSlide({ ...slide, background: bg });
+    };
+
+    return (
+      <div className="w-80 bg-white dark:bg-slate-900 border-r border-gray-200 dark:border-slate-800 flex flex-col h-full text-slate-800 dark:text-slate-200 font-sans text-right rtl select-none overflow-hidden transition-colors">
+        {/* Header Path */}
+        <div className="p-4 border-b border-gray-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/80 flex items-center justify-between">
+          <div>
+            <div className="text-[10px] text-teal-600 dark:text-teal-400 font-mono tracking-wider uppercase font-bold">Slide Settings</div>
+            <div className="text-xs font-black text-slate-900 dark:text-white truncate max-w-[180px]">تنظیمات اسلاید</div>
+          </div>
+        </div>
+
+        {/* Slide Settings Body */}
+        <div className="p-4 overflow-y-auto flex-1 space-y-5 text-xs">
+          {/* Slide Title */}
+          <div className="p-3 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-gray-200 dark:border-slate-800/80 space-y-3">
+            <div className="font-extrabold text-teal-600 dark:text-teal-400 flex items-center gap-1 text-[11px]">
+              <span>عنوان و مدت زمان اسلاید</span>
+            </div>
+            <div>
+              <label className="text-[10px] text-slate-500 dark:text-slate-400">عنوان اسلاید</label>
+              <input
+                type="text"
+                value={slide.title}
+                onChange={e => updateSlideField('title', e.target.value)}
+                className="w-full p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-slate-900 dark:text-white focus:border-teal-500 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] text-slate-500 dark:text-slate-400">مدت زمان نمایش (ثانیه)</label>
+              <input
+                type="number"
+                step="0.5"
+                min="1"
+                value={slide.duration}
+                onChange={e => updateSlideField('duration', Number(e.target.value))}
+                className="w-full p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-slate-900 dark:text-white font-mono focus:border-teal-500 focus:outline-none"
+              />
+            </div>
+          </div>
+
+          {/* Transition */}
+          <div className="p-3 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-gray-200 dark:border-slate-800/80 space-y-3">
+            <div className="font-extrabold text-teal-600 dark:text-teal-400 flex items-center gap-1 text-[11px]">
+              <span>ترنزیشن (انتقال)</span>
+            </div>
+            <div>
+              <label className="text-[10px] text-slate-500 dark:text-slate-400">نوع ترنزیشن</label>
+              <select
+                value={slide.transition}
+                onChange={e => updateSlideField('transition', e.target.value)}
+                className="w-full p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-slate-900 dark:text-white font-sans text-xs cursor-pointer"
+              >
+                <option value="fade">Fade (محو شدن)</option>
+                <option value="slideLeft">Slide Left (حرکت به چپ)</option>
+                <option value="slideRight">Slide Right (حرکت به راست)</option>
+                <option value="zoomOut">Zoom Out (زوم بیرون)</option>
+                <option value="3dCube">3D Cube (مکعب سه بعدی)</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Background Settings */}
+          <div className="p-3 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-gray-200 dark:border-slate-800/80 space-y-3">
+            <div className="font-extrabold text-teal-600 dark:text-teal-400 flex items-center gap-1 text-[11px]">
+              <span>پس‌زمینه اسلاید</span>
+            </div>
+
+            {/* Background Type */}
+            <div>
+              <label className="text-[10px] text-slate-500 dark:text-slate-400">نوع پس‌زمینه</label>
+              <select
+                value={slide.background.type}
+                onChange={e => updateSlideBackground({ ...slide.background, type: e.target.value as SlideBackground['type'] })}
+                className="w-full p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-slate-900 dark:text-white font-sans text-xs cursor-pointer"
+              >
+                <option value="color">رنگ ثابت</option>
+                <option value="gradient">گرادینت</option>
+                <option value="image">تصویر</option>
+                <option value="video">ویدیو</option>
+                <option value="particles">ذرات (پارتیکل)</option>
+              </select>
+            </div>
+
+            {/* Color (for 'color' type) */}
+            {slide.background.type === 'color' && (
+              <div>
+                <label className="text-[10px] text-slate-500 dark:text-slate-400">رنگ پس‌زمینه</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={slide.background.color}
+                    onChange={e => updateSlideBackground({ ...slide.background, color: e.target.value })}
+                    className="w-8 h-8 rounded-lg cursor-pointer bg-transparent border-0"
+                  />
+                  <input
+                    type="text"
+                    value={slide.background.color}
+                    onChange={e => updateSlideBackground({ ...slide.background, color: e.target.value })}
+                    className="w-full p-2 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-slate-900 dark:text-white font-mono text-[11px]"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Gradient (for 'gradient' type) */}
+            {slide.background.type === 'gradient' && (
+              <>
+                <div>
+                  <label className="text-[10px] text-slate-500 dark:text-slate-400">رنگ پایه</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={slide.background.color}
+                      onChange={e => updateSlideBackground({ ...slide.background, color: e.target.value })}
+                      className="w-8 h-8 rounded-lg cursor-pointer bg-transparent border-0"
+                    />
+                    <input
+                      type="text"
+                      value={slide.background.color}
+                      onChange={e => updateSlideBackground({ ...slide.background, color: e.target.value })}
+                      className="w-full p-2 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-slate-900 dark:text-white font-mono text-[11px]"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[10px] text-slate-500 dark:text-slate-400">مقدار گرادینت CSS</label>
+                  <textarea
+                    rows={2}
+                    value={slide.background.gradient}
+                    onChange={e => updateSlideBackground({ ...slide.background, gradient: e.target.value })}
+                    className="w-full p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-slate-900 dark:text-white font-mono text-[11px] focus:border-teal-500 focus:outline-none"
+                    placeholder="linear-gradient(135deg, #0f172a 0%, #1e293b 100%)"
+                  />
+                </div>
+              </>
+            )}
+
+            {/* Image (for 'image' type) */}
+            {slide.background.type === 'image' && (
+              <div>
+                <label className="text-[10px] text-slate-500 dark:text-slate-400">آدرس URL تصویر پس‌زمینه</label>
+                <input
+                  type="text"
+                  value={slide.background.imageUrl || ''}
+                  onChange={e => updateSlideBackground({ ...slide.background, imageUrl: e.target.value })}
+                  className="w-full p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-slate-900 dark:text-white font-mono text-[11px] focus:border-teal-500 focus:outline-none"
+                  placeholder="https://..."
+                />
+              </div>
+            )}
+
+            {/* Video (for 'video' type) */}
+            {slide.background.type === 'video' && (
+              <div>
+                <label className="text-[10px] text-slate-500 dark:text-slate-400">آدرس URL ویدیوی پس‌زمینه</label>
+                <input
+                  type="text"
+                  value={slide.background.videoUrl || ''}
+                  onChange={e => updateSlideBackground({ ...slide.background, videoUrl: e.target.value })}
+                  className="w-full p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-slate-900 dark:text-white font-mono text-[11px] focus:border-teal-500 focus:outline-none"
+                  placeholder="https://..."
+                />
+              </div>
+            )}
+
+            {/* Particles (for 'particles' type) */}
+            {slide.background.type === 'particles' && (
+              <div>
+                <label className="text-[10px] text-slate-500 dark:text-slate-400">پریست ذرات</label>
+                <select
+                  value={slide.background.particlesPreset || 'stars'}
+                  onChange={e => updateSlideBackground({ ...slide.background, particlesPreset: e.target.value as SlideBackground['particlesPreset'] })}
+                  className="w-full p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-slate-900 dark:text-white font-sans text-xs cursor-pointer"
+                >
+                  <option value="stars">ستاره‌ها (Stars)</option>
+                  <option value="bubbles">حباب (Bubbles)</option>
+                  <option value="snow">برف (Snow)</option>
+                  <option value="geometric">اشکال هندسی (Geometric)</option>
+                  <option value="waves">امواج (Waves)</option>
+                </select>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     );
   }
@@ -624,12 +826,12 @@ export default function InspectorPanel({
                   900px
                 </button>
                 <button
-                  onClick={() => setActiveBreakpoint('480')}
+                  onClick={() => setActiveBreakpoint('768')}
                   className={`flex-1 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
-                    activeBreakpoint === '480' ? 'bg-teal-600 dark:bg-teal-500 text-white dark:text-slate-950' : 'text-slate-500 dark:text-slate-400'
+                    activeBreakpoint === '768' ? 'bg-teal-600 dark:bg-teal-500 text-white dark:text-slate-950' : 'text-slate-500 dark:text-slate-400'
                   }`}
                 >
-                  480px
+                  768px
                 </button>
               </div>
 
