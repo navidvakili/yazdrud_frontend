@@ -1104,7 +1104,6 @@ export default function InspectorPanel({
                       >
                         <option value="jumpSlide">پرش به اسلاید دیگر</option>
                         <option value="link">هدایت به لینک خارجی</option>
-                        <option value="openModal">باز کردن پاپ‌آپ</option>
                       </select>
                     </div>
                   </div>
@@ -1132,22 +1131,39 @@ export default function InspectorPanel({
                   )}
 
                   {int.action === 'link' && (
-                    <div>
-                      <label className="text-[10px] text-slate-500 dark:text-slate-400">آدرس URL مقصد</label>
-                      <input
-                        type="text"
-                        value={int.targetUrl || ''}
-                        onChange={e => {
-                          const updated = selectedLayer.interactions.map(item =>
-                            item.id === int.id ? { ...item, targetUrl: e.target.value } : item
-                          );
-                          updateField('interactions', updated);
-                        }}
-                        placeholder="https://..."
-                        className="w-full p-2 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-slate-900 dark:text-white font-mono text-xs"
-                      />
-                    </div>
+                    <>
+                      <div>
+                        <label className="text-[10px] text-slate-500 dark:text-slate-400">آدرس URL مقصد</label>
+                        <input
+                          type="text"
+                          value={int.targetUrl || ''}
+                          onChange={e => {
+                            const updated = selectedLayer.interactions.map(item =>
+                              item.id === int.id ? { ...item, targetUrl: e.target.value } : item
+                            );
+                            updateField('interactions', updated);
+                          }}
+                          placeholder="https://..."
+                          className="w-full p-2 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-slate-900 dark:text-white font-mono text-xs"
+                        />
+                      </div>
+                      <div className="flex items-center justify-between p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800">
+                        <label className="text-[10px] text-slate-500 dark:text-slate-400">باز شدن در صفحه جدید</label>
+                        <input
+                          type="checkbox"
+                          checked={int.openInNewTab !== false}
+                          onChange={e => {
+                            const updated = selectedLayer.interactions.map(item =>
+                              item.id === int.id ? { ...item, openInNewTab: e.target.checked } : item
+                            );
+                            updateField('interactions', updated);
+                          }}
+                          className="w-4 h-4 accent-teal-600 dark:accent-teal-500 cursor-pointer"
+                        />
+                      </div>
+                    </>
                   )}
+
                 </div>
               ))
             )}

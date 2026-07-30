@@ -187,7 +187,7 @@ export const INITIAL_SLIDER_PROJECTS: SliderProject[] = [
               {
                 id: 'int-1',
                 trigger: 'click',
-                action: 'openModal',
+                action: 'link',
                 targetUrl: '#'
               }
             ]

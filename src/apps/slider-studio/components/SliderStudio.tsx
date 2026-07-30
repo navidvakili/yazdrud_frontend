@@ -566,8 +566,27 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
 
     // During animation – interpolate by progress
     const progress = elapsed / inDuration;
-    // easeOutCubic
-    const eased = 1 - Math.pow(1 - progress, 3);
+    // Compute easing based on layer setting
+    const easingFn = (t: number) => {
+      switch (layer.animation.inEasing) {
+        case 'linear': return t;
+        case 'easeIn': return t * t;
+        case 'easeInOut': return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+        case 'bounce': {
+          const n1 = 7.5625; const d1 = 2.75;
+          if (t < 1 / d1) return n1 * t * t;
+          else if (t < 2 / d1) return n1 * (t -= 1.5 / d1) * t + 0.75;
+          else if (t < 2.5 / d1) return n1 * (t -= 2.25 / d1) * t + 0.9375;
+          else return n1 * (t -= 2.625 / d1) * t + 0.984375;
+        }
+        case 'elastic': {
+          const c4 = (2 * Math.PI) / 3;
+          return t === 0 ? 0 : t === 1 ? 1 : Math.pow(2, -10 * t) * Math.sin((t * 10 - 0.75) * c4) + 1;
+        }
+        default: return 1 - Math.pow(1 - t, 3); // easeOut
+      }
+    };
+    const eased = easingFn(progress);
 
     switch (inPreset) {
       case 'fadeIn':
@@ -981,8 +1000,19 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
                     }}
                     animate={animState}
                     transition={isPlaying
-                      ? { duration: 0.05, ease: 'linear' }
+                      ? { duration: 0.05, ease: layer.animation.inEasing === 'bounce' || layer.animation.inEasing === 'elastic' ? 'easeOut' : layer.animation.inEasing || 'easeOut' }
                       : { duration: 0 }
+                    }
+                    whileHover={
+                      layer.animation.hoverEffect === 'glow'
+                        ? { boxShadow: '0 0 25px rgba(56, 189, 248, 0.8)' }
+                        : layer.animation.hoverEffect === 'lift'
+                        ? { y: -8 }
+                        : layer.animation.hoverEffect === 'tilt'
+                        ? { rotate: 3, scale: 1.03 }
+                        : layer.animation.hoverEffect === 'scale'
+                        ? { scale: 1.08 }
+                        : {}
                     }
                     className={`group/layer cursor-move select-none`}
                     onClick={e => e.stopPropagation()}
