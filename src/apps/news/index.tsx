@@ -180,9 +180,13 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
   // ===== Handlers =====
   const handleOpenReader = async (item: NewsItem) => {
     try {
+      // Increment view count
       await incrementViews(item.id);
-      setActiveReaderItem({ ...item, views_count: item.views_count + 1 });
+      // Fetch full article detail (includes content)
+      const detailRes = await fetchNewsById(item.id);
+      setActiveReaderItem({ ...detailRes.data, views_count: detailRes.data.views_count ?? item.views_count + 1 });
     } catch {
+      // Fallback: use list item data (content may be missing)
       setActiveReaderItem(item);
     }
   };
