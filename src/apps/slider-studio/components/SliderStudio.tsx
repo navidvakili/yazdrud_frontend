@@ -545,7 +545,7 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
   // ---- Drag-and-drop state & handlers ----
 
   const dragItemRef = useRef<{ type: 'layer' | 'slide'; id: string; fromIndex: number } | null>(null);
-  const dragOverIndexRef = useRef<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   // Layer drag-and-drop
   const handleLayerDragStart = (layerId: string, index: number) => {
@@ -554,7 +554,7 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
 
   const handleLayerDragOver = (e: React.DragEvent, index: number) => {
     e.preventDefault();
-    dragOverIndexRef.current = index;
+    setDragOverIndex(index);
   };
 
   const handleLayerDrop = (e: React.DragEvent, toIndex: number) => {
@@ -570,7 +570,7 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
     );
     setProject({ ...project, slides: updatedSlides });
     dragItemRef.current = null;
-    dragOverIndexRef.current = null;
+    setDragOverIndex(null);
   };
 
   // Slide drag-and-drop
@@ -580,7 +580,7 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
 
   const handleSlideDragOver = (e: React.DragEvent, index: number) => {
     e.preventDefault();
-    dragOverIndexRef.current = index;
+    setDragOverIndex(index);
   };
 
   const handleSlideDrop = (e: React.DragEvent, toIndex: number) => {
@@ -593,7 +593,7 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
     slides.splice(toIndex, 0, removed);
     setProject({ ...project, slides });
     dragItemRef.current = null;
-    dragOverIndexRef.current = null;
+    setDragOverIndex(null);
   };
 
   // Canvas Mouse Down Drag
@@ -985,7 +985,7 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
           <span className="text-slate-500 font-bold text-[11px]">مدیریت اسلایدها:</span>
           <div className="flex items-center gap-1">
             {project.slides.map((s, idx) => {
-              const isDragOver = dragOverIndexRef.current === idx;
+              const isDragOver = dragOverIndex === idx;
               return (
               <div
                 key={s.id}
@@ -993,13 +993,14 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
                 onDragStart={() => handleSlideDragStart(s.id, idx)}
                 onDragOver={e => handleSlideDragOver(e, idx)}
                 onDrop={e => handleSlideDrop(e, idx)}
-                onDragEnd={() => { dragItemRef.current = null; dragOverIndexRef.current = null; }}
+                onDragEnd={() => { dragItemRef.current = null; setDragOverIndex(null); }}
                 className={`relative group/slidetab flex items-center gap-0.5 px-2 py-1 rounded-xl font-bold transition-all cursor-pointer select-none ${
                   activeSlideId === s.id
                     ? 'bg-teal-600 dark:bg-teal-500 text-white dark:text-slate-950 font-black shadow-xs'
                     : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-gray-200 dark:border-slate-800'
-                } ${isDragOver ? 'ring-2 ring-teal-400' : ''}`}
+                }`}
               >
+                {isDragOver && <div className="absolute right-0 top-1 bottom-1 w-[3px] bg-teal-500 rounded-full -mr-0.5 z-10 shadow-sm shadow-teal-400/50" />}
                 <span className="cursor-grab active:cursor-grabbing opacity-40 hover:opacity-100 transition-opacity" title="درگ برای جابجایی">
                   <GripVertical className="w-3 h-3" />
                 </span>
@@ -1060,7 +1061,7 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
           <div className="flex-1 overflow-y-auto p-2 space-y-1">
             {filteredLayers.map((layer, idx) => {
               const isSelected = selectedLayerId === layer.id;
-              const isDragOver = dragOverIndexRef.current === idx;
+              const isDragOver = dragOverIndex === idx;
               return (
                 <div
                   key={layer.id}
@@ -1068,14 +1069,15 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
                   onDragStart={() => handleLayerDragStart(layer.id, idx)}
                   onDragOver={e => handleLayerDragOver(e, idx)}
                   onDrop={e => handleLayerDrop(e, idx)}
-                  onDragEnd={() => { dragItemRef.current = null; dragOverIndexRef.current = null; }}
+                  onDragEnd={() => { dragItemRef.current = null; setDragOverIndex(null); }}
                   onClick={() => setSelectedLayerId(layer.id)}
-                  className={`p-2.5 rounded-2xl flex items-center justify-between text-xs cursor-pointer transition-all ${
+                  className={`relative p-2.5 rounded-2xl flex items-center justify-between text-xs cursor-pointer transition-all ${
                     isSelected
                       ? 'bg-teal-50 dark:bg-teal-500/20 border border-teal-300 dark:border-teal-500/40 text-teal-800 dark:text-teal-300 font-extrabold shadow-xs'
                       : 'hover:bg-slate-100 dark:hover:bg-slate-800/60 text-slate-700 dark:text-slate-300 border border-transparent'
-                  } ${isDragOver ? 'border-teal-400 border-2' : ''}`}
+                  }`}
                 >
+                  {isDragOver && <div className="absolute top-0 left-2 right-2 h-[3px] bg-teal-500 rounded-full -translate-y-1/2 z-10 shadow-sm shadow-teal-400/50" />}
                   <div className="flex items-center gap-1.5 truncate">
                     <span className="text-slate-300 dark:text-slate-600 cursor-grab active:cursor-grabbing" title="درگ برای جابجایی">
                       <GripVertical className="w-3.5 h-3.5" />
