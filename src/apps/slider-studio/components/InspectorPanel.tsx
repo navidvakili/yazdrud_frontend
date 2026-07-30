@@ -462,7 +462,13 @@ export default function InspectorPanel({
       <div className="p-4 border-b border-gray-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/80 flex items-center justify-between">
         <div>
           <div className="text-[10px] text-teal-600 dark:text-teal-400 font-mono tracking-wider uppercase font-bold">Element Path</div>
-          <div className="text-xs font-black text-slate-900 dark:text-white truncate max-w-[180px]">{selectedLayer.name}</div>
+          <input
+            type="text"
+            value={selectedLayer.name}
+            onChange={e => updateField('name', e.target.value)}
+            className="text-xs font-black text-slate-900 dark:text-white bg-transparent border-b border-transparent hover:border-slate-300 dark:hover:border-slate-600 focus:border-teal-500 dark:focus:border-teal-400 outline-none transition-colors max-w-[180px] truncate"
+            dir="auto"
+          />
         </div>
 
         <div className="flex items-center gap-1">
