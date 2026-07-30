@@ -21,7 +21,7 @@ import TagInput from '@/src/shared-components/TagInput';
 import MediaManager from '@/src/shared-components/MediaManager';
 import {
   fetchNews, fetchNewsById, createNews, updateNews, deleteNews,
-  togglePin, incrementViews,
+  togglePin,
   fetchCategories, createCategory, updateCategory, deleteCategory,
   fetchAnalytics, fetchComments, approveComment, deleteComment,
 } from './api';
@@ -180,11 +180,9 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
   // ===== Handlers =====
   const handleOpenReader = async (item: NewsItem) => {
     try {
-      // Increment view count
-      await incrementViews(item.id);
       // Fetch full article detail (includes content)
       const detailRes = await fetchNewsById(item.id);
-      setActiveReaderItem({ ...detailRes.data, views_count: detailRes.data.views_count ?? item.views_count + 1 });
+      setActiveReaderItem(detailRes.data);
     } catch {
       // Fallback: use list item data (content may be missing)
       setActiveReaderItem(item);
