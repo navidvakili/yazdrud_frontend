@@ -23,6 +23,172 @@ interface InteractivePreviewModalProps {
   project: SliderProject;
 }
 
+// ── Text Animation Helpers ─────────────────────────────────────────
+
+/** Detect Persian/Arabic script characters */
+const HAS_PERSIAN = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/;
+
+/**
+ * Split text into animatable units.
+ * For Persian/Arabic: split by word (preserves joining forms).
+ * For Latin: split by individual character.
+ */
+function splitTextUnits(text: string): string[] {
+  if (HAS_PERSIAN.test(text)) {
+    const parts = text.split(/(\s+)/).filter(Boolean);
+    // Merge consecutive whitespace with their preceding word
+    const merged: string[] = [];
+    for (let i = 0; i < parts.length; i++) {
+      if (/^\s+$/.test(parts[i]) && merged.length > 0) {
+        merged[merged.length - 1] += parts[i];
+      } else {
+        merged.push(parts[i]);
+      }
+    }
+    return merged;
+  }
+  return [...text];
+}
+
+// ── Text Animation Components ──────────────────────────────────────
+
+function TypewriterText({ text, duration, delay }: { text: string; duration: number; delay: number }) {
+  const [visibleCount, setVisibleCount] = useState(0);
+  const totalChars = text.length;
+
+  useEffect(() => {
+    if (!text) return;
+    setVisibleCount(0);
+    const startTimer = setTimeout(() => {
+      if (totalChars === 0) return;
+      const charTime = Math.max((duration * 1000) / totalChars, 20);
+      const interval = setInterval(() => {
+        setVisibleCount(prev => {
+          if (prev >= totalChars) { clearInterval(interval); return prev; }
+          return prev + 1;
+        });
+      }, charTime);
+      return () => clearInterval(interval);
+    }, delay * 1000);
+    return () => { clearTimeout(startTimer); };
+  }, [text, duration, delay, totalChars]);
+
+  return (
+    <span dir="auto">
+      <span>{text.slice(0, visibleCount)}</span>
+      {visibleCount < totalChars && (
+        <span className="inline-block w-[2px] h-[1em] bg-current animate-pulse mr-0.5 align-middle" />
+      )}
+    </span>
+  );
+}
+
+function SplitWordText({ text, duration, delay }: { text: string; duration: number; delay: number }) {
+  const words = text.split(' ');
+  const stagger = words.length > 1 ? duration / words.length : duration;
+  return (
+    <span className="inline-flex flex-wrap" style={{ gap: '0.25em' }} dir="auto">
+      {words.map((word, i) => (
+        <motion.span
+          key={i}
+          initial={{ opacity: 0, y: 20, scale: 0.9 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: Math.min(stagger, 0.5), delay: delay + i * stagger, ease: 'easeOut' }}
+          className="inline-block"
+        >
+          {word}
+        </motion.span>
+      ))}
+    </span>
+  );
+}
+
+function SplitCharText({ text, duration, delay }: { text: string; duration: number; delay: number }) {
+  const units = splitTextUnits(text);
+  const stagger = units.length > 1 ? duration / units.length : duration;
+  return (
+    <span dir="auto">
+      {units.map((unit, i) => (
+        <motion.span
+          key={i}
+          initial={{ opacity: 0, y: 30, rotateX: -90 }}
+          animate={{ opacity: 1, y: 0, rotateX: 0 }}
+          transition={{ duration: Math.min(stagger, 0.4), delay: delay + i * stagger, ease: 'easeOut' }}
+          className="inline-block"
+          style={{ whiteSpace: 'pre' as const }}
+        >
+          {unit}
+        </motion.span>
+      ))}
+    </span>
+  );
+}
+
+function RevealText({ text, duration, delay }: { text: string; duration: number; delay: number }) {
+  return (
+    <div className="overflow-hidden" style={{ display: 'inline-block' }}>
+      <motion.div
+        initial={{ clipPath: 'inset(0 100% 0 0)' }}
+        animate={{ clipPath: 'inset(0 0% 0 0)' }}
+        transition={{ duration, delay, ease: 'easeOut' }}
+      >
+        {text}
+      </motion.div>
+    </div>
+  );
+}
+
+function WaveText({ text, duration, delay }: { text: string; duration: number; delay: number }) {
+  const units = splitTextUnits(text);
+  const stagger = units.length > 1 ? (duration * 0.6) / units.length : duration;
+  return (
+    <span dir="auto">
+      {units.map((unit, i) => (
+        <motion.span
+          key={i}
+          initial={{ opacity: 0, y: 40 }}
+          animate={{ opacity: 1, y: [40, -15, 0] }}
+          transition={{ duration: 0.6, delay: delay + i * stagger, ease: 'easeOut', times: [0, 0.6, 1] }}
+          className="inline-block"
+          style={{ whiteSpace: 'pre' as const }}
+        >
+          {unit}
+        </motion.span>
+      ))}
+    </span>
+  );
+}
+
+function FlickerText({ text, duration, delay }: { text: string; duration: number; delay: number }) {
+  return (
+    <motion.span
+      initial={{ opacity: 0 }}
+      animate={{ opacity: [0, 1, 0.2, 1, 0.3, 1] }}
+      transition={{ duration: duration || 1.5, delay, ease: 'linear', times: [0, 0.15, 0.3, 0.5, 0.7, 1] }}
+    >
+      {text}
+    </motion.span>
+  );
+}
+
+const TEXT_ANIM_PRESETS = new Set(['typewriter', 'splitWord', 'splitChar', 'reveal', 'wave', 'flicker']);
+
+function isTextAnimationPreset(preset: string): boolean {
+  return TEXT_ANIM_PRESETS.has(preset);
+}
+
+function TextAnimContent({ text, preset, duration, delay }: { text: string; preset: string; duration: number; delay: number }) {
+  switch (preset) {
+    case 'typewriter': return <TypewriterText text={text} duration={duration} delay={delay} />;
+    case 'splitWord':  return <SplitWordText  text={text} duration={duration} delay={delay} />;
+    case 'splitChar':  return <SplitCharText  text={text} duration={duration} delay={delay} />;
+    case 'reveal':     return <RevealText     text={text} duration={duration} delay={delay} />;
+    case 'wave':       return <WaveText       text={text} duration={duration} delay={delay} />;
+    case 'flicker':    return <FlickerText    text={text} duration={duration} delay={delay} />;
+    default:           return <>{text}</>;
+  }
+}
+
 export default function InteractivePreviewModal({
   isOpen,
   onClose,
@@ -311,6 +477,15 @@ export default function InteractivePreviewModal({
                     return { ...base, opacity: 0, scale: 0.4 };
                   case 'zoomOut':
                     return { ...base, opacity: 0, scale: 1.5 };
+                  case 'bounceIn':
+                    return { ...base, opacity: 0, scale: 0.6 };
+                  case 'typewriter':
+                  case 'splitWord':
+                  case 'splitChar':
+                  case 'reveal':
+                  case 'wave':
+                  case 'flicker':
+                    return { ...base, opacity: 1 };
                   default:
                     return { ...base, opacity: 0 };
                 }
@@ -427,6 +602,10 @@ export default function InteractivePreviewModal({
                           <button className="w-full h-full cursor-pointer" style={{ background: 'none', border: 'none', color: 'inherit' }}>
                             {layer.content}
                           </button>
+                        ) : isTextAnimationPreset(animInPreset) ? (
+                          <div className="w-full h-full leading-snug flex items-center" style={{ justifyContent: layer.textAlign === 'right' ? 'right' : layer.textAlign === 'left' ? 'left' : 'center' }}>
+                            <TextAnimContent text={layer.content} preset={animInPreset} duration={animDuration} delay={animDelay} />
+                          </div>
                         ) : (
                           <div className="w-full h-full leading-snug">{layer.content}</div>
                         )}

@@ -17,6 +17,11 @@ export type AnimationPreset =
   | 'rotateIn'
   | 'bounceIn'
   | 'typewriter'
+  | 'splitWord'
+  | 'splitChar'
+  | 'reveal'
+  | 'wave'
+  | 'flicker'
   | 'none';
 
 export type InteractionTrigger = 'click' | 'hover' | 'scroll' | 'slideLoad';

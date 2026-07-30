@@ -1004,6 +1004,12 @@ export default function InspectorPanel({
                   <option value="zoomIn">Zoom In (زوم از داخل)</option>
                   <option value="zoomOut">Zoom Out (زوم از بیرون)</option>
                   <option value="bounceIn">Bounce In (پرش بانس)</option>
+                  <option value="typewriter">Typewriter (تایپ رایتر)</option>
+                  <option value="splitWord">Split Word (کلمات مجزا)</option>
+                  <option value="splitChar">Split Char (حروف مجزا)</option>
+                  <option value="reveal">Reveal (آشکار شدن)</option>
+                  <option value="wave">Wave (موج)</option>
+                  <option value="flicker">Flicker (سوسو زدن)</option>
                 </select>
               </div>
 
