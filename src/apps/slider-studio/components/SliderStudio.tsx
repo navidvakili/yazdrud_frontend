@@ -9,6 +9,7 @@ import {
   Plus,
   Trash2,
   Lock,
+  Unlock,
   Eye,
   EyeOff,
   Copy,
@@ -1104,7 +1105,7 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
                       className="p-1 hover:text-slate-900 dark:hover:text-white cursor-pointer"
                       title="قفل/باز"
                     >
-                      <Lock className={`w-3.5 h-3.5 ${layer.locked ? 'text-amber-500' : ''}`} />
+                      {layer.locked ? <Lock className="w-3.5 h-3.5 text-amber-500" /> : <Unlock className="w-3.5 h-3.5" />}
                     </button>
                     <button
                       onClick={e => {
@@ -1380,7 +1381,7 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
                             className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg cursor-pointer"
                             title="قفل"
                           >
-                            <Lock className="w-3.5 h-3.5" />
+                            {layer.locked ? <Lock className="w-3.5 h-3.5 text-amber-500" /> : <Unlock className="w-3.5 h-3.5" />}
                           </button>
                           <span className="text-[10px] text-teal-600 dark:text-teal-400 font-mono font-bold px-1 select-none">
                             {layer.width}×{layer.height}
