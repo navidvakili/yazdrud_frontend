@@ -93,8 +93,8 @@ export const loginApi = {
   async changePassword(currentPassword: string, newPassword: string): Promise<{ message: string }> {
     const data = await API<any>('user/password', {
       current_password: currentPassword,
-      password: newPassword,
-      password_confirmation: newPassword,
+      new_password: newPassword,
+      new_password_confirmation: newPassword,
     }, 'PUT');
     return data;
   },

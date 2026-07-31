@@ -33,8 +33,8 @@ export default function ChangePasswordModule() {
       setMessage({ type: 'error', text: 'لطفاً گذرواژه فعلی را وارد کنید.' });
       return;
     }
-    if (newPassword.length < 6) {
-      setMessage({ type: 'error', text: 'گذرواژه جدید باید حداقل ۶ کاراکتر باشد.' });
+    if (newPassword.length < 8) {
+      setMessage({ type: 'error', text: 'گذرواژه جدید باید حداقل ۸ کاراکتر باشد.' });
       return;
     }
     if (newPassword !== confirmPassword) {
