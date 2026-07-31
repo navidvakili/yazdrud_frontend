@@ -22,19 +22,14 @@ function getAuthHeaders(): Record<string, string> {
       };
 }
 
-/**
- * آدرس پایه API بک‌اند
- */
-const API_BASE = import.meta.env.DEV
-  ? 'http://127.0.0.1:8000/api'
-  : '/api';
+import { API_BASE_URL } from '@/src/shared-constants';
 
 /**
  * دریافت پروژه اسلایدر جاری (تکی)
  * اگر پروژه‌ای وجود نداشته باشد، در بک‌اند به صورت خودکار ساخته می‌شود
  */
 export async function fetchCurrentProject() {
-  const res = await fetch(`${API_BASE}/admin/slider-studio/current`, {
+  const res = await fetch(`${API_BASE_URL}/admin/slider-studio/current`, {
     headers: getAuthHeaders(),
   });
   if (!res.ok) throw new Error('خطا در دریافت پروژه جاری');
@@ -45,7 +40,7 @@ export async function fetchCurrentProject() {
  * دریافت لیست پروژه‌های اسلایدر
  */
 export async function fetchProjects() {
-  const res = await fetch(`${API_BASE}/admin/slider-studio`, {
+  const res = await fetch(`${API_BASE_URL}/admin/slider-studio`, {
     headers: getAuthHeaders(),
   });
   if (!res.ok) throw new Error('خطا در دریافت پروژه‌ها');
@@ -56,7 +51,7 @@ export async function fetchProjects() {
  * دریافت یک پروژه با شناسه
  */
 export async function fetchProject(id: number) {
-  const res = await fetch(`${API_BASE}/admin/slider-studio/${id}`, {
+  const res = await fetch(`${API_BASE_URL}/admin/slider-studio/${id}`, {
     headers: getAuthHeaders(),
   });
   if (!res.ok) throw new Error('خطا در دریافت پروژه');
@@ -72,7 +67,7 @@ export async function createProject(data: {
   project_data: string; // JSON string
   is_active?: boolean;
 }) {
-  const res = await fetch(`${API_BASE}/admin/slider-studio`, {
+  const res = await fetch(`${API_BASE_URL}/admin/slider-studio`, {
     method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify(data),
@@ -96,7 +91,7 @@ export async function updateProject(
     is_active?: boolean;
   }
 ) {
-  const res = await fetch(`${API_BASE}/admin/slider-studio/${id}`, {
+  const res = await fetch(`${API_BASE_URL}/admin/slider-studio/${id}`, {
     method: 'PUT',
     headers: getAuthHeaders(),
     body: JSON.stringify(data),
@@ -112,7 +107,7 @@ export async function updateProject(
  * حذف پروژه
  */
 export async function deleteProject(id: number) {
-  const res = await fetch(`${API_BASE}/admin/slider-studio/${id}`, {
+  const res = await fetch(`${API_BASE_URL}/admin/slider-studio/${id}`, {
     method: 'DELETE',
     headers: getAuthHeaders(),
   });
@@ -124,7 +119,7 @@ export async function deleteProject(id: number) {
  * فعال/غیرفعال کردن پروژه (فقط یک پروژه می‌تواند فعال باشد)
  */
 export async function toggleProjectActive(id: number) {
-  const res = await fetch(`${API_BASE}/admin/slider-studio/${id}/toggle-active`, {
+  const res = await fetch(`${API_BASE_URL}/admin/slider-studio/${id}/toggle-active`, {
     method: 'PUT',
     headers: getAuthHeaders(),
   });
