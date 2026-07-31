@@ -67,6 +67,10 @@ export default function MediaManager({
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const [perPage] = useState(24);
+  const [total, setTotal] = useState(0);
+  const [lastPage, setLastPage] = useState(1);
   const [selectedFile, setSelectedFile] = useState<MediaFile | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -74,28 +78,44 @@ export default function MediaManager({
   const isImage = (type: string) => type.startsWith('image/');
 
   // Load files
-  const loadFiles = useCallback(async () => {
+  const loadFiles = useCallback(async (requestedPage = 1, requestedSearch = '') => {
     setLoading(true);
     setError(null);
     try {
-      const data = await API<{ data: MediaFile[]; total: number }>('media?per_page=100');
+      const params = new URLSearchParams();
+      params.set('per_page', String(perPage));
+      params.set('page', String(requestedPage));
+      if (requestedSearch.trim() !== '') {
+        params.set('search', requestedSearch.trim());
+      }
+
+      const data = await API<{ data: MediaFile[]; total: number; page: number; per_page: number; last_page: number }>(`media?${params.toString()}`);
       setFiles((data.data || []).map(normalizeMediaFile));
+      setTotal(data.total || 0);
+      setPage(data.page || requestedPage);
+      setLastPage(data.last_page || Math.max(1, Math.ceil((data.total || 0) / perPage)));
     } catch (err: any) {
       setError(err.message || 'خطا در بارگذاری فایل‌ها');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [perPage]);
 
   useEffect(() => {
     if (open) {
-      loadFiles();
+      setPage(1);
+      setSearchQuery('');
       setSelectedFile(null);
       setError(null);
       setSuccessMsg(null);
-      setSearchQuery('');
+      loadFiles(1, '');
     }
   }, [open, loadFiles]);
+
+  useEffect(() => {
+    if (!open) return;
+    loadFiles(page, searchQuery);
+  }, [open, page, searchQuery, loadFiles]);
 
   // Upload file
   const handleUpload = async (file: File) => {
@@ -166,13 +186,9 @@ export default function MediaManager({
     if (file) handleUpload(file);
   };
 
-  // Filter files
+  // Filter files by type only; search is handled server-side.
   const filteredFiles = files.filter(f => {
     if (filter === 'image' && !isImage(f.type)) return false;
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      return f.name.toLowerCase().includes(q);
-    }
     return true;
   });
 
@@ -226,7 +242,10 @@ export default function MediaManager({
               <input
                 type="text"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setPage(1);
+                }}
                 placeholder="جستجوی فایل..."
                 className="w-full pr-9 pl-3 py-2 rounded-xl bg-gray-50 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 text-xs text-gray-900 dark:text-white focus:outline-none focus:border-teal-500"
               />
@@ -371,10 +390,40 @@ export default function MediaManager({
             )}
 
             {/* Empty search */}
-            {filteredFiles.length === 0 && !loading && files.length > 0 && (
+            {filteredFiles.length === 0 && !loading && total === 0 && (
               <div className="text-center py-8">
                 <Search className="w-8 h-8 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
                 <p className="text-xs text-gray-400">فایلی یافت نشد</p>
+              </div>
+            )}
+
+            {/* Pagination */}
+            {total > perPage && !loading && (
+              <div className="mt-4 flex items-center justify-between gap-3 px-2">
+                <div className="text-[11px] text-gray-500 dark:text-gray-400">
+                  نمایش {Math.min((page - 1) * perPage + 1, total)} تا {Math.min(page * perPage, total)} از {total} فایل
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPage(prev => Math.max(prev - 1, 1))}
+                    disabled={page <= 1}
+                    className="px-3 py-1 rounded-xl border border-gray-200 dark:border-gray-700 text-xs text-gray-600 dark:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    قبلی
+                  </button>
+                  <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                    {page} / {lastPage}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setPage(prev => Math.min(prev + 1, lastPage))}
+                    disabled={page >= lastPage}
+                    className="px-3 py-1 rounded-xl border border-gray-200 dark:border-gray-700 text-xs text-gray-600 dark:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    بعدی
+                  </button>
+                </div>
               </div>
             )}
 
