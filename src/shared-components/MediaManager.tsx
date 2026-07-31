@@ -76,11 +76,18 @@ export default function MediaManager({
   const [previewFile, setPreviewFile] = useState<MediaFile | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Drops stale async responses (rapid page clicks, reopen while a previous
+  // request is still in flight) so the latest request always wins.
+  const loadSeqRef = useRef(0);
+  // True right after the manager opens, so the page/search load effect does
+  // NOT fire with the stale page value from the previous session.
+  const openedRef = useRef(false);
 
   const isImage = (type: string) => type.startsWith('image/');
 
   // Load files
   const loadFiles = useCallback(async (requestedPage = 1, requestedSearch = '') => {
+    const seq = ++loadSeqRef.current;
     setLoading(true);
     setError(null);
     try {
@@ -98,19 +105,23 @@ export default function MediaManager({
         per_page: number;
         last_page: number;
       }>(`media?${params.toString()}`);
+      // A newer load superseded this one — ignore its (stale) response.
+      if (seq !== loadSeqRef.current) return;
       setFiles((data.data || []).map(normalizeMediaFile));
       setTotal(data.total || 0);
       setPage(data.page || requestedPage);
       setLastPage(data.last_page || Math.max(1, Math.ceil((data.total || 0) / perPage)));
     } catch (err: any) {
+      if (seq !== loadSeqRef.current) return;
       setError(err.message || 'خطا در بارگذاری فایل‌ها');
     } finally {
-      setLoading(false);
+      if (seq === loadSeqRef.current) setLoading(false);
     }
   }, [perPage]);
 
   useEffect(() => {
     if (open) {
+      // Every fresh open starts from page 1 with a cleared search.
       setPage(1);
       setSearchQuery('');
       setDebouncedSearchQuery('');
@@ -118,6 +129,9 @@ export default function MediaManager({
       setError(null);
       setSuccessMsg(null);
       loadFiles(1, '');
+      openedRef.current = true;
+    } else {
+      openedRef.current = false;
     }
   }, [open, loadFiles]);
 
@@ -127,7 +141,12 @@ export default function MediaManager({
   }, [searchQuery]);
 
   useEffect(() => {
-    if (!open) return;
+    // Skip the run triggered by the open transition itself — the open effect
+    // above already loaded page 1 with the freshly reset state.
+    if (!open || openedRef.current) {
+      openedRef.current = false;
+      return;
+    }
     loadFiles(page, debouncedSearchQuery);
   }, [open, page, debouncedSearchQuery, loadFiles]);
 
