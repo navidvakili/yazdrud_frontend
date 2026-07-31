@@ -67,11 +67,13 @@ export default function MediaManager({
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [page, setPage] = useState(1);
-  const [perPage] = useState(24);
+  const [perPage] = useState(20);
   const [total, setTotal] = useState(0);
   const [lastPage, setLastPage] = useState(1);
   const [selectedFile, setSelectedFile] = useState<MediaFile | null>(null);
+  const [previewFile, setPreviewFile] = useState<MediaFile | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -89,7 +91,13 @@ export default function MediaManager({
         params.set('search', requestedSearch.trim());
       }
 
-      const data = await API<{ data: MediaFile[]; total: number; page: number; per_page: number; last_page: number }>(`media?${params.toString()}`);
+      const data = await API<{
+        data: MediaFile[];
+        total: number;
+        page: number;
+        per_page: number;
+        last_page: number;
+      }>(`media?${params.toString()}`);
       setFiles((data.data || []).map(normalizeMediaFile));
       setTotal(data.total || 0);
       setPage(data.page || requestedPage);
@@ -105,6 +113,7 @@ export default function MediaManager({
     if (open) {
       setPage(1);
       setSearchQuery('');
+      setDebouncedSearchQuery('');
       setSelectedFile(null);
       setError(null);
       setSuccessMsg(null);
@@ -113,9 +122,14 @@ export default function MediaManager({
   }, [open, loadFiles]);
 
   useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearchQuery(searchQuery), 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  useEffect(() => {
     if (!open) return;
-    loadFiles(page, searchQuery);
-  }, [open, page, searchQuery, loadFiles]);
+    loadFiles(page, debouncedSearchQuery);
+  }, [open, page, debouncedSearchQuery, loadFiles]);
 
   // Upload file
   const handleUpload = async (file: File) => {
@@ -139,10 +153,9 @@ export default function MediaManager({
       setUploadProgress(100);
       setSuccessMsg(result.message || 'فایل با موفقیت آپلود شد.');
 
-      // Add to list
       const uploaded = normalizeMediaFile(result.data);
-      setFiles(prev => [uploaded, ...prev.filter(f => f.id !== uploaded.id)]);
       setSelectedFile(uploaded);
+      await loadFiles(1, searchQuery);
 
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err: any) {
@@ -236,19 +249,36 @@ export default function MediaManager({
           </div>
 
           {/* Toolbar */}
-          <div className="px-6 py-3 border-b border-gray-100 dark:border-gray-800 flex items-center gap-3">
-            <div className="relative flex-1 max-w-sm">
-              <Search className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setPage(1);
-                }}
-                placeholder="جستجوی فایل..."
-                className="w-full pr-9 pl-3 py-2 rounded-xl bg-gray-50 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 text-xs text-gray-900 dark:text-white focus:outline-none focus:border-teal-500"
-              />
+          <div className="px-6 py-3 border-b border-gray-100 dark:border-gray-800 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 flex-1">
+              <div className="flex-1 max-w-sm">
+                <div className="relative flex items-center gap-2">
+                  <Search className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      setPage(1);
+                    }}
+                    placeholder="جستجوی فایل..."
+                    className="w-full pr-24 pl-3 py-2 rounded-xl bg-gray-50 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 text-xs text-gray-900 dark:text-white focus:outline-none focus:border-teal-500"
+                  />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSearchQuery('');
+                        setDebouncedSearchQuery('');
+                        setPage(1);
+                      }}
+                      className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 whitespace-nowrap"
+                    >
+                      لغو
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
             <button
               onClick={() => fileInputRef.current?.click()}
@@ -270,6 +300,11 @@ export default function MediaManager({
               }}
             />
           </div>
+          {loading && (
+            <div className="px-6 py-2 text-xs text-gray-500 dark:text-gray-400">
+              {searchQuery ? 'در حال جستجو...' : 'در حال بارگذاری...'}
+            </div>
+          )}
 
           {/* Upload Progress */}
           {uploading && (
@@ -308,7 +343,7 @@ export default function MediaManager({
           )}
 
           {/* Content */}
-          <div className="flex-1 overflow-y-auto p-6">
+          <div className="flex-1 overflow-y-auto p-6 pb-28">
             {/* Drag & Drop Zone */}
             {files.length === 0 && !loading && (
               <div
@@ -337,15 +372,17 @@ export default function MediaManager({
                 {filteredFiles.map((file) => (
                   <div
                     key={file.id}
-                    onClick={() => setSelectedFile(file)}
-                    className={`group relative rounded-2xl border-2 overflow-hidden cursor-pointer transition-all ${
+                    className={`group relative rounded-2xl border-2 overflow-hidden transition-all ${
                       selectedFile?.id === file.id
                         ? 'border-teal-500 ring-2 ring-teal-500/20 shadow-lg'
                         : 'border-gray-100 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-md'
                     }`}
                   >
                     {/* Thumbnail */}
-                    <div className="aspect-square bg-gray-50 dark:bg-gray-800 flex items-center justify-center overflow-hidden">
+                    <div
+                      onClick={() => setSelectedFile(file)}
+                      className="aspect-square bg-gray-50 dark:bg-gray-800 flex items-center justify-center overflow-hidden cursor-pointer"
+                    >
                       {isImage(file.type) ? (
                         <img
                           src={file.url}
@@ -358,6 +395,16 @@ export default function MediaManager({
                           <FileText className="w-8 h-8 text-gray-300 dark:text-gray-600" />
                           <span className="text-[10px] text-gray-400 font-mono">{file.type.split('/').pop()}</span>
                         </div>
+                      )}
+                      {isImage(file.type) && (
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); setPreviewFile(file); }}
+                          className="absolute top-2 left-2 p-2 rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                          title="نمایش پیش‌نمایش"
+                        >
+                          <ImageIcon className="w-4 h-4" />
+                        </button>
                       )}
                     </div>
 
@@ -379,7 +426,7 @@ export default function MediaManager({
                     {/* Delete button */}
                     <button
                       onClick={(e) => { e.stopPropagation(); handleDelete(file); }}
-                      className="absolute top-2 left-2 p-1 rounded-full bg-red-500/80 text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer hover:bg-red-600"
+                      className="absolute top-2 right-2 p-1 rounded-full bg-red-500/80 text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer hover:bg-red-600"
                       title="حذف فایل"
                     >
                       <Trash2 className="w-3 h-3" />
@@ -397,12 +444,16 @@ export default function MediaManager({
               </div>
             )}
 
-            {/* Pagination */}
-            {total > perPage && !loading && (
-              <div className="mt-4 flex items-center justify-between gap-3 px-2">
-                <div className="text-[11px] text-gray-500 dark:text-gray-400">
+            {/* Loading */}
+          </div>
+
+          {/* Footer */}
+          <div className="sticky bottom-0 z-20 bg-white dark:bg-gray-900 px-6 py-4 border-t border-gray-100 dark:border-gray-800">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4 text-[11px] text-gray-500 dark:text-gray-400">
+                <span>
                   نمایش {Math.min((page - 1) * perPage + 1, total)} تا {Math.min(page * perPage, total)} از {total} فایل
-                </div>
+                </span>
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
@@ -425,46 +476,56 @@ export default function MediaManager({
                   </button>
                 </div>
               </div>
-            )}
-
-            {/* Loading */}
-            {loading && (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-8 h-8 text-teal-500 animate-spin" />
+              <div className="flex items-center gap-3">
+                {selectedFile && (
+                  <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                    <CheckCircle2 className="w-4 h-4 text-teal-500" />
+                    <span className="font-bold">انتخاب شده:</span>
+                    <span className="text-gray-900 dark:text-white font-semibold truncate max-w-[200px]">{selectedFile.name}</span>
+                  </div>
+                )}
+                <button
+                  onClick={onClose}
+                  className="px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-xs font-bold hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer transition-colors"
+                >
+                  انصراف
+                </button>
+                <button
+                  onClick={() => {
+                    if (selectedFile) {
+                      onSelect(selectedFile.url, selectedFile);
+                      onClose();
+                    }
+                  }}
+                  disabled={!selectedFile}
+                  className="px-5 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  استفاده از تصویر
+                </button>
               </div>
-            )}
-          </div>
-
-          {/* Footer */}
-          <div className="px-6 py-4 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between">
-            {selectedFile && (
-              <div className="flex items-center gap-2 text-xs text-gray-500">
-                <CheckCircle2 className="w-4 h-4 text-teal-500" />
-                <span className="font-bold">انتخاب شده:</span>
-                <span className="text-gray-900 dark:text-white font-semibold truncate max-w-[200px]">{selectedFile.name}</span>
-              </div>
-            )}
-            <div className="flex items-center gap-3 ml-auto">
-              <button
-                onClick={onClose}
-                className="px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-xs font-bold hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer transition-colors"
-              >
-                انصراف
-              </button>
-              <button
-                onClick={() => {
-                  if (selectedFile) {
-                    onSelect(selectedFile.url, selectedFile);
-                    onClose();
-                  }
-                }}
-                disabled={!selectedFile}
-                className="px-5 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                استفاده از تصویر
-              </button>
             </div>
           </div>
+          {previewFile && (
+            <div
+              onClick={() => setPreviewFile(null)}
+              className="fixed inset-0 z-40 bg-black/75 flex items-center justify-center p-4"
+            >
+              <div className="relative max-w-[90vw] max-h-[90vh]">
+                <img
+                  src={previewFile.url}
+                  alt={previewFile.name}
+                  className="max-w-full max-h-[90vh] rounded-3xl shadow-2xl"
+                />
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setPreviewFile(null); }}
+                  className="absolute top-3 right-3 rounded-full bg-white/90 text-gray-800 p-2 hover:bg-white"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
         </motion.div>
       </motion.div>
     </AnimatePresence>
