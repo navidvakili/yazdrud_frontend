@@ -605,11 +605,11 @@ export default function InteractivePreviewModal({
                             {layer.content}
                           </button>
                         ) : isTextAnimationPreset(animInPreset) ? (
-                          <div className="w-full h-full leading-snug flex items-center" style={{ justifyContent: layer.textAlign === 'right' ? 'right' : layer.textAlign === 'left' ? 'left' : 'center' }}>
+                          <div className="w-full leading-snug flex" style={{ justifyContent: layer.textAlign === 'right' ? 'right' : layer.textAlign === 'left' ? 'left' : 'center' }}>
                             <TextAnimContent text={layer.content} preset={animInPreset} duration={animDuration} delay={animDelay} />
                           </div>
                         ) : (
-                          <div className="w-full h-full leading-snug">{layer.content}</div>
+                          <div className="w-full leading-snug">{layer.content}</div>
                         )}
                       </div>
                     )}
