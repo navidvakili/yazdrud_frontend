@@ -6,7 +6,7 @@
 import { useMemo } from 'react';
 import { motion } from 'motion/react';
 import {
-  User,
+  Lock,
   DollarSign,
   Pin,
   type LucideIcon,
@@ -61,7 +61,7 @@ export default function DashboardModule({
 
   // Use dynamic menu items if provided, otherwise fall back to built-in list
   const quickActions: MenuAction[] = allMenuItems || [
-    { id: 'profile', title: 'مشخصات پروفایل', icon: User, desc: 'ویرایش اطلاعات شخصی و مشاهده پرونده', roles: ['admin', 'editor', 'user'] as const },
+    { id: 'change-password', title: 'تغییر کلمه عبور', icon: Lock, desc: 'تغییر گذرواژه حساب کاربری', roles: ['admin', 'editor', 'user'] as const },
     { id: 'finance', title: 'امور مالی', icon: DollarSign, desc: 'مشاهده فاکتورها و تراکنش‌ها', roles: ['admin', 'editor', 'user'] as const },
   ];
 

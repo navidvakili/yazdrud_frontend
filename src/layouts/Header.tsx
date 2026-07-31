@@ -4,7 +4,7 @@
 
 import { useState } from 'react';
 import {
-  Search, X, User, Check, LogOut, Menu,
+  Search, X, Lock, Check, LogOut, Menu,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import type { User as UserType } from '@/src/shared-types';
@@ -170,12 +170,12 @@ export default function Header({
                     <span className="block text-[8px] text-gray-400  mt-0.5">{user.email}</span>
                   </div>
                   <button
-                    onClick={() => { handleOpenTab('profile', 'مشخصات پروفایل', 'User'); setShowUserDropdown(false); }}
+                    onClick={() => { handleOpenTab('change-password', 'تغییر کلمه عبور', 'Lock'); setShowUserDropdown(false); }}
                     className="px-4 py-2 text-[11px] text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/5 flex items-center justify-between w-full text-right cursor-pointer"
                   >
                     <span className="flex items-center gap-2">
-                      <User className="w-4 h-4 text-teal-500" />
-                      <span>پروفایل من</span>
+                      <Lock className="w-4 h-4 text-teal-500" />
+                      <span>تغییر کلمه عبور</span>
                     </span>
                   </button>
 
