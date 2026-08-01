@@ -377,6 +377,27 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
 
   // Slide switcher — always rendered as a dropdown so it never overflows the toolbar
   const [slidesMenuOpen, setSlidesMenuOpen] = useState<boolean>(false);
+  const slidesMenuBtnRef = useRef<HTMLButtonElement>(null);
+  const [slidesMenuPos, setSlidesMenuPos] = useState<{ top: number; left: number; flip: boolean } | null>(null);
+
+  // Position the dropdown panel inside the viewport (RTL-safe, clamped to screen edges)
+  const repositionSlidesMenu = useCallback(() => {
+    const btn = slidesMenuBtnRef.current;
+    if (!btn) return;
+    const rect = btn.getBoundingClientRect();
+    const panelW = 320; // w-80
+    const panelH = 320; // max-h-[320px]
+    const gap = 6;
+    const openDown = rect.bottom + gap + panelH <= window.innerHeight;
+    const top = openDown ? rect.bottom + gap : Math.max(8, rect.top - gap - panelH);
+    const left = Math.max(8, Math.min(rect.right - panelW, window.innerWidth - panelW - 8));
+    setSlidesMenuPos({ top, left, flip: !openDown });
+  }, []);
+
+  const toggleSlidesMenu = () => {
+    if (!slidesMenuOpen) repositionSlidesMenu();
+    setSlidesMenuOpen(o => !o);
+  };
 
   // Close the slides dropdown with Escape
   useEffect(() => {
@@ -387,6 +408,14 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [slidesMenuOpen]);
+
+  // Re-position the panel if the window is resized while open
+  useEffect(() => {
+    if (!slidesMenuOpen) return;
+    repositionSlidesMenu();
+    window.addEventListener('resize', repositionSlidesMenu);
+    return () => window.removeEventListener('resize', repositionSlidesMenu);
+  }, [slidesMenuOpen, repositionSlidesMenu]);
 
   // Dragging layer state
   const [isDragging, setIsDragging] = useState<boolean>(false);
@@ -1145,7 +1174,8 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
             {/* Slide switcher — always rendered as a dropdown so it never overflows the toolbar */}
             <div className="flex items-center gap-1">
               <button
-                onClick={() => setSlidesMenuOpen(o => !o)}
+                ref={slidesMenuBtnRef}
+                onClick={toggleSlidesMenu}
                 className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl font-black transition-all cursor-pointer select-none bg-teal-600 dark:bg-teal-500 text-white dark:text-slate-950 shadow-xs"
                 title="نمایش همه اسلایدها"
               >
@@ -1163,7 +1193,10 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
               {slidesMenuOpen && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setSlidesMenuOpen(false)} />
-                  <div className="absolute top-full right-0 mt-1.5 z-50 w-80 max-h-[320px] overflow-y-auto rounded-2xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-2xl p-1.5 space-y-0.5">
+                  <div
+                    className="fixed z-50 w-80 max-h-[320px] overflow-y-auto rounded-2xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-2xl p-1.5 space-y-0.5"
+                    style={{ top: slidesMenuPos?.top ?? 0, left: slidesMenuPos?.left ?? 0 }}
+                  >
                     {project.slides.map((s, idx) => {
                       const isActive = activeSlideId === s.id;
                       const isDragOver = dragOverIndex === idx;
