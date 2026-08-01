@@ -4,7 +4,7 @@ import path from 'path';
 import { defineConfig } from 'vite';
 
 function makeCsp(mode: string, backendUrl: string): string {
-  const base = `default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: ${backendUrl}; font-src 'self' data:; connect-src 'self' ${backendUrl}`;
+  const base = `default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: ${backendUrl}; font-src 'self' data:; media-src 'self' blob: data: ${backendUrl}; connect-src 'self' ${backendUrl}`;
   if (mode === 'development') {
     return base.replace("script-src 'self' 'unsafe-inline'", "script-src 'self' 'unsafe-inline' 'unsafe-eval'");
   }

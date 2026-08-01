@@ -6,7 +6,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   X, Upload, Image as ImageIcon, FileText, Trash2, Search,
-  Grid3X3, Loader2, AlertCircle, CheckCircle2, Folder,
+  Grid3X3, Loader2, AlertCircle, CheckCircle2, Folder, Video as VideoIcon,
 } from 'lucide-react';
 import { APISendFiles } from '@/src/shared-utils/functions';
 import { API } from '@/src/shared-utils/functions';
@@ -47,8 +47,8 @@ interface MediaManagerProps {
   open: boolean;
   onClose: () => void;
   onSelect: (url: string, file?: MediaFile) => void;
-  /** فیلتر نوع فایل: image یا همه */
-  filter?: 'image' | 'all';
+  /** فیلتر نوع فایل: image، video یا همه */
+  filter?: 'image' | 'video' | 'all';
   /** عنوان دیالوگ */
   title?: string;
 }
@@ -84,6 +84,7 @@ export default function MediaManager({
   const openedRef = useRef(false);
 
   const isImage = (type: string) => type.startsWith('image/');
+  const isVideo = (type: string) => type.startsWith('video/');
 
   // Load files
   const loadFiles = useCallback(async (requestedPage = 1, requestedSearch = '') => {
@@ -221,6 +222,7 @@ export default function MediaManager({
   // Filter files by type only; search is handled server-side.
   const filteredFiles = files.filter(f => {
     if (filter === 'image' && !isImage(f.type)) return false;
+    if (filter === 'video' && !isVideo(f.type)) return false;
     return true;
   });
 
@@ -311,7 +313,7 @@ export default function MediaManager({
               ref={fileInputRef}
               type="file"
               className="hidden"
-              accept={filter === 'image' ? 'image/*' : undefined}
+              accept={filter === 'image' ? 'image/*' : filter === 'video' ? 'video/*' : undefined}
               onChange={(e) => {
                 const file = e.target.files?.[0];
                 if (file) handleUpload(file);
@@ -409,20 +411,33 @@ export default function MediaManager({
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                           loading="lazy"
                         />
+                      ) : isVideo(file.type) ? (
+                        <div className="relative w-full h-full">
+                          <video
+                            src={file.url}
+                            muted
+                            playsInline
+                            preload="metadata"
+                            className="w-full h-full object-cover"
+                          />
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/30 pointer-events-none">
+                            <VideoIcon className="w-8 h-8 text-white drop-shadow" />
+                          </div>
+                        </div>
                       ) : (
                         <div className="flex flex-col items-center gap-2 p-4">
                           <FileText className="w-8 h-8 text-gray-300 dark:text-gray-600" />
                           <span className="text-[10px] text-gray-400 font-mono">{file.type.split('/').pop()}</span>
                         </div>
                       )}
-                      {isImage(file.type) && (
+                      {(isImage(file.type) || isVideo(file.type)) && (
                         <button
                           type="button"
                           onClick={(e) => { e.stopPropagation(); setPreviewFile(file); }}
                           className="absolute top-2 left-2 p-2 rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-opacity"
                           title="نمایش پیش‌نمایش"
                         >
-                          <ImageIcon className="w-4 h-4" />
+                          {isImage(file.type) ? <ImageIcon className="w-4 h-4" /> : <VideoIcon className="w-4 h-4" />}
                         </button>
                       )}
                     </div>
@@ -519,7 +534,13 @@ export default function MediaManager({
                   disabled={!selectedFile}
                   className="px-5 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  استفاده از تصویر
+                  {selectedFile
+                    ? isImage(selectedFile.type)
+                      ? 'استفاده از تصویر'
+                      : isVideo(selectedFile.type)
+                      ? 'استفاده از ویدئو'
+                      : 'استفاده از فایل'
+                    : 'استفاده'}
                 </button>
               </div>
             </div>
@@ -530,11 +551,20 @@ export default function MediaManager({
               className="fixed inset-0 z-40 bg-black/75 flex items-center justify-center p-4"
             >
               <div className="relative max-w-[90vw] max-h-[90vh]">
-                <img
-                  src={previewFile.url}
-                  alt={previewFile.name}
-                  className="max-w-full max-h-[90vh] rounded-3xl shadow-2xl"
-                />
+                {isVideo(previewFile.type) ? (
+                  <video
+                    src={previewFile.url}
+                    controls
+                    autoPlay
+                    className="max-w-full max-h-[90vh] rounded-3xl shadow-2xl bg-black"
+                  />
+                ) : (
+                  <img
+                    src={previewFile.url}
+                    alt={previewFile.name}
+                    className="max-w-full max-h-[90vh] rounded-3xl shadow-2xl"
+                  />
+                )}
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); setPreviewFile(null); }}

@@ -16,6 +16,8 @@ import {
 } from 'lucide-react';
 import type { SliderProject, Slide, BreakpointWidth } from '@/src/shared-types/slider-studio';
 import AddonParticleCanvas from './AddonParticleCanvas';
+import AutoPlayVideo from './AutoPlayVideo';
+import { resolveStorageUrl } from '@/src/shared-utils';
 
 interface InteractivePreviewModalProps {
   isOpen: boolean;
@@ -427,8 +429,16 @@ export default function InteractivePreviewModal({
           {/* Background Image - full when type is 'image', overlay otherwise */}
           {activeSlide.background.imageUrl && activeSlide.background.type === 'image' && (
             <img
-              src={activeSlide.background.imageUrl}
+              src={resolveStorageUrl(activeSlide.background.imageUrl)}
               alt="slide background"
+              className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+            />
+          )}
+
+          {/* Background Video — full when type is 'video' */}
+          {activeSlide.background.type === 'video' && activeSlide.background.videoUrl && (
+            <AutoPlayVideo
+              src={activeSlide.background.videoUrl}
               className="absolute inset-0 w-full h-full object-cover pointer-events-none"
             />
           )}
@@ -578,16 +588,13 @@ export default function InteractivePreviewModal({
                   <div className="w-full h-full flex items-center justify-center relative z-[1]">
                     {layer.type === 'image' ? (
                       <img
-                        src={layer.content}
+                        src={resolveStorageUrl(layer.content)}
                         alt={layer.name}
                         className="w-full h-full object-cover rounded-[inherit]"
                       />
                     ) : layer.type === 'video' ? (
-                      <video
+                      <AutoPlayVideo
                         src={layer.content}
-                        autoPlay
-                        loop
-                        muted
                         className="w-full h-full object-cover rounded-[inherit]"
                       />
                     ) : (

@@ -1,4 +1,5 @@
 export { API, APISendFiles, downloadFile, getFileViewUrl, getAvatarUrl, getBrowserFingerprint, decodeHtmlEntities } from './functions';
+export { resolveStorageUrl } from './storageUrl';
 export { networkObserver } from './networkObserver';
 export {
   toPersianDigits,

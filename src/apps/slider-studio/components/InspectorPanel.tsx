@@ -64,7 +64,11 @@ export default function InspectorPanel({
     if (mediaPickerTarget === 'layer' && selectedLayer) {
       onUpdateLayer({ ...selectedLayer, content: url });
     } else if (mediaPickerTarget === 'slideBg' && slide) {
-      onUpdateSlide({ ...slide, background: { ...slide.background, imageUrl: url } });
+      if (slide.background.type === 'video') {
+        onUpdateSlide({ ...slide, background: { ...slide.background, videoUrl: url } });
+      } else {
+        onUpdateSlide({ ...slide, background: { ...slide.background, imageUrl: url } });
+      }
     }
     setMediaPickerTarget(null);
   };
@@ -265,13 +269,22 @@ export default function InspectorPanel({
             {slide.background.type === 'video' && (
               <div>
                 <label className="text-[10px] text-slate-500 dark:text-slate-400">آدرس URL ویدیوی پس‌زمینه</label>
-                <input
-                  type="text"
-                  value={slide.background.videoUrl || ''}
-                  onChange={e => updateSlideBackground({ ...slide.background, videoUrl: e.target.value })}
-                  className="w-full p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-slate-900 dark:text-white font-mono text-[11px] focus:border-teal-500 focus:outline-none"
-                  placeholder="https://..."
-                />
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={slide.background.videoUrl || ''}
+                    onChange={e => updateSlideBackground({ ...slide.background, videoUrl: e.target.value })}
+                    className="flex-1 p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-slate-900 dark:text-white font-mono text-[11px] focus:border-teal-500 focus:outline-none"
+                    placeholder="https://..."
+                  />
+                  <button
+                    onClick={() => setMediaPickerTarget('slideBg')}
+                    className="shrink-0 p-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 dark:bg-teal-500 dark:hover:bg-teal-400 text-white dark:text-slate-950 transition-colors cursor-pointer"
+                    title="انتخاب ویدیو از مدیریت رسانه"
+                  >
+                    <Video className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             )}
 
@@ -419,8 +432,8 @@ export default function InspectorPanel({
         open={mediaPickerTarget === 'slideBg'}
         onClose={() => setMediaPickerTarget(null)}
         onSelect={handleMediaSelect}
-        filter="image"
-        title="انتخاب تصویر پس‌زمینه اسلاید"
+        filter={slide.background.type === 'video' ? 'video' : 'image'}
+        title={slide.background.type === 'video' ? 'انتخاب ویدیوی پس‌زمینه اسلاید' : 'انتخاب تصویر پس‌زمینه اسلاید'}
       />
       </>
     );
@@ -1335,8 +1348,8 @@ export default function InspectorPanel({
         open={mediaPickerTarget === 'layer'}
         onClose={() => setMediaPickerTarget(null)}
         onSelect={handleMediaSelect}
-        filter="all"
-        title="انتخاب رسانه لایه"
+        filter={selectedLayer.type === 'image' ? 'image' : selectedLayer.type === 'video' ? 'video' : 'all'}
+        title={selectedLayer.type === 'image' ? 'انتخاب تصویر لایه' : selectedLayer.type === 'video' ? 'انتخاب ویدیوی لایه' : 'انتخاب رسانه لایه'}
       />
     </>
   );
