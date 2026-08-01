@@ -2,26 +2,33 @@ import { useEffect, useRef } from 'react';
 import { resolveStorageUrl } from '@/src/shared-utils';
 
 /**
- * AutoPlayVideo — video element that reliably autoplays.
+ * AutoPlayVideo — video element that reliably plays only while `playing` is true.
  *
  * React does not always reflect the `muted` attribute to the DOM, and a
  * browser blocks autoplay for any "unmuted" video, leaving it frozen on
  * the first frame. This component force-sets `muted` as a DOM property and
- * calls `play()` whenever the source changes (or on mount), so videos play
- * in the studio canvas and during animation playback.
+ * calls `play()` whenever the source changes or `playing` becomes true, so
+ * videos only play in the studio canvas while the timeline is running and
+ * in the live preview while it is playing.
  */
 export default function AutoPlayVideo({
   src,
   className,
+  playing = true,
 }: {
   src: string;
   className?: string;
+  playing?: boolean;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   // Normalize relative/storage URLs (e.g. "media/2026/08/...mp4") so the
   // browser always gets an absolute URL pointing at the backend.
   const resolvedSrc = resolveStorageUrl(src);
 
+  const playingRef = useRef(playing);
+  playingRef.current = playing;
+
+  // Start playback when the source becomes ready (only if still `playing`).
   useEffect(() => {
     const el = videoRef.current;
     if (!el || !resolvedSrc) return;
@@ -29,7 +36,7 @@ export default function AutoPlayVideo({
     let cancelled = false;
 
     const tryPlay = () => {
-      if (cancelled || !el) return;
+      if (cancelled || !el || !playingRef.current) return;
       // `muted` must be a DOM property for the autoplay policy to accept it.
       el.muted = true;
       el.defaultMuted = true;
@@ -55,13 +62,30 @@ export default function AutoPlayVideo({
     };
   }, [resolvedSrc]);
 
+  // React to `playing` toggles: pause when stopped, restart from 0 when started.
+  useEffect(() => {
+    const el = videoRef.current;
+    if (!el || !resolvedSrc) return;
+
+    if (playing) {
+      el.currentTime = 0;
+      el.muted = true;
+      el.defaultMuted = true;
+      el.setAttribute('muted', '');
+      const p = el.play();
+      if (p) p.catch(() => { /* retried by the effect above */ });
+    } else {
+      el.pause();
+    }
+  }, [playing, resolvedSrc]);
+
   if (!resolvedSrc) return null;
 
   return (
     <video
       ref={videoRef}
       src={resolvedSrc}
-      autoPlay
+      autoPlay={playing}
       loop
       muted
       playsInline

@@ -439,6 +439,7 @@ export default function InteractivePreviewModal({
           {activeSlide.background.type === 'video' && activeSlide.background.videoUrl && (
             <AutoPlayVideo
               src={activeSlide.background.videoUrl}
+              playing={isPlaying}
               className="absolute inset-0 w-full h-full object-cover pointer-events-none"
             />
           )}
@@ -595,6 +596,7 @@ export default function InteractivePreviewModal({
                     ) : layer.type === 'video' ? (
                       <AutoPlayVideo
                         src={layer.content}
+                        playing={isPlaying}
                         className="w-full h-full object-cover rounded-[inherit]"
                       />
                     ) : (
