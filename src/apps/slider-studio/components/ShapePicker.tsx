@@ -4,7 +4,7 @@
 // the same inline-SVG template used at render time.
 // ============================================================
 import type { ShapeType } from '@/src/shared-types/slider-studio';
-import { SHAPE_LABELS, SHAPE_SVG_TEMPLATES, SHAPE_TYPES } from '../constants/shapes';
+import { getShapePreserveAspect, SHAPE_LABELS, SHAPE_SVG_TEMPLATES, SHAPE_TYPES } from '../constants/shapes';
 
 interface ShapePickerProps {
   value?: ShapeType;
@@ -34,7 +34,7 @@ export default function ShapePicker({ value, onChange, columns = 6, compact = fa
             <span
               className={`block ${compact ? 'w-5 h-5' : 'w-7 h-7'}`}
               dangerouslySetInnerHTML={{
-                __html: `<svg viewBox="0 0 100 100" preserveAspectRatio="none" style="width:100%;height:100%">${SHAPE_SVG_TEMPLATES[shape]('#14b8a6', 'transparent', 0)}</svg>`,
+                __html: `<svg viewBox="0 0 100 100" preserveAspectRatio="${getShapePreserveAspect(shape)}" style="width:100%;height:100%">${SHAPE_SVG_TEMPLATES[shape]('#14b8a6', 'transparent', 0)}</svg>`,
               }}
             />
             <span className={`text-[9px] text-slate-600 dark:text-slate-300 leading-tight ${compact ? 'text-[8px]' : ''}`}>

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { X, Code, Copy, Check, FileText, Smartphone, Laptop } from 'lucide-react';
 import type { SliderProject } from '@/src/shared-types/slider-studio';
-import { SHAPE_SVG_TEMPLATES } from '../constants/shapes';
+import { getShapePreserveAspect, SHAPE_SVG_TEMPLATES } from '../constants/shapes';
 
 function shapeFlatFill(layer: { backgroundColor?: string; backgroundGradient?: string }): string {
   if (layer.backgroundColor) return layer.backgroundColor;
@@ -108,7 +108,7 @@ export default function CodeExportModal({ isOpen, onClose, project }: CodeExport
         const shape = l.shape ?? 'circle';
         const template = SHAPE_SVG_TEMPLATES[shape] ?? SHAPE_SVG_TEMPLATES.circle;
         return `<div id="layer-${l.id}" style="position:relative;">
-          <svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute; inset:0; width:100%; height:100%;">${template(shapeFlatFill(l), bcol === 'transparent' ? 'transparent' : bcol, bw)}</svg>
+          <svg viewBox="0 0 100 100" preserveAspectRatio="${getShapePreserveAspect(shape)}" style="position:absolute; inset:0; width:100%; height:100%;">${template(shapeFlatFill(l), bcol === 'transparent' ? 'transparent' : bcol, bw)}</svg>
         </div>`;
       }
       return `<div id="layer-${l.id}">${l.content}</div>`;

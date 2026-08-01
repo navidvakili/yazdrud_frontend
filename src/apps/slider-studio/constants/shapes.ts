@@ -1,10 +1,13 @@
 // ============================================================
 // Shape presets — اشکال قابل افزودن در Slider Studio
 // Every shape is an inline-SVG template inside a shared 0..100
-// viewBox (preserveAspectRatio="none"), so the same geometry
-// renders identically in the editor canvas, live preview, the
-// code export and the public site. CSS clip-paths are kept as
-// a legacy reference (SHAPE_CLIP_PATHS) but are no longer used.
+// viewBox, so the same geometry renders identically in the
+// editor canvas, live preview, the code export and the public
+// site. Symmetric shapes use preserveAspectRatio="xMidYMid
+// meet" (see getShapePreserveAspect) so they never distort on
+// non-square layers; the rest stretch to fill the box. CSS
+// clip-paths are kept as a legacy reference (SHAPE_CLIP_PATHS)
+// but are no longer used.
 // ============================================================
 import type { ShapeType } from '@/src/shared-types/slider-studio';
 
@@ -53,6 +56,23 @@ export const SHAPE_CLIP_PATHS: Record<ShapeType, string> = {
 const STROKE = (color: string, width: number) =>
   width > 0 ? ` vector-effect="non-scaling-stroke" stroke="${color}" stroke-width="${width}"` : '';
 
+/** Shapes that must keep their natural proportions. They are rendered with
+ *  preserveAspectRatio="xMidYMid meet" (centered, letterboxed) so circles
+ *  stay round and icons stay undistorted on any layer size. Everything
+ *  else uses "none" and stretches to fill the layer box. */
+export const SYMMETRIC_SHAPES = new Set<ShapeType>([
+  'circle', 'ellipse', 'triangle', 'diamond', 'pentagon',
+  'hexagon', 'octagon', 'star', 'heart', 'semicircle',
+  'quarterCircle', 'burst', 'blob', 'smiley', 'notAllowed',
+  'thoughtBubble', 'divide', 'equals', 'minus', 'plus', 'cross', 'multiply',
+]);
+
+/** preserveAspectRatio value for a shape — symmetric shapes must not
+ *  stretch, everything else fills the layer box. */
+export function getShapePreserveAspect(shape: ShapeType): string {
+  return SYMMETRIC_SHAPES.has(shape) ? 'xMidYMid meet' : 'none';
+}
+
 /** Inline-SVG template for EVERY shape — receives (fill, stroke, strokeWidth)
  *  and returns SVG markup in a shared 0..100 coordinate system. The shape
  *  geometry is a direct port of the legacy clip-path percentages, so shapes
@@ -70,7 +90,7 @@ export const SHAPE_SVG_TEMPLATES: Record<ShapeType, (fill: string, stroke: strin
   heart: (f, s, sw) => `<path d="M50 90 C20 64 0 48 0 26 C0 10 12 0 26 0 C37 0 47 8 50 18 C53 8 63 0 74 0 C88 0 100 10 100 26 C100 48 80 64 50 90 Z" fill="${f}"${STROKE(s, sw)}/>`,
   parallelogram: (f, s, sw) => `<polygon points="25,0 100,0 75,100 0,100" fill="${f}"${STROKE(s, sw)}/>`,
   trapezoid: (f, s, sw) => `<polygon points="20,0 80,0 100,100 0,100" fill="${f}"${STROKE(s, sw)}/>`,
-  cross: (f, s, sw) => `<path d="M20 0 L80 0 L80 20 L100 20 L100 80 L80 80 L80 100 L20 100 L20 80 L0 80 L0 20 L20 20 Z" fill="${f}"${STROKE(s, sw)}/>`,
+  cross: (f, s, sw) => `<path fill-rule="evenodd" d="M20 0 L80 0 L80 20 L100 20 L100 80 L80 80 L80 100 L20 100 L20 80 L0 80 L0 20 L20 20 Z" fill="${f}"${STROKE(s, sw)}/>`,
   arrowRight: (f, s, sw) => `<polygon points="0,20 60,20 60,0 100,50 60,100 60,80 0,80" fill="${f}"${STROKE(s, sw)}/>`,
   arrowLeft: (f, s, sw) => `<polygon points="40,0 40,20 100,20 100,80 40,80 40,100 0,50" fill="${f}"${STROKE(s, sw)}/>`,
   arrowUp: (f, s, sw) => `<polygon points="20,40 0,40 50,0 100,40 80,40 80,100 20,100" fill="${f}"${STROKE(s, sw)}/>`,
@@ -83,11 +103,11 @@ export const SHAPE_SVG_TEMPLATES: Record<ShapeType, (fill: string, stroke: strin
   chevronLeft: (f, s, sw) => `<polygon points="25,0 100,0 75,50 100,100 25,100 0,50" fill="${f}"${STROKE(s, sw)}/>`,
   chevronUp: (f, s, sw) => `<polygon points="0,75 50,0 100,75 75,75 50,25 25,75" fill="${f}"${STROKE(s, sw)}/>`,
   chevronDown: (f, s, sw) => `<polygon points="0,25 25,25 50,75 75,25 100,25 50,100" fill="${f}"${STROKE(s, sw)}/>`,
-  cloud: (f, s, sw) => `<polygon points="22,78 8,78 4,64 12,56 8,42 20,30 34,28 42,16 58,16 66,28 80,26 94,36 100,52 94,62 100,70 88,78" fill="${f}"${STROKE(s, sw)}/>`,
+  cloud: (f, s, sw) => `<polygon points="16,78 8,70 4,58 14,46 26,42 34,28 50,20 66,24 78,32 90,22 100,36 100,56 90,66 96,74 86,78" fill="${f}"${STROKE(s, sw)}/>`,
   lightningBolt: (f, s, sw) => `<polygon points="52,0 8,58 40,58 30,100 92,38 58,38" fill="${f}"${STROKE(s, sw)}/>`,
-  plus: (f, s, sw) => `<path d="M38 0 L62 0 L62 38 L100 38 L100 62 L62 62 L62 100 L38 100 L38 62 L0 62 L0 38 L38 38 Z" fill="${f}"${STROKE(s, sw)}/>`,
+  plus: (f, s, sw) => `<path fill-rule="evenodd" d="M38 0 L62 0 L62 38 L100 38 L100 62 L62 62 L62 100 L38 100 L38 62 L0 62 L0 38 L38 38 Z" fill="${f}"${STROKE(s, sw)}/>`,
   minus: (f, s, sw) => `<rect x="0" y="42" width="100" height="16" fill="${f}"${STROKE(s, sw)}/>`,
-  multiply: (f, s, sw) => `<polygon points="39,0 61,0 100,39 100,61 61,100 39,100 0,61 0,39" fill="${f}"${STROKE(s, sw)}/>`,
+  multiply: (f, s, sw) => `<polygon fill-rule="evenodd" points="39,0 61,0 100,39 100,61 61,100 39,100 0,61 0,39" fill="${f}"${STROKE(s, sw)}/>`,
   speechBubble: (f, s, sw) => `<polygon points="6,0 94,0 100,6 100,70 52,70 42,88 36,70 0,70 0,6" fill="${f}"${STROKE(s, sw)}/>`,
   thoughtBubble: (f, s, sw) => {
     const o = STROKE(s, sw);
@@ -192,7 +212,6 @@ export const SHAPE_TYPES: ShapeType[] = [
   'semicircle',
   'quarterCircle',
   'burst',
-  'blob',
   'chevronRight',
   'chevronLeft',
   'chevronUp',
@@ -210,6 +229,8 @@ export const SHAPE_TYPES: ShapeType[] = [
   'equals',
 ];
 
-/** Every shape now has an SVG template — renderers use this list to decide
- *  between SVG (all shapes) and the legacy clip-path path (none). */
+/** Every shape now has an SVG template — kept for backward compatibility
+ *  with renderers that switch on this list. 'blob' was removed from the
+ *  picker (it duplicated the cloud); its template stays as a fallback for
+ *  already-saved layers. */
 export const SHAPE_SVG_TYPES: ShapeType[] = SHAPE_TYPES;

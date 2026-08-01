@@ -2,12 +2,13 @@
 // ShapeLayer — renders a geometric `shape` layer.
 //
 // Every shape is rendered from an inline-SVG template in a
-// shared 0..100 viewBox (preserveAspectRatio="none"), so the
-// same geometry works at any layer size and the outline is a
-// real SVG stroke (uniform via vector-effect).
+// shared 0..100 viewBox. Symmetric shapes keep their natural
+// proportions (xMidYMid meet), the rest stretch to fill the
+// layer box; the outline is a real SVG stroke (uniform via
+// vector-effect).
 // ============================================================
 import type { Layer, ShapeType } from '@/src/shared-types/slider-studio';
-import { SHAPE_SVG_TEMPLATES } from '../constants/shapes';
+import { getShapePreserveAspect, SHAPE_SVG_TEMPLATES } from '../constants/shapes';
 
 interface ShapeLayerProps {
   layer: Layer;
@@ -37,7 +38,7 @@ export default function ShapeLayer({ layer, scaleFactor = 1 }: ShapeLayerProps) 
     <div className="w-full h-full" style={{ position: 'relative', pointerEvents: 'none' }}>
       <svg
         viewBox="0 0 100 100"
-        preserveAspectRatio="none"
+        preserveAspectRatio={getShapePreserveAspect(shape)}
         className="w-full h-full absolute inset-0"
         style={{ opacity: fillOpacity }}
         dangerouslySetInnerHTML={{
