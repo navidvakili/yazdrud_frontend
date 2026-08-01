@@ -1183,7 +1183,7 @@ export default function InspectorPanel({
               </div>
               <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed">
                 با رسم مسیر (یا انتخاب الگوی آماده)، لایه در طول نمایش اسلاید به‌صورت حلقوی روی آن حرکت می‌کند.
-                نقطه سبز = شروع و نقطه قرمز = پایان مسیر؛ می‌توانید آن‌ها را روی بوم بکشید و جابه‌جا کنید.
+                خط مسیر روی بوم نمایش داده می‌شود؛ نقطه سبز = شروع و نقطه قرمز = پایان که می‌توانید آن‌ها را بکشید و جابه‌جا کنید.
               </p>
 
               {/* Preset path templates */}
@@ -1205,30 +1205,20 @@ export default function InspectorPanel({
 
               {selectedLayer.animation.motionPath && selectedLayer.animation.motionPath.points.length >= 2 ? (
                 <>
-                  <div className="grid grid-cols-2 gap-2 font-mono">
-                    <div>
-                      <label className="text-[10px] text-slate-500 dark:text-slate-400">تعداد نقاط</label>
-                      <input
-                        type="text" dir="ltr" readOnly
-                        value={`${selectedLayer.animation.motionPath.points.length} نقطه`}
-                        className="w-full p-2 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-slate-900 dark:text-white"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] text-slate-500 dark:text-slate-400">مدت هر دور (ثانیه)</label>
-                      <input
-                        type="number" dir="ltr"
-                        step="0.1" min="0.1"
-                        value={selectedLayer.animation.motionPath.duration ?? selectedLayer.animation.inDuration}
-                        onChange={e =>
-                          updateAnimField('motionPath', {
-                            ...selectedLayer.animation.motionPath!,
-                            duration: Number(e.target.value) || 2,
-                          })
-                        }
-                        className="w-full p-2 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-slate-900 dark:text-white"
-                      />
-                    </div>
+                  <div>
+                    <label className="text-[10px] text-slate-500 dark:text-slate-400">مدت هر دور (ثانیه)</label>
+                    <input
+                      type="number" dir="ltr"
+                      step="0.1" min="0.1"
+                      value={selectedLayer.animation.motionPath.duration ?? selectedLayer.animation.inDuration}
+                      onChange={e =>
+                        updateAnimField('motionPath', {
+                          ...selectedLayer.animation.motionPath!,
+                          duration: Number(e.target.value) || 2,
+                        })
+                      }
+                      className="w-full p-2 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-slate-900 dark:text-white"
+                    />
                   </div>
                   <div className="flex gap-2">
                     <button

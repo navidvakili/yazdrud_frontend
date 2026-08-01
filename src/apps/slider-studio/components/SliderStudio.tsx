@@ -362,6 +362,9 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
   const stageRef = useRef<HTMLDivElement>(null);
   const pathOverlayRef = useRef<SVGSVGElement>(null);
   const pathDragRef = useRef<{ index: number; source: 'draft' | 'saved' } | null>(null);
+  // Suppresses the click that follows a handle drag (which would otherwise
+  // deselect the layer or append a stray point to the draft path).
+  const suppressStageClickRef = useRef(false);
 
   // Media picker for layer content
   const [mediaPickerTarget, setMediaPickerTarget] = useState<'image' | 'video' | null>(null);
@@ -1034,6 +1037,8 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
   const handlePathPointUp = (e: React.PointerEvent) => {
     if (pathDragRef.current) {
       pathDragRef.current = null;
+      suppressStageClickRef.current = true;
+      window.setTimeout(() => { suppressStageClickRef.current = false; }, 150);
       if (pathOverlayRef.current?.hasPointerCapture(e.pointerId)) {
         pathOverlayRef.current.releasePointerCapture(e.pointerId);
       }
@@ -1045,7 +1050,7 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
    *  right after dragging a path handle is ignored. */
   const handleStageClick = (e: React.MouseEvent<HTMLDivElement>) => {
     e.stopPropagation();
-    if (pathDragRef.current) return;
+    if (suppressStageClickRef.current || pathDragRef.current) return;
     if (isDrawingPath) {
       if (!selectedLayer) return;
       const rect = stageRef.current?.getBoundingClientRect();
@@ -1708,9 +1713,14 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
               className="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-2 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-2xl shadow-lg px-4 py-2"
             >
               <span className="text-xs font-bold text-slate-700 dark:text-slate-200 whitespace-nowrap">
-                رسم مسیر حرکت: کلیک = نقطه جدید
+                رسم مسیر حرکت: کلیک = نقطه جدید، نقاط را بکشید
                 {draftPath.length > 0 && ` (${draftPath.length} نقطه)`}
               </span>
+              <div className="flex items-center gap-3 text-[10px] text-slate-500 dark:text-slate-400">
+                <span className="flex items-center gap-1"><span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500" /> شروع</span>
+                <span className="flex items-center gap-1"><span className="inline-block w-2.5 h-2.5 rounded-full bg-red-500" /> پایان</span>
+                <span className="flex items-center gap-1"><span className="inline-block w-2.5 h-2.5 rounded-full bg-indigo-400" /> نقاط میانی</span>
+              </div>
               {/* Preset path templates */}
               <div className="flex items-center gap-1.5 flex-wrap justify-center">
                 <span className="text-[10px] text-slate-500 dark:text-slate-400">الگو:</span>
@@ -1849,22 +1859,40 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
                   {points.map((p, i) => {
                     const isStart = i === 0;
                     const isEnd = i === points.length - 1;
+                    const hx = p.x + selectedLayer.x;
+                    const hy = p.y + selectedLayer.y;
                     return (
-                      <circle
-                        key={i}
-                        cx={p.x + selectedLayer.x}
-                        cy={p.y + selectedLayer.y}
-                        r={isStart ? 6 : isEnd ? 5 : 3.5}
-                        fill={isStart ? '#34d399' : isEnd ? '#f87171' : '#818cf8'}
-                        stroke="#ffffff"
-                        strokeWidth={1.5}
-                        style={{
-                          pointerEvents: 'auto',
-                          cursor: 'grab',
-                          touchAction: 'none',
-                        }}
-                        onPointerDown={e => handlePathPointDown(e, i, isDrawingPath ? 'draft' : 'saved')}
-                      />
+                      <g key={i}>
+                        <circle
+                          cx={hx}
+                          cy={hy}
+                          r={isStart ? 7 : isEnd ? 6 : 4}
+                          fill={isStart ? '#10b981' : isEnd ? '#ef4444' : '#818cf8'}
+                          stroke="#ffffff"
+                          strokeWidth={2}
+                          style={{
+                            pointerEvents: 'auto',
+                            cursor: 'grab',
+                            touchAction: 'none',
+                          }}
+                          onPointerDown={e => handlePathPointDown(e, i, isDrawingPath ? 'draft' : 'saved')}
+                        />
+                        {(isStart || isEnd) && (
+                          <text
+                            x={hx + (isStart ? 10 : -10)}
+                            y={hy + (isStart ? 24 : 24)}
+                            fontSize={11}
+                            fontWeight={700}
+                            fill={isStart ? '#10b981' : '#ef4444'}
+                            stroke="#ffffff"
+                            strokeWidth={0.5}
+                            textAnchor={isStart ? 'start' : 'end'}
+                            style={{ pointerEvents: 'none', userSelect: 'none' }}
+                          >
+                            {isStart ? 'شروع' : 'پایان'}
+                          </text>
+                        )}
+                      </g>
                     );
                   })}
                 </g>
