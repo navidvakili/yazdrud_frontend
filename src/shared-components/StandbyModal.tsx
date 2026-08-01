@@ -61,7 +61,7 @@ export default function StandbyModal({ isStandby, user, onUnlock, onExit }: Stan
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.3 }}
-                    className="fixed inset-0 bg-gray-50/95 dark:bg-gray-950/98 backdrop-blur-xl z-[100] flex items-center justify-center p-4"
+                    className="fixed inset-0 bg-gray-50 dark:bg-gray-950 z-[100] flex items-center justify-center p-4"
                 >
                     <motion.div
                         initial={{ scale: 0.95, opacity: 0, y: 10 }}
