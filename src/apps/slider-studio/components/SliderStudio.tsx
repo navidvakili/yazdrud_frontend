@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Type,
@@ -357,12 +357,10 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
   // Saving state
   const [isSaving, setIsSaving] = useState(false);
 
-  // Reset timeline to 0 when playback starts (sync before paint to avoid flash)
-  useLayoutEffect(() => {
-    if (isPlaying) {
-      setCurrentTime(0);
-    }
-  }, [isPlaying]);
+  // NOTE: no reset of currentTime on play — pausing mid-playback freezes the
+  // timeline at currentTime, and pressing play again resumes from that frame.
+  // A fresh start (timeline at 0) and STOP are handled by the stop button in
+  // TimelineBar (setCurrentTime(0)); the ticker wraps at maxDuration.
 
   // Viewport & Breakpoints
   const [activeBreakpoint, setActiveBreakpoint] = useState<BreakpointWidth>('1240');
@@ -1430,6 +1428,7 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
               <AutoPlayVideo
                 src={activeSlide.background.videoUrl}
                 playing={isPlaying}
+                startFromZero={currentTime === 0}
                 className="absolute inset-0 w-full h-full object-cover pointer-events-none"
               />
             )}
@@ -1535,6 +1534,7 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
                         <AutoPlayVideo
                           src={layer.content}
                           playing={isPlaying}
+                          startFromZero={currentTime === 0}
                           className="w-full h-full object-cover rounded-[inherit] pointer-events-none"
                         />
                       ) : layer.type === 'rectangle' ? (

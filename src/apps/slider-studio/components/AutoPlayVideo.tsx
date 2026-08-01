@@ -15,10 +15,12 @@ export default function AutoPlayVideo({
   src,
   className,
   playing = true,
+  startFromZero = true,
 }: {
   src: string;
   className?: string;
   playing?: boolean;
+  startFromZero?: boolean;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   // Normalize relative/storage URLs (e.g. "media/2026/08/...mp4") so the
@@ -62,13 +64,17 @@ export default function AutoPlayVideo({
     };
   }, [resolvedSrc]);
 
-  // React to `playing` toggles: pause when stopped, restart from 0 when started.
+  // React to `playing` toggles: pause when stopped, restart from 0 only on a
+  // fresh start (startFromZero), otherwise resume from the current position so
+  // pausing and re-playing continues where the video was frozen.
   useEffect(() => {
     const el = videoRef.current;
     if (!el || !resolvedSrc) return;
 
     if (playing) {
-      el.currentTime = 0;
+      if (startFromZero) {
+        el.currentTime = 0;
+      }
       el.muted = true;
       el.defaultMuted = true;
       el.setAttribute('muted', '');
@@ -77,7 +83,7 @@ export default function AutoPlayVideo({
     } else {
       el.pause();
     }
-  }, [playing, resolvedSrc]);
+  }, [playing, resolvedSrc, startFromZero]);
 
   if (!resolvedSrc) return null;
 
