@@ -48,7 +48,9 @@ export default function CodeExportModal({ isOpen, onClose, project }: CodeExport
       font-size: ${l.fontSize}px;
       color: ${l.color};
       background: ${l.backgroundColor};
-      border-radius: ${l.borderRadius}px;
+      border-radius: ${l.borderRadius ?? 0}px;
+      border: ${l.borderWidth ?? 0}px solid ${l.borderColor ?? 'transparent'};
+      padding: ${l.padding ?? '0px'};
       z-index: ${l.zIndex};
       transform: rotate(${l.rotation}deg);
       box-shadow: ${l.shadow || 'none'};
@@ -96,7 +98,9 @@ export default function InteractiveSlider() {
           fontSize: '${l.fontSize}px',
           color: '${l.color}',
           backgroundColor: '${l.backgroundColor}',
-          borderRadius: '${l.borderRadius}px',
+          borderRadius: '${l.borderRadius ?? 0}px',
+          border: '${l.borderWidth ?? 0}px solid ${l.borderColor ?? 'transparent'}',
+          padding: '${l.padding ?? '0px'}',
           zIndex: ${l.zIndex},
           transform: 'rotate(${l.rotation}deg)'
         }}

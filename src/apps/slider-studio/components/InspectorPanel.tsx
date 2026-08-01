@@ -851,7 +851,7 @@ export default function InspectorPanel({
             <div className="p-3 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-gray-200 dark:border-slate-800/80 space-y-3">
               <div className="font-extrabold text-teal-600 dark:text-teal-400 flex items-center gap-1 text-[11px]">
                 <Palette className="w-3.5 h-3.5" />
-                <span>رنگ پس‌زمینه و شعاع گردی</span>
+                <span>پس‌زمینه، خط دور و فاصله داخلی</span>
               </div>
 
               {/* Layer Background Type Selector */}
@@ -969,6 +969,59 @@ export default function InspectorPanel({
                   type="number" dir="ltr"
                   value={selectedLayer.borderRadius}
                   onChange={e => updateField('borderRadius', Number(e.target.value))}
+                  className="w-full p-2 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-slate-900 dark:text-white font-mono"
+                />
+              </div>
+
+              {/* Border Width — auto-reveal a visible color when thickness is raised from 0 while the color is transparent (default) */}
+              <div>
+                <label className="text-[10px] text-slate-500 dark:text-slate-400">ضخامت خط دور (px)</label>
+                <input
+                  type="number" dir="ltr"
+                  min="0"
+                  value={selectedLayer.borderWidth ?? 0}
+                  onChange={e => {
+                    const v = Math.max(0, Number(e.target.value));
+                    const updates: Partial<Layer> = { borderWidth: v };
+                    if (v > 0 && (!selectedLayer.borderColor || selectedLayer.borderColor === 'transparent')) {
+                      updates.borderColor = '#ffffff';
+                    }
+                    onUpdateLayer({ ...selectedLayer, ...updates });
+                  }}
+                  className="w-full p-2 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-slate-900 dark:text-white font-mono"
+                />
+              </div>
+
+              {/* Border Color */}
+              <div>
+                <label className="text-[10px] text-slate-500 dark:text-slate-400">رنگ خط دور</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={!selectedLayer.borderColor || selectedLayer.borderColor === 'transparent' ? '#0f172a' : selectedLayer.borderColor}
+                    onChange={e => updateField('borderColor', e.target.value)}
+                    className="w-8 h-8 rounded-lg cursor-pointer bg-transparent border-0 shrink-0"
+                  />
+                  <input
+                    type="text"
+                    value={selectedLayer.borderColor ?? 'transparent'}
+                    onChange={e => updateField('borderColor', e.target.value)}
+                    className="flex-1 p-2 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-slate-900 dark:text-white font-mono text-[11px]"
+                  />
+                </div>
+              </div>
+
+              {/* Padding — uniform (all sides), px appended automatically so the value is always valid CSS */}
+              <div>
+                <label className="text-[10px] text-slate-500 dark:text-slate-400">فاصله داخلی (همه جهات - px)</label>
+                <input
+                  type="number" dir="ltr"
+                  min="0"
+                  value={(() => {
+                    const p = parseFloat(String(selectedLayer.padding ?? '0'));
+                    return Number.isFinite(p) && p > 0 ? p : 0;
+                  })()}
+                  onChange={e => updateField('padding', `${Math.max(0, Number(e.target.value))}px`)}
                   className="w-full p-2 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-slate-900 dark:text-white font-mono"
                 />
               </div>

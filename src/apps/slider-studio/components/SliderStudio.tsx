@@ -1476,8 +1476,9 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
                       fontWeight: layer.fontWeight,
                       color: layer.color,
                       opacity: layer.animation.inPreset === 'none' ? (layer.opacity ?? 1) : undefined,
-                      borderRadius: `${layer.borderRadius}px`,
-                      padding: layer.padding,
+                      borderRadius: `${layer.borderRadius ?? 0}px`,
+                      border: `${layer.borderWidth ?? 0}px solid ${layer.borderColor ?? 'transparent'}`,
+                      padding: layer.padding ?? '0px',
                       zIndex: layer.zIndex,
                       boxShadow: layer.shadow,
                     }}

@@ -555,8 +555,9 @@ export default function InteractivePreviewModal({
                     fontFamily: layer.fontFamily,
                     fontWeight: layer.fontWeight,
                     color: layer.color,
-                    borderRadius: `${layer.borderRadius * scaleFactor}px`,
-                    padding: layer.padding,
+                    borderRadius: `${(layer.borderRadius ?? 0) * scaleFactor}px`,
+                    border: `${(layer.borderWidth ?? 0) * scaleFactor}px solid ${layer.borderColor ?? 'transparent'}`,
+                    padding: layer.padding ?? '0px',
                     zIndex: layer.zIndex,
                     boxShadow: layer.shadow,
                     cursor: layer.interactions.length > 0 ? 'pointer' : 'default'
@@ -579,7 +580,7 @@ export default function InteractivePreviewModal({
                         position: 'absolute',
                         inset: 0,
                         background: layer.backgroundGradient || layer.backgroundColor,
-                        borderRadius: `${layer.borderRadius * scaleFactor}px`,
+                        borderRadius: `${(layer.borderRadius ?? 0) * scaleFactor}px`,
                         opacity: layer.backgroundOpacity !== undefined ? layer.backgroundOpacity / 100 : 1,
                         pointerEvents: 'none',
                       }}
