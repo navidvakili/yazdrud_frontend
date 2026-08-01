@@ -611,6 +611,7 @@ export default function InteractivePreviewModal({
                       height: '100%',
                       offsetPath: pathString ? `path('${pathString}')` : undefined,
                       offsetAnchor: '0% 0%',
+                      offsetRotate: '0deg',
                     }}
                     initial={pathString ? { offsetDistance: '0%' } : false}
                     animate={pathString ? { offsetDistance: '100%' } : undefined}

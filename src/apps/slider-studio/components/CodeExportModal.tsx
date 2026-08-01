@@ -55,6 +55,7 @@ export default function CodeExportModal({ isOpen, onClose, project }: CodeExport
             ? `
       offset-path: path("M ${path.points[0].x} ${path.points[0].y} ${path.points.slice(1).map(p => `L ${p.x} ${p.y}`).join(' ')}");
       offset-anchor: 0% 0%;
+      offset-rotate: 0deg;
       animation: mp-${l.id} ${Math.max(0.1, path.duration ?? l.animation?.inDuration ?? 2)}s ${l.animation?.inEasing ?? 'ease-out'} ${l.animation?.inDelay ?? 0}s infinite;`
             : '';
           return `

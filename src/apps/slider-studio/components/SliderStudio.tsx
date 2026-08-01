@@ -1814,20 +1814,21 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
               <AddonParticleCanvas preset={activeSlide.background.particlesPreset || 'stars'} opacity={0.6} />
             )}
 
-          {/* Motion-path overlay — ALWAYS visible so the user can see the path
-              the layer will travel along. Selected layer = prominent with
-              draggable handles (green start, red end); other layers = subtle. */}
+          {/* Motion-path overlay — ALWAYS visible so the user can see the
+              dashed path the layer will travel along. Selected layer =
+              prominent with draggable handles (green start, red end); other
+              layers = dimmer dashed lines. */}
           <svg
             ref={pathOverlayRef}
             className="absolute inset-0"
-            style={{ zIndex: 9998, pointerEvents: 'none' }}
+            style={{ zIndex: 10000, pointerEvents: 'none', width: '100%', height: '100%' }}
             onClick={e => e.stopPropagation()}
             onPointerDown={e => e.stopPropagation()}
             onPointerMove={handlePathPointMove}
             onPointerUp={handlePathPointUp}
             onPointerCancel={handlePathPointUp}
           >
-            {/* Other layers with a motion path (subtle) */}
+            {/* Other layers with a motion path (dashed, dimmer) */}
             {activeSlide.layers
               .filter(l => l.id !== selectedLayerId && l.visible && l.animation?.motionPath?.points?.length >= 2)
               .map(l => (
@@ -1835,10 +1836,10 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
                   key={l.id}
                   points={l.animation.motionPath!.points.map(p => `${p.x + l.x},${p.y + l.y}`).join(' ')}
                   fill="none"
-                  stroke="#94a3b8"
-                  strokeWidth={1}
-                  strokeDasharray="3 3"
-                  opacity={0.55}
+                  stroke="#64748b"
+                  strokeWidth={1.5}
+                  strokeDasharray="5 4"
+                  opacity={0.8}
                 />
               ))}
 
@@ -1854,7 +1855,7 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
                     fill="none"
                     stroke={isDrawingPath ? '#f472b6' : '#818cf8'}
                     strokeWidth={2.5}
-                    strokeDasharray={isDrawingPath ? '6 4' : undefined}
+                    strokeDasharray={isDrawingPath ? '6 4' : '7 5'}
                   />
                   {points.map((p, i) => {
                     const isStart = i === 0;
