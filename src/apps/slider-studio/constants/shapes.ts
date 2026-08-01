@@ -150,25 +150,15 @@ export const SHAPE_SVG_TEMPLATES: Record<ShapeType, (fill: string, stroke: strin
     );
   },
   notAllowed: (f, s, sw) => {
-    const o = STROKE(s, sw);
-    const barColor = s !== 'transparent' ? s : '#dc2626';
-    const borderWidth = sw > 0 ? sw : 4;
+    // همه اجزا از یک رنگ استفاده می‌کنند
+    const color = s !== 'transparent' && s !== 'undefined' ? s : '#ef4444';
+    const thickness = sw > 0 ? sw : 10;
 
     return `
-      <!-- دایره پس‌زمینه -->
-      <circle cx="50" cy="50" r="46" fill="${f}"${o}/>
-      <!-- دایره داخلی برای ایجاد حاشیه -->
-      <circle cx="50" cy="50" r="42" fill="none" 
-              stroke="${barColor}" stroke-width="2" 
-              stroke-opacity="0.3"/>
-      <!-- خط مورب اصلی -->
-      <line x1="18" y1="18" x2="82" y2="82" 
-            stroke="${barColor}" stroke-width="10" 
-            stroke-linecap="round"/>
-      <!-- سایه خط برای عمق بیشتر -->
-      <line x1="18" y1="18" x2="82" y2="82" 
-            stroke="rgba(0,0,0,0.1)" stroke-width="10" 
-            stroke-linecap="round" transform="translate(0, 2)"/>
+      <!-- دایره توخالی با حاشیه ضخیم -->
+      <circle cx="50" cy="50" r="44" fill="none" stroke="${color}" stroke-width="${thickness}"/>
+      <!-- خط مورب متصل به حاشیه دایره -->
+      <line x1="18.9" y1="18.9" x2="81.1" y2="81.1" stroke="${color}" stroke-width="${thickness}" stroke-linecap="round"/>
     `;
   },
   divide: (f, s, sw) => {
