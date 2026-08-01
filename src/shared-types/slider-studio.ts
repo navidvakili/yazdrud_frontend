@@ -35,6 +35,8 @@ export type ShapeType =
   | 'lightningBolt'
   | 'plus'
   | 'minus'
+  | 'horizontalLine'
+  | 'verticalLine'
   | 'multiply'
   | 'speechBubble'
   | 'thoughtBubble'
