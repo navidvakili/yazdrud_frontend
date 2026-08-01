@@ -886,7 +886,10 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
       rotate: layer.rotation,
     };
 
-    if (!isPlaying) return finalState;
+    // Design/editing view (not playing and timeline at 0): show the final layout.
+    // Paused mid-playback (currentTime > 0): keep computing from currentTime so
+    // the animation freezes at the exact frame instead of snapping to the end.
+    if (!isPlaying && currentTime === 0) return finalState;
 
     const { inDelay = 0, inDuration = 0.8, inPreset = 'fadeIn' } = layer.animation;
     if (inPreset === 'none' || inDuration === 0) return finalState;
@@ -1550,7 +1553,7 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
                               text={layer.content}
                               preset={layer.animation.inPreset}
                               duration={layer.animation.inDuration || 0.5}
-                              delay={isPlaying ? (layer.animation.inDelay || 0) : 0}
+                              delay={isPlaying || currentTime > 0 ? (layer.animation.inDelay || 0) : 0}
                               currentTime={currentTime}
                             />
                           ) : (

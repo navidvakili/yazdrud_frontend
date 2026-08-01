@@ -104,7 +104,7 @@ export default function TimelineBar({
             }`}
           >
             {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-            <span>{isPlaying ? 'توقف' : 'پخش انیمیشن'}</span>
+            <span>{isPlaying ? 'توقف موقت' : 'پخش انیمیشن'}</span>
           </button>
 
           <button
