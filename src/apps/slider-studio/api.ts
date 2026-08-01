@@ -29,7 +29,7 @@ import { API_BASE_URL } from '@/src/shared-constants';
  * اگر پروژه‌ای وجود نداشته باشد، در بک‌اند به صورت خودکار ساخته می‌شود
  */
 export async function fetchCurrentProject() {
-  const res = await fetch(`${API_BASE_URL}/admin/slider-studio/current`, {
+  const res = await fetch(`${API_BASE_URL}/admin/slider-studio/current?lang=fa`, {
     headers: getAuthHeaders(),
   });
   if (!res.ok) throw new Error('خطا در دریافت پروژه جاری');
@@ -40,7 +40,7 @@ export async function fetchCurrentProject() {
  * دریافت لیست پروژه‌های اسلایدر
  */
 export async function fetchProjects() {
-  const res = await fetch(`${API_BASE_URL}/admin/slider-studio`, {
+  const res = await fetch(`${API_BASE_URL}/admin/slider-studio?lang=fa`, {
     headers: getAuthHeaders(),
   });
   if (!res.ok) throw new Error('خطا در دریافت پروژه‌ها');
@@ -51,7 +51,7 @@ export async function fetchProjects() {
  * دریافت یک پروژه با شناسه
  */
 export async function fetchProject(id: number) {
-  const res = await fetch(`${API_BASE_URL}/admin/slider-studio/${id}`, {
+  const res = await fetch(`${API_BASE_URL}/admin/slider-studio/${id}?lang=fa`, {
     headers: getAuthHeaders(),
   });
   if (!res.ok) throw new Error('خطا در دریافت پروژه');
@@ -70,7 +70,7 @@ export async function createProject(data: {
   const res = await fetch(`${API_BASE_URL}/admin/slider-studio`, {
     method: 'POST',
     headers: getAuthHeaders(),
-    body: JSON.stringify(data),
+    body: JSON.stringify({ ...data, lang: 'fa' }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
@@ -94,7 +94,7 @@ export async function updateProject(
   const res = await fetch(`${API_BASE_URL}/admin/slider-studio/${id}`, {
     method: 'PUT',
     headers: getAuthHeaders(),
-    body: JSON.stringify(data),
+    body: JSON.stringify({ ...data, lang: 'fa' }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));

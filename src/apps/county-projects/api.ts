@@ -19,6 +19,7 @@ export async function fetchCountyProjects(params: {
   total: number;
 }> {
   const query = new URLSearchParams();
+  query.set('lang', 'fa');
   if (params.page) query.set('page', String(params.page));
   if (params.per_page) query.set('per_page', String(params.per_page));
   if (params.search) query.set('search', params.search);
@@ -32,12 +33,12 @@ export async function updateCountyProject(
   id: number,
   data: Partial<CountyProject>
 ): Promise<{ message: string; data: CountyProject }> {
-  return API(`admin/county-projects/${id}`, data, 'PUT');
+  return API(`admin/county-projects/${id}`, { ...data, lang: 'fa' }, 'PUT');
 }
 
 /** Batch update multiple county projects at once */
 export async function updateCountyProjectsBatch(
   counties: Partial<CountyProject>[]
 ): Promise<{ message: string; data: CountyProject[] }> {
-  return API('admin/county-projects/batch', { counties }, 'PUT');
+  return API('admin/county-projects/batch', { counties, lang: 'fa' }, 'PUT');
 }

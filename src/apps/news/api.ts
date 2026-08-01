@@ -24,6 +24,7 @@ export async function fetchNews(params: {
   total: number;
 }> {
   const query = new URLSearchParams();
+  query.set('lang', 'fa');
   if (params.page) query.set('page', String(params.page));
   if (params.per_page) query.set('per_page', String(params.per_page));
   if (params.search) query.set('search', params.search);
@@ -53,7 +54,7 @@ export async function createNews(data: {
   tags?: string[];
   attachments?: { name: string; size: string; url: string }[];
 }): Promise<{ message: string; data: NewsItem }> {
-  return API('news', data, 'POST');
+  return API('news', { ...data, lang: 'fa' }, 'POST');
 }
 
 /** Update a news article */
@@ -69,7 +70,7 @@ export async function updateNews(id: number, data: Partial<{
   tags: string[];
   attachments: { name: string; size: string; url: string }[];
 }>): Promise<{ message: string; data: NewsItem }> {
-  return API(`news/${id}`, data, 'PUT');
+  return API(`news/${id}`, { ...data, lang: 'fa' }, 'PUT');
 }
 
 /** Delete a news article */
@@ -98,7 +99,7 @@ export async function incrementViews(id: number): Promise<{ data: { views_count:
 
 /** Get all categories with news count */
 export async function fetchCategories(): Promise<{ data: NewsCategory[] }> {
-  return API('news-categories');
+  return API('news-categories?lang=fa');
 }
 
 /** Create a new category */
@@ -108,7 +109,7 @@ export async function createCategory(data: {
   color?: string;
   description?: string;
 }): Promise<{ message: string; data: NewsCategory }> {
-  return API('news-categories', data, 'POST');
+  return API('news-categories', { ...data, lang: 'fa' }, 'POST');
 }
 
 /** Update a category */
@@ -119,7 +120,7 @@ export async function updateCategory(id: number, data: Partial<{
   description: string;
   is_active: boolean;
 }>): Promise<{ message: string; data: NewsCategory }> {
-  return API(`news-categories/${id}`, data, 'PUT');
+  return API(`news-categories/${id}`, { ...data, lang: 'fa' }, 'PUT');
 }
 
 /** Delete a category */

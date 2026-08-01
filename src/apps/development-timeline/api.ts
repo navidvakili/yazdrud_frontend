@@ -32,28 +32,28 @@ export interface SingleTimelineResponse {
  * Fetch all timeline items (admin)
  */
 export async function fetchTimelineItems(): Promise<TimelineApiResponse> {
-  return API('admin/development-timeline');
+  return API('admin/development-timeline?lang=fa');
 }
 
 /**
  * Fetch a single timeline item
  */
 export async function fetchTimelineItem(id: number): Promise<SingleTimelineResponse> {
-  return API(`admin/development-timeline/${id}`);
+  return API(`admin/development-timeline/${id}?lang=fa`);
 }
 
 /**
  * Create a new timeline item
  */
 export async function createTimelineItem(data: Partial<DevelopmentTimelineItem>): Promise<SingleTimelineResponse> {
-  return API('admin/development-timeline', data, 'POST');
+  return API('admin/development-timeline', { ...data, lang: 'fa' }, 'POST');
 }
 
 /**
  * Update a timeline item
  */
 export async function updateTimelineItem(id: number, data: Partial<DevelopmentTimelineItem>): Promise<SingleTimelineResponse> {
-  return API(`admin/development-timeline/${id}`, data, 'PUT');
+  return API(`admin/development-timeline/${id}`, { ...data, lang: 'fa' }, 'PUT');
 }
 
 /**
