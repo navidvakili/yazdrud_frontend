@@ -362,6 +362,14 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
   const stageRef = useRef<HTMLDivElement>(null);
   const pathOverlayRef = useRef<SVGSVGElement>(null);
   const pathDragRef = useRef<{ index: number; source: 'draft' | 'saved' } | null>(null);
+  // Whole-path uniform scale drag (dragging the bounding-box corner handle).
+  const pathScaleRef = useRef<{
+    source: 'draft' | 'saved';
+    cx: number;      // path bbox center (stage coords, layer-relative)
+    cy: number;
+    startDist: number; // pointer distance from center at drag start
+    points: { x: number; y: number }[]; // snapshot at drag start
+  } | null>(null);
   // Suppresses the click that follows a handle drag (which would otherwise
   // deselect the layer or append a stray point to the draft path).
   const suppressStageClickRef = useRef(false);
@@ -1034,9 +1042,56 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
     }
   };
 
+  /** Start a whole-path uniform scale drag from a bounding-box corner handle. */
+  const handlePathScaleDown = (e: React.PointerEvent, source: 'draft' | 'saved') => {
+    e.stopPropagation();
+    e.preventDefault();
+    const points = source === 'draft' ? draftPath : selectedLayer?.animation?.motionPath?.points;
+    if (!points || points.length < 2) return;
+    const rect = stageRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    // Bounding-box center in layer-relative coords
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const p of points) {
+      minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x);
+      minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y);
+    }
+    const cx = (minX + maxX) / 2;
+    const cy = (minY + maxY) / 2;
+    const startDist = Math.max(1, Math.hypot(e.clientX - (rect.left + cx + selectedLayer!.x), e.clientY - (rect.top + cy + selectedLayer!.y)));
+    pathOverlayRef.current?.setPointerCapture(e.pointerId);
+    pathScaleRef.current = { source, cx, cy, startDist, points: points.map(p => ({ ...p })) };
+  };
+
+  const handlePathScaleMove = (e: React.PointerEvent) => {
+    const scale = pathScaleRef.current;
+    if (!scale) return;
+    const rect = stageRef.current?.getBoundingClientRect();
+    if (!rect || !selectedLayer) return;
+    const curDist = Math.max(1, Math.hypot(e.clientX - (rect.left + scale.cx + selectedLayer.x), e.clientY - (rect.top + scale.cy + selectedLayer.y)));
+    const factor = curDist / scale.startDist;
+    const scaled = scale.points.map(p => ({
+      x: Math.round(scale.cx + (p.x - scale.cx) * factor),
+      y: Math.round(scale.cy + (p.y - scale.cy) * factor),
+    }));
+    if (scale.source === 'draft') {
+      setDraftPath(scaled);
+    } else if (selectedLayer.animation.motionPath) {
+      const mp = selectedLayer.animation.motionPath;
+      handleUpdateLayer({
+        ...selectedLayer,
+        animation: {
+          ...selectedLayer.animation,
+          motionPath: { ...mp, points: scaled },
+        },
+      });
+    }
+  };
+
   const handlePathPointUp = (e: React.PointerEvent) => {
-    if (pathDragRef.current) {
+    if (pathDragRef.current || pathScaleRef.current) {
       pathDragRef.current = null;
+      pathScaleRef.current = null;
       suppressStageClickRef.current = true;
       window.setTimeout(() => { suppressStageClickRef.current = false; }, 150);
       if (pathOverlayRef.current?.hasPointerCapture(e.pointerId)) {
@@ -1050,7 +1105,7 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
    *  right after dragging a path handle is ignored. */
   const handleStageClick = (e: React.MouseEvent<HTMLDivElement>) => {
     e.stopPropagation();
-    if (suppressStageClickRef.current || pathDragRef.current) return;
+    if (suppressStageClickRef.current || pathDragRef.current || pathScaleRef.current) return;
     if (isDrawingPath) {
       if (!selectedLayer) return;
       const rect = stageRef.current?.getBoundingClientRect();
@@ -1713,7 +1768,7 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
               className="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-2 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-2xl shadow-lg px-4 py-2"
             >
               <span className="text-xs font-bold text-slate-700 dark:text-slate-200 whitespace-nowrap">
-                رسم مسیر حرکت: کلیک = نقطه جدید، نقاط را بکشید
+                رسم مسیر حرکت: کلیک = نقطه جدید، کشیدن دستگیره‌های گوشه = بزرگ/کوچک‌کردن کل مسیر
                 {draftPath.length > 0 && ` (${draftPath.length} نقطه)`}
               </span>
               <div className="flex items-center gap-3 text-[10px] text-slate-500 dark:text-slate-400">
@@ -1824,7 +1879,7 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
             style={{ zIndex: 10000, pointerEvents: 'none', width: '100%', height: '100%' }}
             onClick={e => e.stopPropagation()}
             onPointerDown={e => e.stopPropagation()}
-            onPointerMove={handlePathPointMove}
+            onPointerMove={e => { handlePathPointMove(e); handlePathScaleMove(e); }}
             onPointerUp={handlePathPointUp}
             onPointerCancel={handlePathPointUp}
           >
@@ -1896,6 +1951,53 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
                       </g>
                     );
                   })}
+
+                  {/* Whole-path scale box: dashed bounding box + 4 corner
+                      handles that scale the ENTIRE path uniformly around its
+                      center (dragging only start/end distorts the shape). */}
+                  {(() => {
+                    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+                    for (const p of points) {
+                      minX = Math.min(minX, p.x + selectedLayer.x);
+                      maxX = Math.max(maxX, p.x + selectedLayer.x);
+                      minY = Math.min(minY, p.y + selectedLayer.y);
+                      maxY = Math.max(maxY, p.y + selectedLayer.y);
+                    }
+                    const pad = 12;
+                    const bx = minX - pad, by = minY - pad;
+                    const bw = maxX - minX + pad * 2, bh = maxY - minY + pad * 2;
+                    const corners: [number, number, string][] = [
+                      [bx, by, 'nwse-resize'],
+                      [bx + bw, by, 'nesw-resize'],
+                      [bx, by + bh, 'nesw-resize'],
+                      [bx + bw, by + bh, 'nwse-resize'],
+                    ];
+                    const source = isDrawingPath ? 'draft' : 'saved';
+                    return (
+                      <g>
+                        <rect
+                          x={bx} y={by} width={bw} height={bh}
+                          fill="none"
+                          stroke="#38bdf8"
+                          strokeWidth={1}
+                          strokeDasharray="4 4"
+                          style={{ pointerEvents: 'none' }}
+                        />
+                        {corners.map(([cx, cy, cursor], ci) => (
+                          <circle
+                            key={ci}
+                            cx={cx} cy={cy}
+                            r={6.5}
+                            fill="#ffffff"
+                            stroke="#38bdf8"
+                            strokeWidth={2}
+                            style={{ pointerEvents: 'auto', cursor, touchAction: 'none' }}
+                            onPointerDown={e => handlePathScaleDown(e, source)}
+                          />
+                        ))}
+                      </g>
+                    );
+                  })()}
                 </g>
               );
             })()}
