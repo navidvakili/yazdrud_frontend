@@ -103,7 +103,23 @@ export const SHAPE_SVG_TEMPLATES: Record<ShapeType, (fill: string, stroke: strin
   chevronLeft: (f, s, sw) => `<polygon points="25,0 100,0 75,50 100,100 25,100 0,50" fill="${f}"${STROKE(s, sw)}/>`,
   chevronUp: (f, s, sw) => `<polygon points="0,75 50,0 100,75 75,75 50,25 25,75" fill="${f}"${STROKE(s, sw)}/>`,
   chevronDown: (f, s, sw) => `<polygon points="0,25 25,25 50,75 75,25 100,25 50,100" fill="${f}"${STROKE(s, sw)}/>`,
-  cloud: (f, s, sw) => `<path d="M50 20 C64 20 70 26 78 28 C88 30 96 38 96 50 C96 60 88 66 78 66 C70 70 62 72 50 72 C38 72 30 70 22 66 C12 66 4 60 4 50 C4 38 12 30 22 28 C30 26 36 20 50 20 Z" fill="${f}"${STROKE(s, sw)}/>`,
+  cloud: (f, s, sw) => {
+    const o = STROKE(s, sw);
+    return `<path d="
+      M 15 78 
+      C 5 78, 0 70, 4 60 
+      C 6 54, 12 50, 18 50 
+      C 14 42, 20 30, 32 28 
+      C 40 26, 48 30, 52 36 
+      C 56 26, 68 20, 78 26 
+      C 88 32, 94 44, 90 54 
+      C 96 56, 100 62, 96 70 
+      C 92 78, 84 82, 76 82 
+      L 24 82 
+      C 18 82, 14 80, 15 78 Z" 
+      fill="${f}"${o}
+    />`;
+  },
   lightningBolt: (f, s, sw) => `<polygon points="52,0 8,58 40,58 30,100 92,38 58,38" fill="${f}"${STROKE(s, sw)}/>`,
   plus: (f, s, sw) => `<path fill-rule="evenodd" d="M38 0 L62 0 L62 38 L100 38 L100 62 L62 62 L62 100 L38 100 L38 62 L0 62 L0 38 L38 38 Z" fill="${f}"${STROKE(s, sw)}/>`,
   minus: (f, s, sw) => `<rect x="0" y="42" width="100" height="16" fill="${f}"${STROKE(s, sw)}/>`,
@@ -134,11 +150,26 @@ export const SHAPE_SVG_TEMPLATES: Record<ShapeType, (fill: string, stroke: strin
     );
   },
   notAllowed: (f, s, sw) => {
-    const bar = s !== 'transparent' ? s : 'rgba(255,255,255,0.95)';
-    return (
-      `<circle cx="50" cy="50" r="46" fill="${f}"${STROKE(s, sw)}/>` +
-      `<path d="M21 15 L85 79 L79 85 L15 21 Z" fill="${bar}"/>`
-    );
+    const o = STROKE(s, sw);
+    const barColor = s !== 'transparent' ? s : '#dc2626';
+    const borderWidth = sw > 0 ? sw : 4;
+
+    return `
+      <!-- دایره پس‌زمینه -->
+      <circle cx="50" cy="50" r="46" fill="${f}"${o}/>
+      <!-- دایره داخلی برای ایجاد حاشیه -->
+      <circle cx="50" cy="50" r="42" fill="none" 
+              stroke="${barColor}" stroke-width="2" 
+              stroke-opacity="0.3"/>
+      <!-- خط مورب اصلی -->
+      <line x1="18" y1="18" x2="82" y2="82" 
+            stroke="${barColor}" stroke-width="10" 
+            stroke-linecap="round"/>
+      <!-- سایه خط برای عمق بیشتر -->
+      <line x1="18" y1="18" x2="82" y2="82" 
+            stroke="rgba(0,0,0,0.1)" stroke-width="10" 
+            stroke-linecap="round" transform="translate(0, 2)"/>
+    `;
   },
   divide: (f, s, sw) => {
     const o = STROKE(s, sw);
