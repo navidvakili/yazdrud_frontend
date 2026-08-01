@@ -103,19 +103,25 @@ export const SHAPE_SVG_TEMPLATES: Record<ShapeType, (fill: string, stroke: strin
   chevronLeft: (f, s, sw) => `<polygon points="25,0 100,0 75,50 100,100 25,100 0,50" fill="${f}"${STROKE(s, sw)}/>`,
   chevronUp: (f, s, sw) => `<polygon points="0,75 50,0 100,75 75,75 50,25 25,75" fill="${f}"${STROKE(s, sw)}/>`,
   chevronDown: (f, s, sw) => `<polygon points="0,25 25,25 50,75 75,25 100,25 50,100" fill="${f}"${STROKE(s, sw)}/>`,
-  cloud: (f, s, sw) => `<polygon points="16,78 8,70 4,58 14,46 26,42 34,28 50,20 66,24 78,32 90,22 100,36 100,56 90,66 96,74 86,78" fill="${f}"${STROKE(s, sw)}/>`,
+  cloud: (f, s, sw) => `<path d="M50 20 C64 20 70 26 78 28 C88 30 96 38 96 50 C96 60 88 66 78 66 C70 70 62 72 50 72 C38 72 30 70 22 66 C12 66 4 60 4 50 C4 38 12 30 22 28 C30 26 36 20 50 20 Z" fill="${f}"${STROKE(s, sw)}/>`,
   lightningBolt: (f, s, sw) => `<polygon points="52,0 8,58 40,58 30,100 92,38 58,38" fill="${f}"${STROKE(s, sw)}/>`,
   plus: (f, s, sw) => `<path fill-rule="evenodd" d="M38 0 L62 0 L62 38 L100 38 L100 62 L62 62 L62 100 L38 100 L38 62 L0 62 L0 38 L38 38 Z" fill="${f}"${STROKE(s, sw)}/>`,
   minus: (f, s, sw) => `<rect x="0" y="42" width="100" height="16" fill="${f}"${STROKE(s, sw)}/>`,
-  multiply: (f, s, sw) => `<polygon fill-rule="evenodd" points="39,0 61,0 100,39 100,61 61,100 39,100 0,61 0,39" fill="${f}"${STROKE(s, sw)}/>`,
-  speechBubble: (f, s, sw) => `<polygon points="6,0 94,0 100,6 100,70 52,70 42,88 36,70 0,70 0,6" fill="${f}"${STROKE(s, sw)}/>`,
+  multiply: (f, s, sw) => {
+    const o = STROKE(s, sw);
+    return (
+      `<rect x="38" y="0" width="24" height="100" transform="rotate(45 50 50)" fill="${f}"${o}/>` +
+      `<rect x="38" y="0" width="24" height="100" transform="rotate(-45 50 50)" fill="${f}"${o}/>`
+    );
+  },
+  speechBubble: (f, s, sw) => `<path d="M10 4 L90 4 A6 6 0 0 1 96 10 L96 56 A6 6 0 0 1 90 62 L58 62 L38 84 L44 62 L10 62 A6 6 0 0 1 4 56 L4 10 A6 6 0 0 1 10 4 Z" fill="${f}"${STROKE(s, sw)}/>`,
   thoughtBubble: (f, s, sw) => {
     const o = STROKE(s, sw);
     return (
-      `<circle cx="55" cy="42" r="34" fill="${f}"${o}/>` +
-      `<circle cx="14" cy="82" r="5" fill="${f}"/>` +
-      `<circle cx="27" cy="86" r="8" fill="${f}"/>` +
-      `<circle cx="41" cy="86" r="11" fill="${f}"/>`
+      `<path d="M50 8 C60 4 76 6 82 18 C92 17 98 28 94 38 C100 44 98 56 90 58 C90 66 80 72 68 70 C60 76 40 76 32 70 C22 72 12 66 12 58 C4 56 2 46 6 40 C4 30 10 20 20 20 C24 8 40 6 50 8 Z" fill="${f}"${o}/>` +
+      `<circle cx="14" cy="78" r="4.5" fill="${f}"/>` +
+      `<circle cx="26" cy="84" r="7" fill="${f}"/>` +
+      `<circle cx="40" cy="86" r="9.5" fill="${f}"/>`
     );
   },
   smiley: (f, s, sw) => {
@@ -131,14 +137,15 @@ export const SHAPE_SVG_TEMPLATES: Record<ShapeType, (fill: string, stroke: strin
     const bar = s !== 'transparent' ? s : 'rgba(255,255,255,0.95)';
     return (
       `<circle cx="50" cy="50" r="46" fill="${f}"${STROKE(s, sw)}/>` +
-      `<path d="M29.8 24.2 L75.8 70.2 L70.2 75.8 L24.2 29.8 Z" fill="${bar}"/>`
+      `<path d="M21 15 L85 79 L79 85 L15 21 Z" fill="${bar}"/>`
     );
   },
   divide: (f, s, sw) => {
     const o = STROKE(s, sw);
     return (
-      `<circle cx="50" cy="26" r="12" fill="${f}"${o}/>` +
-      `<rect x="14" y="44" width="72" height="14" rx="7" fill="${f}"${o}/>`
+      `<circle cx="50" cy="24" r="11" fill="${f}"${o}/>` +
+      `<rect x="14" y="42" width="72" height="16" rx="8" fill="${f}"${o}/>` +
+      `<circle cx="50" cy="76" r="11" fill="${f}"${o}/>`
     );
   },
   equals: (f, s, sw) => {
@@ -204,7 +211,6 @@ export const SHAPE_TYPES: ShapeType[] = [
   'heart',
   'parallelogram',
   'trapezoid',
-  'cross',
   'arrowRight',
   'arrowLeft',
   'arrowUp',
@@ -230,7 +236,7 @@ export const SHAPE_TYPES: ShapeType[] = [
 ];
 
 /** Every shape now has an SVG template — kept for backward compatibility
- *  with renderers that switch on this list. 'blob' was removed from the
- *  picker (it duplicated the cloud); its template stays as a fallback for
- *  already-saved layers. */
+ *  with renderers that switch on this list. 'blob' and 'cross' were removed
+ *  from the picker (blob duplicated the cloud; cross duplicated 'plus');
+ *  their templates stay as fallbacks for already-saved layers. */
 export const SHAPE_SVG_TYPES: ShapeType[] = SHAPE_TYPES;
