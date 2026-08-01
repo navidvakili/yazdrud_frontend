@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { X, Code, Copy, Check, FileText, Smartphone, Laptop } from 'lucide-react';
 import type { SliderProject } from '@/src/shared-types/slider-studio';
+import { SHAPE_CLIP_PATHS } from '../constants/shapes';
 
 interface CodeExportModalProps {
   isOpen: boolean;
@@ -47,14 +48,15 @@ export default function CodeExportModal({ isOpen, onClose, project }: CodeExport
       height: ${l.height}px;
       font-size: ${l.fontSize}px;
       color: ${l.color};
-      background: ${l.backgroundColor};
+      background: ${l.type === 'shape' ? 'transparent' : l.backgroundColor};
       border-radius: ${l.borderRadius ?? 0}px;
-      border: ${l.borderWidth ?? 0}px solid ${l.borderColor ?? 'transparent'};
+      border: ${l.type === 'shape' ? 'none' : `${l.borderWidth ?? 0}px solid ${l.borderColor ?? 'transparent'}`};
       padding: ${l.padding ?? '0px'};
       z-index: ${l.zIndex};
       transform: rotate(${l.rotation}deg);
       box-shadow: ${l.shadow || 'none'};
       transition: all 0.3s ease;
+      ${l.type === 'shape' ? `clip-path: ${SHAPE_CLIP_PATHS[l.shape ?? 'circle']};` : ''}
     }`
       )
       .join('\n')}
@@ -70,6 +72,17 @@ export default function CodeExportModal({ isOpen, onClose, project }: CodeExport
       }
       if (l.type === 'button') {
         return `<button id="layer-${l.id}">${l.content}</button>`;
+      }
+      if (l.type === 'shape') {
+        const clip = SHAPE_CLIP_PATHS[l.shape ?? 'circle'];
+        const bw = l.borderWidth ?? 0;
+        const bcol = l.borderColor && l.borderColor !== 'transparent' ? l.borderColor : 'transparent';
+        return `<div id="layer-${l.id}" style="position:relative;">
+          ${bw > 0 && bcol !== 'transparent'
+            ? `<div style="position:absolute; inset:${-bw}px; background:${bcol}; clip-path:${clip};"></div>`
+            : ''}
+          <div style="position:absolute; inset:0; background:${l.backgroundGradient || l.backgroundColor}; opacity:${(l.backgroundOpacity ?? 100) / 100};"></div>
+        </div>`;
       }
       return `<div id="layer-${l.id}">${l.content}</div>`;
     })

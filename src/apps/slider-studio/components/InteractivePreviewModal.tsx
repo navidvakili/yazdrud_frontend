@@ -17,6 +17,7 @@ import {
 import type { SliderProject, Slide, BreakpointWidth } from '@/src/shared-types/slider-studio';
 import AddonParticleCanvas from './AddonParticleCanvas';
 import AutoPlayVideo from './AutoPlayVideo';
+import ShapeLayer from './ShapeLayer';
 import { resolveStorageUrl } from '@/src/shared-utils';
 
 interface InteractivePreviewModalProps {
@@ -576,7 +577,9 @@ export default function InteractivePreviewModal({
                     fontWeight: layer.fontWeight,
                     color: layer.color,
                     borderRadius: `${(layer.borderRadius ?? 0) * scaleFactor}px`,
-                    border: `${(layer.borderWidth ?? 0) * scaleFactor}px solid ${layer.borderColor ?? 'transparent'}`,
+                    // Shapes draw their own outline inside ShapeLayer (a CSS
+                    // border here would stay rectangular and be clipped away).
+                    border: layer.type === 'shape' ? 'none' : `${(layer.borderWidth ?? 0) * scaleFactor}px solid ${layer.borderColor ?? 'transparent'}`,
                     padding: layer.padding ?? '0px',
                     zIndex: layer.zIndex,
                     boxShadow: layer.shadow,
@@ -593,8 +596,9 @@ export default function InteractivePreviewModal({
                       transition: 'transform 0.15s ease-out',
                     } : {}),
                   }}>
-                  {/* Layer Background */}
-                  {(layer.backgroundColor !== 'transparent' || layer.backgroundGradient) && (
+                  {/* Layer Background — for shapes the fill lives inside
+                      ShapeLayer (it must be clipped by the shape geometry) */}
+                  {(layer.type !== 'shape' && (layer.backgroundColor !== 'transparent' || layer.backgroundGradient)) && (
                     <div
                       style={{
                         position: 'absolute',
@@ -608,7 +612,9 @@ export default function InteractivePreviewModal({
                   )}
                   {/* Layer Content */}
                   <div className="w-full h-full flex items-center justify-center relative z-[1]">
-                    {layer.type === 'image' ? (
+                    {layer.type === 'shape' ? (
+                      <ShapeLayer layer={layer} scaleFactor={scaleFactor} />
+                    ) : layer.type === 'image' ? (
                       <img
                         src={resolveStorageUrl(layer.content)}
                         alt={layer.name}

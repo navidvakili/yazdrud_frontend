@@ -29,10 +29,12 @@ import {
   AlignVerticalJustifyCenter,
   AlignVerticalJustifyEnd,
   Sun,
-  Video
+  Video,
+  Shapes
 } from 'lucide-react';
 import { MediaManager } from '@/src/shared-components';
 import type { Layer, LayerType, AnimationPreset, AnimationEasing, InteractionTrigger, InteractionActionType, LayerInteraction, Slide, SlideBackground, BreakpointWidth } from '@/src/shared-types/slider-studio';
+import ShapePicker from './ShapePicker';
 
 interface InspectorPanelProps {
   selectedLayer: Layer | null;
@@ -610,9 +612,11 @@ export default function InspectorPanel({
                     <Video className="w-4 h-4" />
                   </button>
                 </div>
-              ) : selectedLayer.type === 'rectangle' ? (
+              ) : selectedLayer.type === 'rectangle' || selectedLayer.type === 'shape' ? (
                 <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-center text-slate-500 dark:text-slate-400 text-[11px]">
-                  این لایه رنگ است و محتوای متنی ندارد
+                  {selectedLayer.type === 'shape'
+                    ? 'این لایه یک شکل هندسی است و محتوای متنی ندارد'
+                    : 'این لایه رنگ است و محتوای متنی ندارد'}
                 </div>
               ) : (
                 <input
@@ -623,6 +627,17 @@ export default function InspectorPanel({
                 />
               )}
             </div>
+
+            {/* Shape Selector — choose another geometric preset for shape layers */}
+            {selectedLayer.type === 'shape' && (
+              <div className="p-3 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-gray-200 dark:border-slate-800/80 space-y-2">
+                <div className="font-extrabold text-fuchsia-600 dark:text-fuchsia-400 flex items-center gap-1 text-[11px]">
+                  <Shapes className="w-3.5 h-3.5" />
+                  <span>شکل هندسی (Shape)</span>
+                </div>
+                <ShapePicker value={selectedLayer.shape} onChange={s => updateField('shape', s)} columns={5} />
+              </div>
+            )}
 
             {/* Typography Controls */}
             {(selectedLayer.type === 'text' || selectedLayer.type === 'button') && (

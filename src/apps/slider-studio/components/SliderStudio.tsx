@@ -40,9 +40,13 @@ import {
   AlertTriangle,
   Move,
   RotateCw,
-  X
+  X,
+  Shapes
 } from 'lucide-react';
-import type { SliderProject, Slide, Layer, LayerType, BreakpointWidth } from '@/src/shared-types/slider-studio';
+import type { SliderProject, Slide, Layer, LayerType, BreakpointWidth, ShapeType } from '@/src/shared-types/slider-studio';
+import ShapePicker from './ShapePicker';
+import ShapeLayer from './ShapeLayer';
+import { SHAPE_LABELS } from '../constants/shapes';
 import { INITIAL_SLIDER_PROJECTS } from '../data/presetTemplates';
 import InspectorPanel from './InspectorPanel';
 import TimelineBar from './TimelineBar';
@@ -373,6 +377,9 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
   const [isExportModalOpen, setIsExportModalOpen] = useState<boolean>(false);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState<boolean>(false);
 
+  // Shapes menu (add-layer toolbar popover)
+  const [showShapeMenu, setShowShapeMenu] = useState<boolean>(false);
+
   // Slide switcher — always rendered as a dropdown so it never overflows the toolbar
   const [slidesMenuOpen, setSlidesMenuOpen] = useState<boolean>(false);
   const slidesMenuBtnRef = useRef<HTMLButtonElement>(null);
@@ -565,6 +572,60 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
       setPendingMediaLayerId(newLayerId);
       setMediaPickerTarget(type);
     }
+  };
+
+  // Add a geometric shape layer (centered on the canvas)
+  const handleAddShape = (shape: ShapeType) => {
+    const newLayerId = `layer-${Date.now()}`;
+    const size = Math.round(Math.min(200, Math.min(canvasWidth, project.height) * 0.35));
+    const faLabel = SHAPE_LABELS[shape].split(' (')[0];
+    const newLayer: Layer = {
+      id: newLayerId,
+      name: `${faLabel} ${activeSlide.layers.length + 1}`,
+      type: 'shape',
+      shape,
+      x: Math.round((canvasWidth - size) / 2),
+      y: Math.round((project.height - size) / 2),
+      width: size,
+      height: size,
+      rotation: 0,
+      opacity: 1,
+      zIndex: activeSlide.layers.length + 1,
+      locked: false,
+      visible: true,
+      content: '',
+      fontFamily: 'Vazirmatn, sans-serif',
+      fontSize: 24,
+      fontWeight: 'bold',
+      fontStyle: 'normal',
+      textAlign: 'center',
+      alignVertical: 'center',
+      color: '#ffffff',
+      backgroundColor: '#38bdf8',
+      backgroundOpacity: 100,
+      borderRadius: 0,
+      borderWidth: 0,
+      borderColor: '#ffffff',
+      padding: '0px',
+      shadow: 'none',
+      animation: {
+        inPreset: 'fadeIn',
+        inDuration: 0.8,
+        inDelay: 0.2,
+        inEasing: 'easeOut',
+        outPreset: 'none' as any,
+        outDuration: 0.5,
+        outDelay: 5.0,
+        hoverEffect: 'none',
+        parallaxDepth: 0
+      },
+      interactions: []
+    };
+
+    const updatedLayers = [newLayer, ...activeSlide.layers];
+    const updatedSlides = project.slides.map(s => (s.id === activeSlide.id ? { ...s, layers: updatedLayers } : s));
+    updateProject({ ...project, slides: updatedSlides });
+    setSelectedLayerId(newLayerId);
   };
 
   // ---- Actual mutation helpers (used by confirm callbacks) ----
@@ -1184,6 +1245,42 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
             <Square className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
             <span>رنگ</span>
           </button>
+
+          {/* Shapes dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setShowShapeMenu(prev => !prev)}
+              className={`px-3 py-1 rounded-xl bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold flex items-center gap-1 cursor-pointer border shadow-xs transition-colors ${
+                showShapeMenu
+                  ? 'border-teal-400 dark:border-teal-500/60 text-teal-700 dark:text-teal-300'
+                  : 'border-gray-200 dark:border-slate-800'
+              }`}
+            >
+              <Shapes className="w-3.5 h-3.5 text-fuchsia-600 dark:text-fuchsia-400" />
+              <span>اشکال</span>
+              <ChevronDown className="w-3 h-3 opacity-60" />
+            </button>
+            {showShapeMenu && (
+              <>
+                {/* Click-away backdrop */}
+                <div className="fixed inset-0 z-40" onClick={() => setShowShapeMenu(false)} />
+                <div className="absolute z-50 top-full right-0 mt-2 w-80 p-3 bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-2xl">
+                  <div className="text-[11px] font-black text-slate-700 dark:text-slate-200 mb-2 flex items-center gap-1.5">
+                    <Shapes className="w-3.5 h-3.5 text-fuchsia-600 dark:text-fuchsia-400" />
+                    <span>افزودن شکل (Add Shape)</span>
+                  </div>
+                  <ShapePicker
+                    value={undefined}
+                    columns={5}
+                    onChange={shape => {
+                      handleAddShape(shape);
+                      setShowShapeMenu(false);
+                    }}
+                  />
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Sidebar Toggle & Right Slide Switcher */}
@@ -1349,6 +1446,7 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
                     {layer.type === 'button' && <Square className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />}
                     {layer.type === 'video' && <Video className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400 shrink-0" />}
                     {layer.type === 'rectangle' && <Square className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />}
+                    {layer.type === 'shape' && <Shapes className="w-3.5 h-3.5 text-fuchsia-600 dark:text-fuchsia-400 shrink-0" />}
                     <span className="truncate">{layer.name}</span>
                   </div>
 
@@ -1511,7 +1609,9 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
                       color: layer.color,
                       opacity: layer.animation.inPreset === 'none' ? (layer.opacity ?? 1) : undefined,
                       borderRadius: `${layer.borderRadius ?? 0}px`,
-                      border: `${layer.borderWidth ?? 0}px solid ${layer.borderColor ?? 'transparent'}`,
+                      // Shapes draw their own outline inside ShapeLayer (a CSS
+                      // border here would stay rectangular and be clipped away).
+                      border: layer.type === 'shape' ? 'none' : `${layer.borderWidth ?? 0}px solid ${layer.borderColor ?? 'transparent'}`,
                       padding: layer.padding ?? '0px',
                       zIndex: layer.zIndex,
                       boxShadow: layer.shadow,
@@ -1544,8 +1644,9 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
                         transition: 'transform 0.15s ease-out',
                       } : {}),
                     }}>
-                    {/* Layer Background */}
-                    {(layer.backgroundColor !== 'transparent' || layer.backgroundGradient) && (
+                    {/* Layer Background — for shapes the fill lives inside
+                        ShapeLayer (it must be clipped by the shape geometry) */}
+                    {(layer.type !== 'shape' && (layer.backgroundColor !== 'transparent' || layer.backgroundGradient)) && (
                       <div
                         style={{
                           position: 'absolute',
@@ -1559,7 +1660,9 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
                     )}
                     {/* Layer Content View */}
                     <div className="w-full h-full flex items-center justify-center relative z-[1]">
-                      {layer.type === 'image' ? (
+                      {layer.type === 'shape' ? (
+                        <ShapeLayer layer={layer} />
+                      ) : layer.type === 'image' ? (
                         <img
                           src={resolveStorageUrl(layer.content)}
                           alt={layer.name}

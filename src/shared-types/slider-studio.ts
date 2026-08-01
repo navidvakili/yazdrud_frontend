@@ -4,6 +4,34 @@
 
 export type LayerType = 'text' | 'image' | 'button' | 'video' | 'rectangle' | 'svg' | 'shape' | 'group' | 'customHtml';
 
+/** Geometric shape presets — rendered via CSS clip-path. */
+export type ShapeType =
+  | 'rectangle'
+  | 'circle'
+  | 'ellipse'
+  | 'triangle'
+  | 'diamond'
+  | 'pentagon'
+  | 'hexagon'
+  | 'octagon'
+  | 'star'
+  | 'heart'
+  | 'parallelogram'
+  | 'trapezoid'
+  | 'cross'
+  | 'arrowRight'
+  | 'arrowLeft'
+  | 'arrowUp'
+  | 'arrowDown'
+  | 'semicircle'
+  | 'quarterCircle'
+  | 'burst'
+  | 'blob'
+  | 'chevronRight'
+  | 'chevronLeft'
+  | 'chevronUp'
+  | 'chevronDown';
+
 export type AnimationEasing = 'linear' | 'easeIn' | 'easeOut' | 'easeInOut' | 'bounce' | 'elastic';
 
 export type AnimationPreset =
@@ -71,6 +99,8 @@ export interface Layer {
   id: string;
   name: string;
   type: LayerType;
+  /** Which geometric shape a `shape` layer draws (clip-path preset). */
+  shape?: ShapeType;
   x: number;
   y: number;
   width: number;
