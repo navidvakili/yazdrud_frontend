@@ -378,19 +378,27 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
   // Slide switcher — always rendered as a dropdown so it never overflows the toolbar
   const [slidesMenuOpen, setSlidesMenuOpen] = useState<boolean>(false);
   const slidesMenuBtnRef = useRef<HTMLButtonElement>(null);
+  const slidesToolbarRef = useRef<HTMLDivElement>(null);
   const [slidesMenuPos, setSlidesMenuPos] = useState<{ top: number; left: number; flip: boolean } | null>(null);
 
-  // Position the dropdown panel inside the viewport (RTL-safe, clamped to screen edges)
+  // Position the dropdown panel inside the visible content area.
+  // The panel is `fixed`, so clamp it to the sub-toolbar's bounds (the app is
+  // narrower than the viewport because of the surrounding app chrome), otherwise
+  // the left side of the panel — and the delete button — would end up hidden
+  // under the app's side bars.
   const repositionSlidesMenu = useCallback(() => {
     const btn = slidesMenuBtnRef.current;
-    if (!btn) return;
+    const area = slidesToolbarRef.current;
+    if (!btn || !area) return;
     const rect = btn.getBoundingClientRect();
+    const areaRect = area.getBoundingClientRect();
     const panelW = 320; // w-80
     const panelH = 320; // max-h-[320px]
     const gap = 6;
     const openDown = rect.bottom + gap + panelH <= window.innerHeight;
-    const top = openDown ? rect.bottom + gap : Math.max(8, rect.top - gap - panelH);
-    const left = Math.max(8, Math.min(rect.right - panelW, window.innerWidth - panelW - 8));
+    const top = openDown ? rect.bottom + gap : Math.max(areaRect.top + 4, rect.top - gap - panelH);
+    // Keep the whole panel inside the toolbar's horizontal bounds
+    const left = Math.max(areaRect.left + 4, Math.min(rect.right - panelW, areaRect.right - panelW - 4));
     setSlidesMenuPos({ top, left, flip: !openDown });
   }, []);
 
@@ -1102,7 +1110,7 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
       </div>
 
       {/* 2. SUB-TOOLBAR FOR LAYERS & SLIDES */}
-      <div className="h-11 border-b border-gray-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-4 flex items-center justify-between text-xs z-10">
+      <div ref={slidesToolbarRef} className="h-11 border-b border-gray-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-4 flex items-center justify-between text-xs z-10">
         {/* Left Add Layer Menu */}
         <div className="flex items-center gap-1">
           <span className="text-slate-500 font-bold text-[11px] ml-2">افزودن لایه:</span>
@@ -1194,7 +1202,7 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setSlidesMenuOpen(false)} />
                   <div
-                    className="fixed z-50 w-80 max-h-[320px] overflow-y-auto rounded-2xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-2xl p-1.5 space-y-0.5"
+                    className="fixed z-50 w-80 max-h-[320px] overflow-y-auto overflow-x-hidden rounded-2xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-2xl p-1.5 space-y-0.5"
                     style={{ top: slidesMenuPos?.top ?? 0, left: slidesMenuPos?.left ?? 0 }}
                   >
                     {project.slides.map((s, idx) => {
