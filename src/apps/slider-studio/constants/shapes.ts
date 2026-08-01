@@ -1,8 +1,10 @@
 // ============================================================
 // Shape presets — اشکال قابل افزودن در Slider Studio
-// Each shape is a CSS clip-path so the same geometry renders
-// identically in the editor canvas, live preview and the public
-// site (no SVG dependency).
+// Every shape is an inline-SVG template inside a shared 0..100
+// viewBox (preserveAspectRatio="none"), so the same geometry
+// renders identically in the editor canvas, live preview, the
+// code export and the public site. CSS clip-paths are kept as
+// a legacy reference (SHAPE_CLIP_PATHS) but are no longer used.
 // ============================================================
 import type { ShapeType } from '@/src/shared-types/slider-studio';
 
@@ -28,7 +30,7 @@ export const SHAPE_CLIP_PATHS: Record<ShapeType, string> = {
   semicircle: 'circle(50% at 50% 0%)',
   quarterCircle: 'circle(50% at 100% 100%)',
   burst: 'polygon(50% 0%, 59.3% 21.5%, 79.4% 9.5%, 74.3% 32.4%, 97.6% 34.5%, 80% 50%, 97.6% 65.5%, 74.3% 67.6%, 79.4% 90.5%, 59.3% 78.5%, 50% 100%, 40.7% 78.5%, 20.6% 90.5%, 25.7% 67.6%, 2.4% 65.5%, 20% 50%, 2.4% 34.5%, 25.7% 32.4%, 20.6% 9.5%, 40.7% 21.5%)',
-  blob: 'polygon(15% 20%, 30% 5%, 55% 0%, 80% 10%, 100% 30%, 95% 60%, 85% 85%, 60% 100%, 35% 95%, 10% 80%, 0% 55%, 5% 30%)',
+  blob: 'polygon(30% 0%, 70% 0%, 100% 20%, 100% 70%, 80% 100%, 20% 100%, 0% 70%, 0% 20%)',
   chevronRight: 'polygon(75% 0%, 100% 50%, 75% 100%, 0% 100%, 25% 50%, 0% 0%)',
   chevronLeft: 'polygon(25% 0%, 100% 0%, 75% 50%, 100% 100%, 25% 100%, 0% 50%)',
   chevronUp: 'polygon(0% 75%, 50% 0%, 100% 75%, 75% 75%, 50% 25%, 25% 75%)',
@@ -46,13 +48,60 @@ export const SHAPE_CLIP_PATHS: Record<ShapeType, string> = {
   equals: 'inset(30% 0% 30% 0%)',
 };
 
-/** Shapes rendered with inline SVG (holes / internal details).
- *  Function receives (fill, stroke, strokeWidth) and returns SVG markup. */
-export const SHAPE_SVG_TEMPLATES: Partial<Record<ShapeType, (fill: string, stroke: string, strokeWidth: number) => string>> = {
+/** SVG stroke attribute. vector-effect keeps the border uniform (screen
+ *  pixels) on every side, even when the viewBox is stretched non-uniformly. */
+const STROKE = (color: string, width: number) =>
+  width > 0 ? ` vector-effect="non-scaling-stroke" stroke="${color}" stroke-width="${width}"` : '';
+
+/** Inline-SVG template for EVERY shape — receives (fill, stroke, strokeWidth)
+ *  and returns SVG markup in a shared 0..100 coordinate system. The shape
+ *  geometry is a direct port of the legacy clip-path percentages, so shapes
+ *  render at any layer size without distortion. */
+export const SHAPE_SVG_TEMPLATES: Record<ShapeType, (fill: string, stroke: string, strokeWidth: number) => string> = {
+  rectangle: (f, s, sw) => `<rect x="0" y="0" width="100" height="100" fill="${f}"${STROKE(s, sw)}/>`,
+  circle: (f, s, sw) => `<circle cx="50" cy="50" r="50" fill="${f}"${STROKE(s, sw)}/>`,
+  ellipse: (f, s, sw) => `<ellipse cx="50" cy="50" rx="50" ry="35" fill="${f}"${STROKE(s, sw)}/>`,
+  triangle: (f, s, sw) => `<polygon points="50,0 100,100 0,100" fill="${f}"${STROKE(s, sw)}/>`,
+  diamond: (f, s, sw) => `<polygon points="50,0 100,50 50,100 0,50" fill="${f}"${STROKE(s, sw)}/>`,
+  pentagon: (f, s, sw) => `<polygon points="50,0 100,38 82,100 18,100 0,38" fill="${f}"${STROKE(s, sw)}/>`,
+  hexagon: (f, s, sw) => `<polygon points="25,5 75,5 100,50 75,95 25,95 0,50" fill="${f}"${STROKE(s, sw)}/>`,
+  octagon: (f, s, sw) => `<polygon points="30,0 70,0 100,30 100,70 70,100 30,100 0,70 0,30" fill="${f}"${STROKE(s, sw)}/>`,
+  star: (f, s, sw) => `<polygon points="50,0 63,38 100,38 69,61 81,100 50,75 19,100 31,61 0,38 37,38" fill="${f}"${STROKE(s, sw)}/>`,
+  heart: (f, s, sw) => `<path d="M50 90 C20 64 0 48 0 26 C0 10 12 0 26 0 C37 0 47 8 50 18 C53 8 63 0 74 0 C88 0 100 10 100 26 C100 48 80 64 50 90 Z" fill="${f}"${STROKE(s, sw)}/>`,
+  parallelogram: (f, s, sw) => `<polygon points="25,0 100,0 75,100 0,100" fill="${f}"${STROKE(s, sw)}/>`,
+  trapezoid: (f, s, sw) => `<polygon points="20,0 80,0 100,100 0,100" fill="${f}"${STROKE(s, sw)}/>`,
+  cross: (f, s, sw) => `<path d="M20 0 L80 0 L80 20 L100 20 L100 80 L80 80 L80 100 L20 100 L20 80 L0 80 L0 20 L20 20 Z" fill="${f}"${STROKE(s, sw)}/>`,
+  arrowRight: (f, s, sw) => `<polygon points="0,20 60,20 60,0 100,50 60,100 60,80 0,80" fill="${f}"${STROKE(s, sw)}/>`,
+  arrowLeft: (f, s, sw) => `<polygon points="40,0 40,20 100,20 100,80 40,80 40,100 0,50" fill="${f}"${STROKE(s, sw)}/>`,
+  arrowUp: (f, s, sw) => `<polygon points="20,40 0,40 50,0 100,40 80,40 80,100 20,100" fill="${f}"${STROKE(s, sw)}/>`,
+  arrowDown: (f, s, sw) => `<polygon points="20,0 80,0 80,60 100,60 50,100 0,60 20,60" fill="${f}"${STROKE(s, sw)}/>`,
+  semicircle: (f, s, sw) => `<path d="M0 50 A50 50 0 0 1 100 50 Z" fill="${f}"${STROKE(s, sw)}/>`,
+  quarterCircle: (f, s, sw) => `<path d="M100 100 L0 100 A100 100 0 0 1 100 0 Z" fill="${f}"${STROKE(s, sw)}/>`,
+  burst: (f, s, sw) => `<polygon points="50,0 59.3,21.5 79.4,9.5 74.3,32.4 97.6,34.5 80,50 97.6,65.5 74.3,67.6 79.4,90.5 59.3,78.5 50,100 40.7,78.5 20.6,90.5 25.7,67.6 2.4,65.5 20,50 2.4,34.5 25.7,32.4 20.6,9.5 40.7,21.5" fill="${f}"${STROKE(s, sw)}/>`,
+  blob: (f, s, sw) => `<polygon points="30,0 70,0 100,20 100,70 80,100 20,100 0,70 0,20" fill="${f}"${STROKE(s, sw)}/>`,
+  chevronRight: (f, s, sw) => `<polygon points="75,0 100,50 75,100 0,100 25,50 0,0" fill="${f}"${STROKE(s, sw)}/>`,
+  chevronLeft: (f, s, sw) => `<polygon points="25,0 100,0 75,50 100,100 25,100 0,50" fill="${f}"${STROKE(s, sw)}/>`,
+  chevronUp: (f, s, sw) => `<polygon points="0,75 50,0 100,75 75,75 50,25 25,75" fill="${f}"${STROKE(s, sw)}/>`,
+  chevronDown: (f, s, sw) => `<polygon points="0,25 25,25 50,75 75,25 100,25 50,100" fill="${f}"${STROKE(s, sw)}/>`,
+  cloud: (f, s, sw) => `<polygon points="22,78 8,78 4,64 12,56 8,42 20,30 34,28 42,16 58,16 66,28 80,26 94,36 100,52 94,62 100,70 88,78" fill="${f}"${STROKE(s, sw)}/>`,
+  lightningBolt: (f, s, sw) => `<polygon points="52,0 8,58 40,58 30,100 92,38 58,38" fill="${f}"${STROKE(s, sw)}/>`,
+  plus: (f, s, sw) => `<path d="M38 0 L62 0 L62 38 L100 38 L100 62 L62 62 L62 100 L38 100 L38 62 L0 62 L0 38 L38 38 Z" fill="${f}"${STROKE(s, sw)}/>`,
+  minus: (f, s, sw) => `<rect x="0" y="42" width="100" height="16" fill="${f}"${STROKE(s, sw)}/>`,
+  multiply: (f, s, sw) => `<polygon points="39,0 61,0 100,39 100,61 61,100 39,100 0,61 0,39" fill="${f}"${STROKE(s, sw)}/>`,
+  speechBubble: (f, s, sw) => `<polygon points="6,0 94,0 100,6 100,70 52,70 42,88 36,70 0,70 0,6" fill="${f}"${STROKE(s, sw)}/>`,
+  thoughtBubble: (f, s, sw) => {
+    const o = STROKE(s, sw);
+    return (
+      `<circle cx="55" cy="42" r="34" fill="${f}"${o}/>` +
+      `<circle cx="14" cy="82" r="5" fill="${f}"/>` +
+      `<circle cx="27" cy="86" r="8" fill="${f}"/>` +
+      `<circle cx="41" cy="86" r="11" fill="${f}"/>`
+    );
+  },
   smiley: (f, s, sw) => {
     const d = s !== 'transparent' ? s : '#1e293b';
     return (
-      `<circle cx="50" cy="50" r="46" fill="${f}"${sw > 0 ? ` stroke="${s}" stroke-width="${sw}"` : ''}/>` +
+      `<circle cx="50" cy="50" r="46" fill="${f}"${STROKE(s, sw)}/>` +
       `<circle cx="30" cy="38" r="6.5" fill="${d}"/>` +
       `<circle cx="70" cy="38" r="6.5" fill="${d}"/>` +
       `<path d="M26 62 Q50 84 74 62" fill="none" stroke="${d}" stroke-width="7" stroke-linecap="round"/>`
@@ -61,37 +110,25 @@ export const SHAPE_SVG_TEMPLATES: Partial<Record<ShapeType, (fill: string, strok
   notAllowed: (f, s, sw) => {
     const bar = s !== 'transparent' ? s : 'rgba(255,255,255,0.95)';
     return (
-      `<circle cx="50" cy="50" r="46" fill="${f}"${sw > 0 ? ` stroke="${s}" stroke-width="${sw}"` : ''}/>` +
+      `<circle cx="50" cy="50" r="46" fill="${f}"${STROKE(s, sw)}/>` +
       `<path d="M29.8 24.2 L75.8 70.2 L70.2 75.8 L24.2 29.8 Z" fill="${bar}"/>`
     );
   },
-  thoughtBubble: (f, s, sw) => {
-    const o = sw > 0 ? ` stroke="${s}" stroke-width="${sw}"` : '';
-    return (
-      `<circle cx="55" cy="42" r="34" fill="${f}"${o}/>` +
-      `<circle cx="14" cy="82" r="5" fill="${f}"/>` +
-      `<circle cx="27" cy="86" r="8" fill="${f}"/>` +
-      `<circle cx="41" cy="86" r="11" fill="${f}"/>`
-    );
-  },
   divide: (f, s, sw) => {
-    const o = sw > 0 ? ` stroke="${s}" stroke-width="${sw}"` : '';
+    const o = STROKE(s, sw);
     return (
       `<circle cx="50" cy="26" r="12" fill="${f}"${o}/>` +
       `<rect x="14" y="44" width="72" height="14" rx="7" fill="${f}"${o}/>`
     );
   },
   equals: (f, s, sw) => {
-    const o = sw > 0 ? ` stroke="${s}" stroke-width="${sw}"` : '';
+    const o = STROKE(s, sw);
     return (
       `<rect x="14" y="28" width="72" height="14" rx="7" fill="${f}"${o}/>` +
       `<rect x="14" y="58" width="72" height="14" rx="7" fill="${f}"${o}/>`
     );
   },
 };
-
-/** Shapes that use the inline-SVG templates above. */
-export const SHAPE_SVG_TYPES: ShapeType[] = ['smiley', 'notAllowed', 'thoughtBubble', 'divide', 'equals'];
 
 /** Persian + English label for each shape. */
 export const SHAPE_LABELS: Record<ShapeType, string> = {
@@ -172,3 +209,7 @@ export const SHAPE_TYPES: ShapeType[] = [
   'divide',
   'equals',
 ];
+
+/** Every shape now has an SVG template — renderers use this list to decide
+ *  between SVG (all shapes) and the legacy clip-path path (none). */
+export const SHAPE_SVG_TYPES: ShapeType[] = SHAPE_TYPES;

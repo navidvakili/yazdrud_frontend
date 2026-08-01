@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { X, Code, Copy, Check, FileText, Smartphone, Laptop } from 'lucide-react';
 import type { SliderProject } from '@/src/shared-types/slider-studio';
-import { SHAPE_CLIP_PATHS, SHAPE_SVG_TEMPLATES, SHAPE_SVG_TYPES } from '../constants/shapes';
+import { SHAPE_SVG_TEMPLATES } from '../constants/shapes';
 
 function shapeFlatFill(layer: { backgroundColor?: string; backgroundGradient?: string }): string {
   if (layer.backgroundColor) return layer.backgroundColor;
@@ -106,17 +106,9 @@ export default function CodeExportModal({ isOpen, onClose, project }: CodeExport
         const bw = l.borderWidth ?? 0;
         const bcol = l.borderColor && l.borderColor !== 'transparent' ? l.borderColor : 'transparent';
         const shape = l.shape ?? 'circle';
-        if (SHAPE_SVG_TYPES.includes(shape)) {
-          return `<div id="layer-${l.id}" style="position:relative;">
-          <svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute; inset:0; width:100%; height:100%;">${SHAPE_SVG_TEMPLATES[shape](shapeFlatFill(l), bcol === 'transparent' ? 'transparent' : bcol, bw)}</svg>
-        </div>`;
-        }
-        const clip = SHAPE_CLIP_PATHS[shape];
+        const template = SHAPE_SVG_TEMPLATES[shape] ?? SHAPE_SVG_TEMPLATES.circle;
         return `<div id="layer-${l.id}" style="position:relative;">
-          ${bw > 0 && bcol !== 'transparent'
-            ? `<div style="position:absolute; inset:0; background:${bcol}; clip-path:${clip};"></div>`
-            : ''}
-          <div style="position:absolute; inset:${bw}px; background:${l.backgroundGradient || l.backgroundColor}; opacity:${(l.backgroundOpacity ?? 100) / 100}; clip-path:${clip};"></div>
+          <svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute; inset:0; width:100%; height:100%;">${template(shapeFlatFill(l), bcol === 'transparent' ? 'transparent' : bcol, bw)}</svg>
         </div>`;
       }
       return `<div id="layer-${l.id}">${l.content}</div>`;

@@ -1,15 +1,13 @@
 // ============================================================
 // ShapeLayer — renders a geometric `shape` layer.
 //
-// Most shapes are clip-path based: the fill (backgroundGradient /
-// backgroundColor) is painted on an inner clipped div, and the
-// outline uses the double-clip trick (a slightly enlarged shape
-// painted with the border color sits behind the fill). Complex
-// shapes with holes/internal details (smiley, not-allowed, ...)
-// are rendered with inline SVG instead.
+// Every shape is rendered from an inline-SVG template in a
+// shared 0..100 viewBox (preserveAspectRatio="none"), so the
+// same geometry works at any layer size and the outline is a
+// real SVG stroke (uniform via vector-effect).
 // ============================================================
 import type { Layer, ShapeType } from '@/src/shared-types/slider-studio';
-import { SHAPE_CLIP_PATHS, SHAPE_SVG_TEMPLATES, SHAPE_SVG_TYPES } from '../constants/shapes';
+import { SHAPE_SVG_TEMPLATES } from '../constants/shapes';
 
 interface ShapeLayerProps {
   layer: Layer;
@@ -29,47 +27,21 @@ function shapeFlatFill(layer: Layer): string {
 
 export default function ShapeLayer({ layer, scaleFactor = 1 }: ShapeLayerProps) {
   const shape: ShapeType = layer.shape ?? 'circle';
-  const clip = SHAPE_CLIP_PATHS[shape] ?? SHAPE_CLIP_PATHS.circle;
   const bw = Math.max(0, (layer.borderWidth ?? 0) * scaleFactor);
   const borderColor =
     layer.borderColor && layer.borderColor !== 'transparent' ? layer.borderColor : null;
-  const fill = layer.backgroundGradient || layer.backgroundColor || 'transparent';
   const fillOpacity = (layer.backgroundOpacity ?? 100) / 100;
-
-  // ── SVG-based complex shapes ─────────────────────────────
-  if (SHAPE_SVG_TYPES.includes(shape)) {
-    const svg = SHAPE_SVG_TEMPLATES[shape](
-      shapeFlatFill(layer),
-      borderColor ?? 'transparent',
-      bw
-    );
-    return (
-      <div className="w-full h-full" style={{ position: 'relative', pointerEvents: 'none' }}>
-        <svg
-          viewBox="0 0 100 100"
-          preserveAspectRatio="none"
-          className="w-full h-full absolute inset-0"
-          style={{ opacity: fillOpacity }}
-          dangerouslySetInnerHTML={{ __html: svg }}
-        />
-      </div>
-    );
-  }
+  const template = SHAPE_SVG_TEMPLATES[shape] ?? SHAPE_SVG_TEMPLATES.circle;
 
   return (
     <div className="w-full h-full" style={{ position: 'relative', pointerEvents: 'none' }}>
-      {/* Outline — border-color shape clipped to the full layer box */}
-      {bw > 0 && borderColor && (
-        <div style={{ position: 'absolute', inset: 0, background: borderColor, clipPath: clip }} />
-      )}
-      {/* Fill — slightly inset so the outline ring stays visible inside the box */}
-      <div
-        style={{
-          position: 'absolute',
-          inset: bw,
-          background: fill,
-          opacity: fillOpacity,
-          clipPath: clip,
+      <svg
+        viewBox="0 0 100 100"
+        preserveAspectRatio="none"
+        className="w-full h-full absolute inset-0"
+        style={{ opacity: fillOpacity }}
+        dangerouslySetInnerHTML={{
+          __html: template(shapeFlatFill(layer), borderColor ?? 'transparent', bw),
         }}
       />
     </div>
