@@ -375,36 +375,8 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
   const [isExportModalOpen, setIsExportModalOpen] = useState<boolean>(false);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState<boolean>(false);
 
-  // Slides bar responsive mode — collapse into a dropdown when tabs overflow
-  const slidesToolbarRef = useRef<HTMLDivElement>(null);
-  const slidesLeftGroupRef = useRef<HTMLDivElement>(null);
-  const slidesFixedRef = useRef<HTMLDivElement>(null);
-  const slidesTabsWrapRef = useRef<HTMLDivElement>(null);
-  const [slidesOverflow, setSlidesOverflow] = useState<boolean>(false);
+  // Slide switcher — always rendered as a dropdown so it never overflows the toolbar
   const [slidesMenuOpen, setSlidesMenuOpen] = useState<boolean>(false);
-
-  // Collapse the slide tabs into a dropdown when they no longer fit in the toolbar
-  useLayoutEffect(() => {
-    const measure = () => {
-      const toolbar = slidesToolbarRef.current;
-      const tabs = slidesTabsWrapRef.current;
-      const left = slidesLeftGroupRef.current;
-      const fixed = slidesFixedRef.current;
-      if (!toolbar || !tabs || !left || !fixed) return;
-      // Available width for the slides area = toolbar minus left add-layer group,
-      // minus fixed right-side controls (toggles, divider, label), minus px-4 padding
-      const available = toolbar.clientWidth - left.offsetWidth - fixed.offsetWidth - 32;
-      setSlidesOverflow(tabs.scrollWidth > available + 4);
-    };
-    measure();
-    const ro = new ResizeObserver(measure);
-    if (slidesToolbarRef.current) ro.observe(slidesToolbarRef.current);
-    window.addEventListener('resize', measure);
-    return () => {
-      ro.disconnect();
-      window.removeEventListener('resize', measure);
-    };
-  }, [project.slides.length]);
 
   // Close the slides dropdown with Escape
   useEffect(() => {
@@ -1101,9 +1073,9 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
       </div>
 
       {/* 2. SUB-TOOLBAR FOR LAYERS & SLIDES */}
-      <div ref={slidesToolbarRef} className="h-11 border-b border-gray-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-4 flex items-center justify-between text-xs z-10">
+      <div className="h-11 border-b border-gray-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-4 flex items-center justify-between text-xs z-10">
         {/* Left Add Layer Menu */}
-        <div ref={slidesLeftGroupRef} className="flex items-center gap-1">
+        <div className="flex items-center gap-1">
           <span className="text-slate-500 font-bold text-[11px] ml-2">افزودن لایه:</span>
           <button
             onClick={() => handleAddLayer('text')}
@@ -1144,7 +1116,6 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
 
         {/* Sidebar Toggle & Right Slide Switcher */}
         <div className="flex items-center gap-2">
-          <div ref={slidesFixedRef} className="flex items-center gap-2">
           {/* Toggle sidebars */}
           <button
             onClick={() => setShowLeftSidebar(prev => !prev)}
@@ -1170,135 +1141,77 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
           </button>
           <div className="w-px h-5 bg-gray-200 dark:bg-slate-700 mx-1"></div>
           <span className="text-slate-500 font-bold text-[11px]">مدیریت اسلایدها:</span>
-          </div>
           <div className="relative">
-            {/* Slide tabs — always rendered for measurement; hidden (still measurable) in dropdown mode */}
-            <div
-              ref={slidesTabsWrapRef}
-              aria-hidden={slidesOverflow}
-              className={slidesOverflow ? 'invisible absolute top-0 left-0 pointer-events-none' : ''}
-              style={slidesOverflow ? { width: 'max-content' } : undefined}
-            >
-              <div className="flex items-center gap-1">
-                {project.slides.map((s, idx) => {
-                  const isDragOver = dragOverIndex === idx;
-                  return (
-                  <div
-                    key={s.id}
-                    draggable
-                    onDragStart={() => handleSlideDragStart(s.id, idx)}
-                    onDragOver={e => handleSlideDragOver(e, idx)}
-                    onDrop={e => handleSlideDrop(e, idx)}
-                    onDragEnd={() => { dragItemRef.current = null; setDragOverIndex(null); setDragOverPosition('before'); }}
-                    className={`relative group/slidetab flex items-center gap-0.5 px-2 py-1 rounded-xl font-bold transition-all cursor-pointer select-none ${
-                      activeSlideId === s.id
-                        ? 'bg-teal-600 dark:bg-teal-500 text-white dark:text-slate-950 font-black shadow-xs'
-                        : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-gray-200 dark:border-slate-800'
-                    }`}
-                  >
-                  {isDragOver && dragOverPosition === 'before' && <div className="absolute right-0 top-1 bottom-1 w-[3px] bg-teal-500 rounded-full -mr-0.5 z-10 shadow-sm shadow-teal-400/50" />}
-                  {isDragOver && dragOverPosition === 'after' && <div className="absolute left-0 top-1 bottom-1 w-[3px] bg-teal-500 rounded-full -ml-0.5 z-10 shadow-sm shadow-teal-400/50" />}
-                    <span className="cursor-grab active:cursor-grabbing opacity-40 hover:opacity-100 transition-opacity" title="درگ برای جابجایی">
-                      <GripVertical className="w-3 h-3" />
-                    </span>
-                    <span
-                      onClick={() => setActiveSlideId(s.id)}
-                      className="cursor-pointer"
-                      title={s.title || `اسلاید ${idx + 1}`}
-                    >اسلاید {idx + 1}</span>
-                    {project.slides.length > 1 && (
-                      <button
-                        onClick={e => { e.stopPropagation(); handleDeleteSlide(s.id); }}
-                        className="p-0.5 rounded-full bg-rose-500/80 text-white opacity-0 group-hover/slidetab:opacity-100 hover:bg-rose-600 transition-all cursor-pointer ml-0.5"
-                        title="حذف اسلاید"
-                      >
-                        <X className="w-2.5 h-2.5" />
-                      </button>
-                    )}
+            {/* Slide switcher — always rendered as a dropdown so it never overflows the toolbar */}
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setSlidesMenuOpen(o => !o)}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl font-black transition-all cursor-pointer select-none bg-teal-600 dark:bg-teal-500 text-white dark:text-slate-950 shadow-xs"
+                title="نمایش همه اسلایدها"
+              >
+                <span>اسلاید {activeSlideIndex + 1} از {project.slides.length}</span>
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${slidesMenuOpen ? 'rotate-180' : ''}`} />
+              </button>
+              <button
+                onClick={handleAddSlide}
+                className="p-1 rounded-xl bg-teal-50 dark:bg-teal-500/20 text-teal-700 dark:text-teal-300 hover:bg-teal-600 hover:text-white dark:hover:bg-teal-500 dark:hover:text-slate-950 transition-colors cursor-pointer border border-teal-200 dark:border-teal-500/30"
+                title="افزودن اسلاید جدید"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+
+              {slidesMenuOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setSlidesMenuOpen(false)} />
+                  <div className="absolute top-full right-0 mt-1.5 z-50 w-80 max-h-[320px] overflow-y-auto rounded-2xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-2xl p-1.5 space-y-0.5">
+                    {project.slides.map((s, idx) => {
+                      const isActive = activeSlideId === s.id;
+                      const isDragOver = dragOverIndex === idx;
+                      return (
+                        <div
+                          key={s.id}
+                          draggable
+                          onDragStart={() => handleSlideDragStart(s.id, idx)}
+                          onDragOver={(e) => {
+                            e.preventDefault();
+                            setDragOverIndex(idx);
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            setDragOverPosition(e.clientY < rect.top + rect.height / 2 ? 'before' : 'after');
+                          }}
+                          onDrop={e => handleSlideDrop(e, idx)}
+                          onDragEnd={() => { dragItemRef.current = null; setDragOverIndex(null); setDragOverPosition('before'); }}
+                          onClick={() => { setActiveSlideId(s.id); setSlidesMenuOpen(false); }}
+                          className={`relative flex items-center gap-2 px-2 py-1.5 rounded-xl font-bold transition-all cursor-pointer select-none ${
+                            isActive
+                              ? 'bg-teal-600 dark:bg-teal-500 text-white dark:text-slate-950 font-black'
+                              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'
+                          }`}
+                        >
+                          {isDragOver && dragOverPosition === 'before' && <div className="absolute top-0 left-2 right-2 h-[3px] bg-teal-500 rounded-full -translate-y-1/2 z-10" />}
+                          {isDragOver && dragOverPosition === 'after' && <div className="absolute bottom-0 left-2 right-2 h-[3px] bg-teal-500 rounded-full translate-y-1/2 z-10" />}
+                          <span className="cursor-grab active:cursor-grabbing opacity-40 hover:opacity-100 transition-opacity shrink-0" title="درگ برای جابجایی">
+                            <GripVertical className="w-3.5 h-3.5" />
+                          </span>
+                          <span className="truncate flex-1" title={s.title || `اسلاید ${idx + 1}`}>
+                            {s.title || `اسلاید ${idx + 1}`}
+                          </span>
+                          <span className="text-[10px] opacity-60 shrink-0">{idx + 1}</span>
+                          {project.slides.length > 1 && (
+                            <button
+                              onClick={e => { e.stopPropagation(); handleDeleteSlide(s.id); }}
+                              className="p-1 rounded-lg bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-300/50 dark:border-rose-500/30 hover:bg-rose-500 hover:text-white transition-all cursor-pointer shrink-0"
+                              title="حذف اسلاید"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
-                )})}
-                <button
-                  onClick={handleAddSlide}
-                  className="p-1 rounded-xl bg-teal-50 dark:bg-teal-500/20 text-teal-700 dark:text-teal-300 hover:bg-teal-600 hover:text-white dark:hover:bg-teal-500 dark:hover:text-slate-950 transition-colors cursor-pointer border border-teal-200 dark:border-teal-500/30"
-                  title="افزودن اسلاید جدید"
-                >
-                  <Plus className="w-4 h-4" />
-                </button>
-              </div>
+                </>
+              )}
             </div>
-
-            {/* Dropdown mode — slides collapse into a menu when they overflow */}
-            {slidesOverflow && (
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => setSlidesMenuOpen(o => !o)}
-                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl font-black transition-all cursor-pointer select-none bg-teal-600 dark:bg-teal-500 text-white dark:text-slate-950 shadow-xs"
-                  title="نمایش همه اسلایدها"
-                >
-                  <span>اسلاید {activeSlideIndex + 1} از {project.slides.length}</span>
-                  <ChevronDown className={`w-3.5 h-3.5 transition-transform ${slidesMenuOpen ? 'rotate-180' : ''}`} />
-                </button>
-                <button
-                  onClick={handleAddSlide}
-                  className="p-1 rounded-xl bg-teal-50 dark:bg-teal-500/20 text-teal-700 dark:text-teal-300 hover:bg-teal-600 hover:text-white dark:hover:bg-teal-500 dark:hover:text-slate-950 transition-colors cursor-pointer border border-teal-200 dark:border-teal-500/30"
-                  title="افزودن اسلاید جدید"
-                >
-                  <Plus className="w-4 h-4" />
-                </button>
-
-                {slidesMenuOpen && (
-                  <>
-                    <div className="fixed inset-0 z-40" onClick={() => setSlidesMenuOpen(false)} />
-                    <div className="absolute top-full right-0 mt-1.5 z-50 w-80 max-h-[320px] overflow-y-auto rounded-2xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-2xl p-1.5 space-y-0.5">
-                      {project.slides.map((s, idx) => {
-                        const isActive = activeSlideId === s.id;
-                        const isDragOver = dragOverIndex === idx;
-                        return (
-                          <div
-                            key={s.id}
-                            draggable
-                            onDragStart={() => handleSlideDragStart(s.id, idx)}
-                            onDragOver={(e) => {
-                              e.preventDefault();
-                              setDragOverIndex(idx);
-                              const rect = e.currentTarget.getBoundingClientRect();
-                              setDragOverPosition(e.clientY < rect.top + rect.height / 2 ? 'before' : 'after');
-                            }}
-                            onDrop={e => handleSlideDrop(e, idx)}
-                            onDragEnd={() => { dragItemRef.current = null; setDragOverIndex(null); setDragOverPosition('before'); }}
-                            onClick={() => { setActiveSlideId(s.id); setSlidesMenuOpen(false); }}
-                            className={`relative flex items-center gap-2 px-2 py-1.5 rounded-xl font-bold transition-all cursor-pointer select-none ${
-                              isActive
-                                ? 'bg-teal-600 dark:bg-teal-500 text-white dark:text-slate-950 font-black'
-                                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'
-                            }`}
-                          >
-                            {isDragOver && dragOverPosition === 'before' && <div className="absolute top-0 left-2 right-2 h-[3px] bg-teal-500 rounded-full -translate-y-1/2 z-10" />}
-                            {isDragOver && dragOverPosition === 'after' && <div className="absolute bottom-0 left-2 right-2 h-[3px] bg-teal-500 rounded-full translate-y-1/2 z-10" />}
-                            <span className="cursor-grab active:cursor-grabbing opacity-40 hover:opacity-100 transition-opacity shrink-0" title="درگ برای جابجایی">
-                              <GripVertical className="w-3.5 h-3.5" />
-                            </span>
-                            <span className="truncate flex-1" title={s.title || `اسلاید ${idx + 1}`}>
-                              {s.title || `اسلاید ${idx + 1}`}
-                            </span>
-                            <span className="text-[10px] opacity-60 shrink-0">{idx + 1}</span>
-                            {project.slides.length > 1 && (
-                              <button
-                                onClick={e => { e.stopPropagation(); handleDeleteSlide(s.id); }}
-                                className="p-0.5 rounded-full bg-rose-500/80 text-white hover:bg-rose-600 transition-all cursor-pointer shrink-0"
-                                title="حذف اسلاید"
-                              >
-                                <X className="w-2.5 h-2.5" />
-                              </button>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
           </div>
         </div>
       </div>
