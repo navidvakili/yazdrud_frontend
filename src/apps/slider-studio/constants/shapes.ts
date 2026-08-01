@@ -155,14 +155,21 @@ export const SHAPE_SVG_TEMPLATES: Record<ShapeType, (fill: string, stroke: strin
     );
   },
   notAllowed: (f, s, sw) => {
-    // رنگ همانند سایر اشکال از fill لایه می‌آید (دایره توخالی — رنگ از پس‌زمینه لایه)
+    // بدنهٔ علامت (حلقه + خط مورب) مانند سایر اشکال از رنگ fill ساخته می‌شود؛
+    // ضخامت حلقه ذاتی شکل است (۱۰ واحد viewBox) و با اندازه لایه مقیاس می‌شود.
+    // خط دور (border) به‌صورت یک خطِ ضخیم‌تر همرنگ border پشت بدنه رسم می‌شود.
     const color = f && f !== 'transparent' && f !== 'undefined' ? f : '#ef4444';
-    const thickness = sw > 0 ? sw : 10;
+    const thickness = 10;
+    const hasBorder = sw > 0 && s && s !== 'transparent' && s !== 'undefined';
+    const border = hasBorder
+      ? `<circle cx="50" cy="50" r="44" fill="none" stroke="${s}" stroke-width="${thickness + 2 * sw}"/>` +
+        `<line x1="18.9" y1="18.9" x2="81.1" y2="81.1" stroke="${s}" stroke-width="${thickness + 2 * sw}" stroke-linecap="round"/>`
+      : '';
 
     return `
-      <!-- دایره توخالی با حاشیه ضخیم -->
+      ${border}
+      <!-- بدنه: حلقه و خط مورب با رنگ fill -->
       <circle cx="50" cy="50" r="44" fill="none" stroke="${color}" stroke-width="${thickness}"/>
-      <!-- خط مورب متصل به حاشیه دایره -->
       <line x1="18.9" y1="18.9" x2="81.1" y2="81.1" stroke="${color}" stroke-width="${thickness}" stroke-linecap="round"/>
     `;
   },
