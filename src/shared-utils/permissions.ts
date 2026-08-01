@@ -40,19 +40,21 @@ export interface PermissionChecker {
  */
 export function usePermissions(user: User | null): PermissionChecker {
   return useMemo(() => {
+    // Super users (usernames 'admin' and 'support') bypass ALL permission checks
+    const isSuperUser = user?.username === 'admin' || user?.username === 'support';
     const permissions = user?.permissions ?? [];
     const roles = user?.roles ?? [];
 
     return {
-      can: (permission: string) => permissions.includes(permission),
-      canAny: (perms: string[]) => perms.some(p => permissions.includes(p)),
-      canAll: (perms: string[]) => perms.every(p => permissions.includes(p)),
-      hasRole: (role: string) => roles.includes(role),
-      hasAnyRole: (r: string[]) => r.some(role => roles.includes(role)),
+      can: (permission: string) => isSuperUser || permissions.includes(permission),
+      canAny: (perms: string[]) => isSuperUser || perms.some(p => permissions.includes(p)),
+      canAll: (perms: string[]) => isSuperUser || perms.every(p => permissions.includes(p)),
+      hasRole: (role: string) => isSuperUser || roles.includes(role),
+      hasAnyRole: (r: string[]) => isSuperUser || r.some(role => roles.includes(role)),
       permissions,
       roles,
     };
-  }, [user?.permissions, user?.roles]);
+  }, [user?.username, user?.permissions, user?.roles]);
 }
 
 /**
