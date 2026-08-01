@@ -36,6 +36,8 @@ import {
 import { MediaManager } from '@/src/shared-components';
 import type { Layer, LayerType, AnimationPreset, AnimationEasing, InteractionTrigger, InteractionActionType, LayerInteraction, Slide, SlideBackground, BreakpointWidth } from '@/src/shared-types/slider-studio';
 import ShapePicker from './ShapePicker';
+import { MOTION_PATH_PRESETS } from '../constants/motionPath';
+import type { MotionPathPresetMode } from '../constants/motionPath';
 
 interface InspectorPanelProps {
   selectedLayer: Layer | null;
@@ -48,6 +50,8 @@ interface InspectorPanelProps {
   canvasHeight: number;
   /** Called when the user asks to draw a custom motion path on the canvas. */
   onStartPathDraw?: () => void;
+  /** Called with a preset path mode to generate and save a motion path. */
+  onApplyPathPreset?: (mode: MotionPathPresetMode) => void;
 }
 
 export default function InspectorPanel({
@@ -59,7 +63,8 @@ export default function InspectorPanel({
   allSlides,
   canvasWidth,
   canvasHeight,
-  onStartPathDraw
+  onStartPathDraw,
+  onApplyPathPreset
 }: InspectorPanelProps) {
   const [activeTab, setActiveTab] = useState<'style' | 'anim' | 'interaction' | 'parallax' | 'responsive'>('style');
   const [activeBreakpoint, setActiveBreakpoint] = useState<BreakpointWidth>('1240');
@@ -1177,8 +1182,26 @@ export default function InspectorPanel({
                 <span>مسیر حرکت سفارشی (Motion Path)</span>
               </div>
               <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed">
-                با رسم یک مسیر روی بوم، لایه در طول نمایش اسلاید به‌صورت حلقوی روی آن حرکت می‌کند.
+                با رسم مسیر (یا انتخاب الگوی آماده)، لایه در طول نمایش اسلاید به‌صورت حلقوی روی آن حرکت می‌کند.
+                نقطه سبز = شروع و نقطه قرمز = پایان مسیر؛ می‌توانید آن‌ها را روی بوم بکشید و جابه‌جا کنید.
               </p>
+
+              {/* Preset path templates */}
+              <div>
+                <label className="text-[10px] text-slate-500 dark:text-slate-400">الگوهای آماده</label>
+                <div className="grid grid-cols-3 gap-1.5 mt-1">
+                  {MOTION_PATH_PRESETS.map(p => (
+                    <button
+                      key={p.mode}
+                      onClick={() => onApplyPathPreset?.(p.mode)}
+                      title={p.hint}
+                      className="px-2 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-300 text-[10px] font-bold hover:bg-indigo-100 dark:hover:bg-indigo-500/20 cursor-pointer"
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
               {selectedLayer.animation.motionPath && selectedLayer.animation.motionPath.points.length >= 2 ? (
                 <>

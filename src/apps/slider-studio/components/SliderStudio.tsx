@@ -47,6 +47,8 @@ import type { SliderProject, Slide, Layer, LayerType, BreakpointWidth, ShapeType
 import ShapePicker from './ShapePicker';
 import ShapeLayer from './ShapeLayer';
 import { SHAPE_LABELS } from '../constants/shapes';
+import { MOTION_PATH_PRESETS, buildMotionPathPreset } from '../constants/motionPath';
+import type { MotionPathPresetMode } from '../constants/motionPath';
 import { INITIAL_SLIDER_PROJECTS } from '../data/presetTemplates';
 import InspectorPanel from './InspectorPanel';
 import TimelineBar from './TimelineBar';
@@ -355,6 +357,11 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
   const [mousePos, setMousePos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [isDrawingPath, setIsDrawingPath] = useState(false);
   const [draftPath, setDraftPath] = useState<{ x: number; y: number }[]>([]);
+
+  // Motion-path overlay & drag state (draggable start/end/any point handles)
+  const stageRef = useRef<HTMLDivElement>(null);
+  const pathOverlayRef = useRef<SVGSVGElement>(null);
+  const pathDragRef = useRef<{ index: number; source: 'draft' | 'saved' } | null>(null);
 
   // Media picker for layer content
   const [mediaPickerTarget, setMediaPickerTarget] = useState<'image' | 'video' | null>(null);
@@ -957,13 +964,92 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
     setDraftPath([]);
   };
 
+  /** Apply a preset motion path (line/arc/turn/shape/loop/figure-8) for the
+   *  selected layer. When `save` is true the path is saved immediately (used
+   *  from the inspector); otherwise it becomes the in-progress draft so the
+   *  user can still tweak it on the canvas before finishing. */
+  const applyPathPreset = (mode: MotionPathPresetMode, save = false) => {
+    if (!selectedLayer) return;
+    const pts = buildMotionPathPreset(mode, selectedLayer.width, selectedLayer.height);
+    if (save) {
+      handleUpdateLayer({
+        ...selectedLayer,
+        animation: {
+          ...selectedLayer.animation,
+          motionPath: { points: pts, duration: selectedLayer.animation.inDuration || 2 },
+        },
+      });
+      setIsDrawingPath(false);
+      setDraftPath([]);
+    } else {
+      setDraftPath(pts);
+      setIsDrawingPath(true);
+    }
+  };
+
+  /** Convert a pointer event to layer-relative stage coordinates. */
+  const stagePointFromEvent = (e: { clientX: number; clientY: number }) => {
+    const rect = stageRef.current?.getBoundingClientRect();
+    if (!rect || !selectedLayer) return null;
+    return {
+      x: Math.round(e.clientX - rect.left - selectedLayer.x),
+      y: Math.round(e.clientY - rect.top - selectedLayer.y),
+    };
+  };
+
+  /** Start dragging a path point handle (start / end / any point). */
+  const handlePathPointDown = (
+    e: React.PointerEvent,
+    index: number,
+    source: 'draft' | 'saved'
+  ) => {
+    e.stopPropagation();
+    e.preventDefault();
+    pathOverlayRef.current?.setPointerCapture(e.pointerId);
+    pathDragRef.current = { index, source };
+  };
+
+  const handlePathPointMove = (e: React.PointerEvent) => {
+    const drag = pathDragRef.current;
+    if (!drag) return;
+    const pt = stagePointFromEvent(e);
+    if (!pt) return;
+    if (drag.source === 'draft') {
+      setDraftPath(prev => prev.map((p, i) => (i === drag.index ? pt : p)));
+    } else if (selectedLayer?.animation.motionPath) {
+      const mp = selectedLayer.animation.motionPath;
+      handleUpdateLayer({
+        ...selectedLayer,
+        animation: {
+          ...selectedLayer.animation,
+          motionPath: {
+            ...mp,
+            points: mp.points.map((p, i) => (i === drag.index ? pt : p)),
+          },
+        },
+      });
+    }
+  };
+
+  const handlePathPointUp = (e: React.PointerEvent) => {
+    if (pathDragRef.current) {
+      pathDragRef.current = null;
+      if (pathOverlayRef.current?.hasPointerCapture(e.pointerId)) {
+        pathOverlayRef.current.releasePointerCapture(e.pointerId);
+      }
+    }
+  };
+
   /** Stage click: while drawing a motion path it adds a point (relative to the
-   *  selected layer's top-left); otherwise it deselects the layer. */
+   *  selected layer's top-left); otherwise it deselects the layer. Clicking
+   *  right after dragging a path handle is ignored. */
   const handleStageClick = (e: React.MouseEvent<HTMLDivElement>) => {
     e.stopPropagation();
+    if (pathDragRef.current) return;
     if (isDrawingPath) {
       if (!selectedLayer) return;
-      const rect = e.currentTarget.getBoundingClientRect();
+      const rect = stageRef.current?.getBoundingClientRect();
+      if (!rect) return;
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
       setDraftPath(prev => [
@@ -1619,38 +1705,62 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
           {isDrawingPath && (
             <div
               onClick={e => e.stopPropagation()}
-              className="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-2xl shadow-lg px-4 py-2"
+              className="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-2 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-2xl shadow-lg px-4 py-2"
             >
               <span className="text-xs font-bold text-slate-700 dark:text-slate-200 whitespace-nowrap">
-                رسم مسیر حرکت: روی بوم کلیک کنید
+                رسم مسیر حرکت: کلیک = نقطه جدید
                 {draftPath.length > 0 && ` (${draftPath.length} نقطه)`}
               </span>
-              <button
-                onClick={finishPathDraw}
-                disabled={draftPath.length < 2}
-                className="px-3 py-1 rounded-xl bg-teal-600 text-white text-xs font-bold disabled:opacity-40 cursor-pointer"
-              >
-                پایان مسیر
-              </button>
-              <button
-                onClick={() => setDraftPath([])}
-                disabled={draftPath.length === 0}
-                className="px-3 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-bold disabled:opacity-40 cursor-pointer"
-              >
-                پاک کردن
-              </button>
-              <button
-                onClick={cancelPathDraw}
-                className="px-3 py-1 rounded-xl bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-300 text-xs font-bold cursor-pointer"
-              >
-                انصراف
-              </button>
+              {/* Preset path templates */}
+              <div className="flex items-center gap-1.5 flex-wrap justify-center">
+                <span className="text-[10px] text-slate-500 dark:text-slate-400">الگو:</span>
+                {MOTION_PATH_PRESETS.map(p => (
+                  <button
+                    key={p.mode}
+                    onClick={() => applyPathPreset(p.mode)}
+                    title={p.hint}
+                    className="px-2 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-300 text-[10px] font-bold hover:bg-indigo-100 dark:hover:bg-indigo-500/20 cursor-pointer"
+                  >
+                    {p.label}
+                  </button>
+                ))}
+                <button
+                  onClick={() => setDraftPath([])}
+                  title="رسم آزاد نقطه‌به‌نقطه"
+                  className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] font-bold hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer"
+                >
+                  رسم آزاد
+                </button>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={finishPathDraw}
+                  disabled={draftPath.length < 2}
+                  className="px-3 py-1 rounded-xl bg-teal-600 text-white text-xs font-bold disabled:opacity-40 cursor-pointer"
+                >
+                  پایان مسیر
+                </button>
+                <button
+                  onClick={() => setDraftPath([])}
+                  disabled={draftPath.length === 0}
+                  className="px-3 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-bold disabled:opacity-40 cursor-pointer"
+                >
+                  پاک کردن
+                </button>
+                <button
+                  onClick={cancelPathDraw}
+                  className="px-3 py-1 rounded-xl bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-300 text-xs font-bold cursor-pointer"
+                >
+                  انصراف
+                </button>
+              </div>
             </div>
           )}
           {/* Scrollable viewport */}
           <div className="absolute inset-0 overflow-auto p-8 flex items-start justify-center">
           {/* Slide Stage Container */}
           <div
+            ref={stageRef}
             data-stage-container
             onClick={handleStageClick}
             onMouseMove={e => {
@@ -1694,27 +1804,73 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
               <AddonParticleCanvas preset={activeSlide.background.particlesPreset || 'stars'} opacity={0.6} />
             )}
 
-            {/* Motion-path drawing overlay */}
-            {isDrawingPath && draftPath.length > 0 && selectedLayer && (
-              <svg className="absolute inset-0 pointer-events-none" style={{ zIndex: 9998 }}>
+          {/* Motion-path overlay — ALWAYS visible so the user can see the path
+              the layer will travel along. Selected layer = prominent with
+              draggable handles (green start, red end); other layers = subtle. */}
+          <svg
+            ref={pathOverlayRef}
+            className="absolute inset-0"
+            style={{ zIndex: 9998, pointerEvents: 'none' }}
+            onClick={e => e.stopPropagation()}
+            onPointerDown={e => e.stopPropagation()}
+            onPointerMove={handlePathPointMove}
+            onPointerUp={handlePathPointUp}
+            onPointerCancel={handlePathPointUp}
+          >
+            {/* Other layers with a motion path (subtle) */}
+            {activeSlide.layers
+              .filter(l => l.id !== selectedLayerId && l.visible && l.animation?.motionPath?.points?.length >= 2)
+              .map(l => (
                 <polyline
-                  points={draftPath.map(p => `${p.x + selectedLayer.x},${p.y + selectedLayer.y}`).join(' ')}
+                  key={l.id}
+                  points={l.animation.motionPath!.points.map(p => `${p.x + l.x},${p.y + l.y}`).join(' ')}
                   fill="none"
-                  stroke="#f472b6"
-                  strokeWidth={2}
-                  strokeDasharray="6 4"
+                  stroke="#94a3b8"
+                  strokeWidth={1}
+                  strokeDasharray="3 3"
+                  opacity={0.55}
                 />
-                {draftPath.map((p, i) => (
-                  <circle
-                    key={i}
-                    cx={p.x + selectedLayer.x}
-                    cy={p.y + selectedLayer.y}
-                    r={i === 0 ? 5 : 3.5}
-                    fill={i === 0 ? '#34d399' : '#f472b6'}
+              ))}
+
+            {/* Selected layer path (saved or draft) with draggable handles */}
+            {(() => {
+              if (!selectedLayer) return null;
+              const points = isDrawingPath ? draftPath : selectedLayer.animation?.motionPath?.points;
+              if (!points || points.length < 2) return null;
+              return (
+                <g>
+                  <polyline
+                    points={points.map(p => `${p.x + selectedLayer.x},${p.y + selectedLayer.y}`).join(' ')}
+                    fill="none"
+                    stroke={isDrawingPath ? '#f472b6' : '#818cf8'}
+                    strokeWidth={2.5}
+                    strokeDasharray={isDrawingPath ? '6 4' : undefined}
                   />
-                ))}
-              </svg>
-            )}
+                  {points.map((p, i) => {
+                    const isStart = i === 0;
+                    const isEnd = i === points.length - 1;
+                    return (
+                      <circle
+                        key={i}
+                        cx={p.x + selectedLayer.x}
+                        cy={p.y + selectedLayer.y}
+                        r={isStart ? 6 : isEnd ? 5 : 3.5}
+                        fill={isStart ? '#34d399' : isEnd ? '#f87171' : '#818cf8'}
+                        stroke="#ffffff"
+                        strokeWidth={1.5}
+                        style={{
+                          pointerEvents: 'auto',
+                          cursor: 'grab',
+                          touchAction: 'none',
+                        }}
+                        onPointerDown={e => handlePathPointDown(e, i, isDrawingPath ? 'draft' : 'saved')}
+                      />
+                    );
+                  })}
+                </g>
+              );
+            })()}
+          </svg>
 
             {/* Render Stage Layers */}
             {activeSlide.layers
@@ -1952,6 +2108,7 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
           canvasWidth={canvasWidth}
           canvasHeight={canvasHeight}
           onStartPathDraw={startPathDraw}
+          onApplyPathPreset={mode => applyPathPreset(mode, true)}
         />
         )}
       </div>
