@@ -4,7 +4,7 @@
 // the same clip-path used at render time.
 // ============================================================
 import type { ShapeType } from '@/src/shared-types/slider-studio';
-import { SHAPE_CLIP_PATHS, SHAPE_LABELS, SHAPE_TYPES } from '../constants/shapes';
+import { SHAPE_CLIP_PATHS, SHAPE_LABELS, SHAPE_SVG_TEMPLATES, SHAPE_SVG_TYPES, SHAPE_TYPES } from '../constants/shapes';
 
 interface ShapePickerProps {
   value?: ShapeType;
@@ -31,10 +31,19 @@ export default function ShapePicker({ value, onChange, columns = 6, compact = fa
                 : 'bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-800 hover:border-teal-300 dark:hover:border-teal-500/40 hover:bg-teal-50/50 dark:hover:bg-slate-800/60'
             }`}
           >
-            <span
-              className={`block bg-gradient-to-br from-teal-500 to-indigo-600 ${compact ? 'w-5 h-5' : 'w-7 h-7'}`}
-              style={{ clipPath: SHAPE_CLIP_PATHS[shape] }}
-            />
+            {SHAPE_SVG_TYPES.includes(shape) ? (
+              <span
+                className={`block ${compact ? 'w-5 h-5' : 'w-7 h-7'}`}
+                dangerouslySetInnerHTML={{
+                  __html: `<svg viewBox="0 0 100 100" preserveAspectRatio="none" style="width:100%;height:100%">${SHAPE_SVG_TEMPLATES[shape]('#14b8a6', 'transparent', 0)}</svg>`,
+                }}
+              />
+            ) : (
+              <span
+                className={`block bg-gradient-to-br from-teal-500 to-indigo-600 ${compact ? 'w-5 h-5' : 'w-7 h-7'}`}
+                style={{ clipPath: SHAPE_CLIP_PATHS[shape] }}
+              />
+            )}
             <span className={`text-[9px] text-slate-600 dark:text-slate-300 leading-tight ${compact ? 'text-[8px]' : ''}`}>
               {faLabel}
             </span>

@@ -534,6 +534,23 @@ export default function InteractivePreviewModal({
 
               const animKey = `${layer.id}-anim-${layer.animation.inPreset}-${layer.animation.inDuration}-${layer.animation.inDelay}-${layer.animation.inEasing}`;
 
+              // Motion path — layer loops along a user-drawn path. Chrome anchors
+              // offset-path at the wrapper's own position (the layer's left/top,
+              // since the wrapper sits inside the positioned layer div), so only
+              // the scaled layer-relative points are used (no +layerX/+layerY).
+              const motionPath = layer.animation.motionPath;
+              const pathPts =
+                motionPath?.points && motionPath.points.length >= 2
+                  ? motionPath.points.map(p => ({
+                      x: p.x * scaleFactor,
+                      y: p.y * scaleFactor,
+                    }))
+                  : null;
+              const pathString = pathPts
+                ? `M ${pathPts[0].x} ${pathPts[0].y} ` + pathPts.slice(1).map(p => `L ${p.x} ${p.y}`).join(' ')
+                : null;
+              const pathDuration = Math.max(0.1, motionPath?.duration ?? animDuration);
+
               return (
                 <motion.div
                   key={animKey}
@@ -587,6 +604,18 @@ export default function InteractivePreviewModal({
                   }}
                   className="transition-all duration-200"
                 >
+                  {/* Motion path wrapper — loops the layer along the drawn path */}
+                  <motion.div
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      offsetPath: pathString ? `path('${pathString}')` : undefined,
+                      offsetAnchor: '0% 0%',
+                    }}
+                    initial={pathString ? { offsetDistance: '0%' } : false}
+                    animate={pathString ? { offsetDistance: '100%' } : undefined}
+                    transition={pathString ? { duration: pathDuration, ease: inEase, repeat: Infinity } : undefined}
+                  >
                   {/* Parallax inner */}
                   <div style={{
                     width: '100%',
@@ -651,6 +680,7 @@ export default function InteractivePreviewModal({
                     )}
                   </div>
                   </div>{/* end parallax */}
+                  </motion.div>{/* end motion path wrapper */}
                 </motion.div>
               );
             })}

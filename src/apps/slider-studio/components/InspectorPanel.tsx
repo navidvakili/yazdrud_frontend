@@ -30,7 +30,8 @@ import {
   AlignVerticalJustifyEnd,
   Sun,
   Video,
-  Shapes
+  Shapes,
+  Route
 } from 'lucide-react';
 import { MediaManager } from '@/src/shared-components';
 import type { Layer, LayerType, AnimationPreset, AnimationEasing, InteractionTrigger, InteractionActionType, LayerInteraction, Slide, SlideBackground, BreakpointWidth } from '@/src/shared-types/slider-studio';
@@ -45,6 +46,8 @@ interface InspectorPanelProps {
   allSlides: { id: string; title: string }[];
   canvasWidth: number;
   canvasHeight: number;
+  /** Called when the user asks to draw a custom motion path on the canvas. */
+  onStartPathDraw?: () => void;
 }
 
 export default function InspectorPanel({
@@ -55,7 +58,8 @@ export default function InspectorPanel({
   onUpdateSlide,
   allSlides,
   canvasWidth,
-  canvasHeight
+  canvasHeight,
+  onStartPathDraw
 }: InspectorPanelProps) {
   const [activeTab, setActiveTab] = useState<'style' | 'anim' | 'interaction' | 'parallax' | 'responsive'>('style');
   const [activeBreakpoint, setActiveBreakpoint] = useState<BreakpointWidth>('1240');
@@ -1164,6 +1168,69 @@ export default function InspectorPanel({
                   <option value="linear">Linear (خطی)</option>
                 </select>
               </div>
+            </div>
+
+            {/* Motion Path */}
+            <div className="p-3 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-gray-200 dark:border-slate-800/80 space-y-3">
+              <div className="font-extrabold text-indigo-600 dark:text-indigo-400 flex items-center gap-1 text-[11px]">
+                <Route className="w-3.5 h-3.5" />
+                <span>مسیر حرکت سفارشی (Motion Path)</span>
+              </div>
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                با رسم یک مسیر روی بوم، لایه در طول نمایش اسلاید به‌صورت حلقوی روی آن حرکت می‌کند.
+              </p>
+
+              {selectedLayer.animation.motionPath && selectedLayer.animation.motionPath.points.length >= 2 ? (
+                <>
+                  <div className="grid grid-cols-2 gap-2 font-mono">
+                    <div>
+                      <label className="text-[10px] text-slate-500 dark:text-slate-400">تعداد نقاط</label>
+                      <input
+                        type="text" dir="ltr" readOnly
+                        value={`${selectedLayer.animation.motionPath.points.length} نقطه`}
+                        className="w-full p-2 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-slate-900 dark:text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-slate-500 dark:text-slate-400">مدت هر دور (ثانیه)</label>
+                      <input
+                        type="number" dir="ltr"
+                        step="0.1" min="0.1"
+                        value={selectedLayer.animation.motionPath.duration ?? selectedLayer.animation.inDuration}
+                        onChange={e =>
+                          updateAnimField('motionPath', {
+                            ...selectedLayer.animation.motionPath!,
+                            duration: Number(e.target.value) || 2,
+                          })
+                        }
+                        className="w-full p-2 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-slate-900 dark:text-white"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => onStartPathDraw?.()}
+                      className="flex-1 px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-[11px] cursor-pointer"
+                    >
+                      ویرایش مسیر
+                    </button>
+                    <button
+                      onClick={() => updateAnimField('motionPath', undefined)}
+                      className="px-3 py-2 rounded-xl bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 font-extrabold text-[11px] cursor-pointer"
+                    >
+                      حذف مسیر
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <button
+                  onClick={() => onStartPathDraw?.()}
+                  className="w-full px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-[11px] flex items-center justify-center gap-1 cursor-pointer"
+                >
+                  <Route className="w-3.5 h-3.5" />
+                  رسم مسیر جدید
+                </button>
+              )}
             </div>
 
             {/* Out-Animation */}

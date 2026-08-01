@@ -30,7 +30,18 @@ export type ShapeType =
   | 'chevronRight'
   | 'chevronLeft'
   | 'chevronUp'
-  | 'chevronDown';
+  | 'chevronDown'
+  | 'cloud'
+  | 'lightningBolt'
+  | 'plus'
+  | 'minus'
+  | 'multiply'
+  | 'speechBubble'
+  | 'thoughtBubble'
+  | 'smiley'
+  | 'notAllowed'
+  | 'divide'
+  | 'equals';
 
 export type AnimationEasing = 'linear' | 'easeIn' | 'easeOut' | 'easeInOut' | 'bounce' | 'elastic';
 
@@ -83,6 +94,11 @@ export interface LayerResponsiveOverride {
   hidden?: boolean;
 }
 
+export interface MotionPathPoint {
+  x: number;
+  y: number;
+}
+
 export interface LayerAnimation {
   inPreset: AnimationPreset;
   inDuration: number;
@@ -93,6 +109,13 @@ export interface LayerAnimation {
   outDelay: number;
   hoverEffect?: 'scale' | 'lift' | 'glow' | 'tilt' | 'none';
   parallaxDepth?: number;
+  /** Custom motion path — points relative to the layer's top-left (canvas px).
+   *  While set, the layer loops along this path for its on-screen window. */
+  motionPath?: {
+    points: MotionPathPoint[];
+    /** Seconds per full loop; defaults to inDuration. */
+    duration?: number;
+  };
 }
 
 export interface Layer {

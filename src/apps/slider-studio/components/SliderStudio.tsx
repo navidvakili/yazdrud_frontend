@@ -353,6 +353,8 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
 
   // Mouse position for parallax (normalized -1..1)
   const [mousePos, setMousePos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [isDrawingPath, setIsDrawingPath] = useState(false);
+  const [draftPath, setDraftPath] = useState<{ x: number; y: number }[]>([]);
 
   // Media picker for layer content
   const [mediaPickerTarget, setMediaPickerTarget] = useState<'image' | 'video' | null>(null);
@@ -926,10 +928,58 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
     }
   };
 
+  // ---- Motion Path Drawing Helpers ----
+
+  const startPathDraw = () => {
+    setDraftPath(selectedLayer?.animation.motionPath?.points ?? []);
+    setIsDrawingPath(true);
+  };
+
+  const cancelPathDraw = () => {
+    setIsDrawingPath(false);
+    setDraftPath([]);
+  };
+
+  const finishPathDraw = () => {
+    if (selectedLayer && draftPath.length >= 2) {
+      handleUpdateLayer({
+        ...selectedLayer,
+        animation: {
+          ...selectedLayer.animation,
+          motionPath: {
+            points: draftPath,
+            duration: selectedLayer.animation.inDuration || 2,
+          },
+        },
+      });
+    }
+    setIsDrawingPath(false);
+    setDraftPath([]);
+  };
+
+  /** Stage click: while drawing a motion path it adds a point (relative to the
+   *  selected layer's top-left); otherwise it deselects the layer. */
+  const handleStageClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    if (isDrawingPath) {
+      if (!selectedLayer) return;
+      const rect = e.currentTarget.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      setDraftPath(prev => [
+        ...prev,
+        { x: Math.round(x - selectedLayer.x), y: Math.round(y - selectedLayer.y) },
+      ]);
+      return;
+    }
+    setSelectedLayerId(null);
+  };
+
   // ---- Animation Playback Helpers ----
 
-  /** Compute the Framer Motion animate state for a layer based on playback position */
-  const computeLayerPlaybackState = (layer: Layer): {
+  /** Compute the Framer Motion animate state for a layer based on playback position
+   *  (base transforms; motion-path offset is applied by computeLayerPlaybackState). */
+  const computeBasePlaybackState = (layer: Layer): {
     opacity: number;
     x: number;
     y: number;
@@ -1072,6 +1122,48 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
       default:
         return { ...finalState, opacity: eased * layer.opacity };
     }
+  };
+
+  /** Interpolate a point along a polyline path at normalized time t ∈ [0,1]
+   *  (evenly spaced by segment length, so speed is constant along the path). */
+  const interpolatePathPoint = (points: { x: number; y: number }[], t: number) => {
+    const n = points.length;
+    if (n === 0) return { x: 0, y: 0 };
+    if (n === 1) return points[0];
+    const segLens: number[] = [];
+    let total = 0;
+    for (let i = 1; i < n; i++) {
+      const d = Math.hypot(points[i].x - points[i - 1].x, points[i].y - points[i - 1].y);
+      segLens.push(d);
+      total += d;
+    }
+    if (total === 0) return points[0];
+    let target = t * total;
+    for (let i = 0; i < segLens.length; i++) {
+      if (target <= segLens[i] || i === segLens.length - 1) {
+        const segT = segLens[i] === 0 ? 0 : target / segLens[i];
+        return {
+          x: points[i].x + (points[i + 1].x - points[i].x) * segT,
+          y: points[i].y + (points[i + 1].y - points[i].y) * segT,
+        };
+      }
+      target -= segLens[i];
+    }
+    return points[n - 1];
+  };
+
+  /** Playback state + motion-path override: while a motionPath is configured the
+   *  layer loops along the path (x/y replaced with path coordinates). */
+  const computeLayerPlaybackState = (layer: Layer) => {
+    const state = computeBasePlaybackState(layer);
+    const mp = layer.animation.motionPath;
+    if (!mp || !mp.points || mp.points.length < 2) return state;
+    const elapsed = currentTime - (layer.animation.inDelay ?? 0);
+    const loopDur = Math.max(0.1, mp.duration ?? layer.animation.inDuration ?? 2);
+    if (elapsed <= 0) return state; // before the window — keep base state (hidden)
+    const t = (elapsed % loopDur) / loopDur;
+    const p = interpolatePathPoint(mp.points, t);
+    return { ...state, x: p.x, y: p.y };
   };
 
   // Filtered Layers in Left Sidebar
@@ -1523,12 +1615,44 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
         {/* CENTER CANVAS STAGE — scrollable when layers overflow */}
         <div className="flex-1 bg-slate-200/80 dark:bg-slate-950 relative overflow-hidden"
              onClick={() => setSelectedLayerId(null)}>
+          {/* Motion-path draw toolbar */}
+          {isDrawingPath && (
+            <div
+              onClick={e => e.stopPropagation()}
+              className="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-2xl shadow-lg px-4 py-2"
+            >
+              <span className="text-xs font-bold text-slate-700 dark:text-slate-200 whitespace-nowrap">
+                رسم مسیر حرکت: روی بوم کلیک کنید
+                {draftPath.length > 0 && ` (${draftPath.length} نقطه)`}
+              </span>
+              <button
+                onClick={finishPathDraw}
+                disabled={draftPath.length < 2}
+                className="px-3 py-1 rounded-xl bg-teal-600 text-white text-xs font-bold disabled:opacity-40 cursor-pointer"
+              >
+                پایان مسیر
+              </button>
+              <button
+                onClick={() => setDraftPath([])}
+                disabled={draftPath.length === 0}
+                className="px-3 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-bold disabled:opacity-40 cursor-pointer"
+              >
+                پاک کردن
+              </button>
+              <button
+                onClick={cancelPathDraw}
+                className="px-3 py-1 rounded-xl bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-300 text-xs font-bold cursor-pointer"
+              >
+                انصراف
+              </button>
+            </div>
+          )}
           {/* Scrollable viewport */}
           <div className="absolute inset-0 overflow-auto p-8 flex items-start justify-center">
           {/* Slide Stage Container */}
           <div
             data-stage-container
-            onClick={e => { e.stopPropagation(); setSelectedLayerId(null); }}
+            onClick={handleStageClick}
             onMouseMove={e => {
               const rect = e.currentTarget.getBoundingClientRect();
               const cx = rect.left + rect.width / 2;
@@ -1568,6 +1692,28 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
             {/* Particle Canvas — show when type is 'particles' OR project addon is enabled */}
             {(project.addonParticles || activeSlide.background.type === 'particles') && (
               <AddonParticleCanvas preset={activeSlide.background.particlesPreset || 'stars'} opacity={0.6} />
+            )}
+
+            {/* Motion-path drawing overlay */}
+            {isDrawingPath && draftPath.length > 0 && selectedLayer && (
+              <svg className="absolute inset-0 pointer-events-none" style={{ zIndex: 9998 }}>
+                <polyline
+                  points={draftPath.map(p => `${p.x + selectedLayer.x},${p.y + selectedLayer.y}`).join(' ')}
+                  fill="none"
+                  stroke="#f472b6"
+                  strokeWidth={2}
+                  strokeDasharray="6 4"
+                />
+                {draftPath.map((p, i) => (
+                  <circle
+                    key={i}
+                    cx={p.x + selectedLayer.x}
+                    cy={p.y + selectedLayer.y}
+                    r={i === 0 ? 5 : 3.5}
+                    fill={i === 0 ? '#34d399' : '#f472b6'}
+                  />
+                ))}
+              </svg>
             )}
 
             {/* Render Stage Layers */}
@@ -1805,6 +1951,7 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
           allSlides={project.slides.map(s => ({ id: s.id, title: s.title }))}
           canvasWidth={canvasWidth}
           canvasHeight={canvasHeight}
+          onStartPathDraw={startPathDraw}
         />
         )}
       </div>

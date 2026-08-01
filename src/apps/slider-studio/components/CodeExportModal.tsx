@@ -2,7 +2,17 @@ import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { X, Code, Copy, Check, FileText, Smartphone, Laptop } from 'lucide-react';
 import type { SliderProject } from '@/src/shared-types/slider-studio';
-import { SHAPE_CLIP_PATHS } from '../constants/shapes';
+import { SHAPE_CLIP_PATHS, SHAPE_SVG_TEMPLATES, SHAPE_SVG_TYPES } from '../constants/shapes';
+
+function shapeFlatFill(layer: { backgroundColor?: string; backgroundGradient?: string }): string {
+  if (layer.backgroundColor) return layer.backgroundColor;
+  const g = layer.backgroundGradient;
+  if (g) {
+    const m = g.match(/#[0-9a-fA-F]{3,8}/g);
+    if (m && m.length) return m[0];
+  }
+  return '#38bdf8';
+}
 
 interface CodeExportModalProps {
   isOpen: boolean;
@@ -39,7 +49,15 @@ export default function CodeExportModal({ isOpen, onClose, project }: CodeExport
     }
     ${currentSlide.layers
       .map(
-        l => `
+        l => {
+          const path = l.animation?.motionPath;
+          const pathCss = path?.points && path.points.length >= 2
+            ? `
+      offset-path: path("M ${path.points[0].x} ${path.points[0].y} ${path.points.slice(1).map(p => `L ${p.x} ${p.y}`).join(' ')}");
+      offset-anchor: 0% 0%;
+      animation: mp-${l.id} ${Math.max(0.1, path.duration ?? l.animation?.inDuration ?? 2)}s ${l.animation?.inEasing ?? 'ease-out'} ${l.animation?.inDelay ?? 0}s infinite;`
+            : '';
+          return `
     #layer-${l.id} {
       position: absolute;
       left: ${l.x}px;
@@ -55,7 +73,18 @@ export default function CodeExportModal({ isOpen, onClose, project }: CodeExport
       z-index: ${l.zIndex};
       transform: rotate(${l.rotation}deg);
       box-shadow: ${l.shadow || 'none'};
-      transition: all 0.3s ease;
+      transition: all 0.3s ease;${pathCss}
+    }`;
+        }
+      )
+      .join('\n')}
+    ${currentSlide.layers
+      .filter(l => l.animation?.motionPath?.points && l.animation.motionPath.points.length >= 2)
+      .map(
+        l => `
+    @keyframes mp-${l.id} {
+      from { offset-distance: 0%; }
+      to   { offset-distance: 100%; }
     }`
       )
       .join('\n')}
@@ -73,9 +102,15 @@ export default function CodeExportModal({ isOpen, onClose, project }: CodeExport
         return `<button id="layer-${l.id}">${l.content}</button>`;
       }
       if (l.type === 'shape') {
-        const clip = SHAPE_CLIP_PATHS[l.shape ?? 'circle'];
         const bw = l.borderWidth ?? 0;
         const bcol = l.borderColor && l.borderColor !== 'transparent' ? l.borderColor : 'transparent';
+        const shape = l.shape ?? 'circle';
+        if (SHAPE_SVG_TYPES.includes(shape)) {
+          return `<div id="layer-${l.id}" style="position:relative;">
+          <svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute; inset:0; width:100%; height:100%;">${SHAPE_SVG_TEMPLATES[shape](shapeFlatFill(l), bcol === 'transparent' ? 'transparent' : bcol, bw)}</svg>
+        </div>`;
+        }
+        const clip = SHAPE_CLIP_PATHS[shape];
         return `<div id="layer-${l.id}" style="position:relative;">
           ${bw > 0 && bcol !== 'transparent'
             ? `<div style="position:absolute; inset:0; background:${bcol}; clip-path:${clip};"></div>`
