@@ -889,7 +889,14 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
     // the animation freezes at the exact frame instead of snapping to the end.
     if (!isPlaying && currentTime === 0) return finalState;
 
-    const { inDelay = 0, inDuration = 0.8, inPreset = 'fadeIn' } = layer.animation;
+    const {
+      inDelay = 0,
+      inDuration = 0.8,
+      inPreset = 'fadeIn',
+      outPreset = 'none',
+      outDuration = 0,
+      outDelay = 0,
+    } = layer.animation;
     if (inPreset === 'none' || inDuration === 0) return finalState;
 
     const elapsed = currentTime - inDelay;
@@ -917,12 +924,7 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
       }
     }
 
-    // Animation completed – final/resting state
-    if (elapsed >= inDuration) return finalState;
-
-    // During animation – interpolate by progress
-    const progress = elapsed / inDuration;
-    // Compute easing based on layer setting
+    // Compute easing based on layer setting (shared by in & out interpolation)
     const easingFn = (t: number) => {
       switch (layer.animation.inEasing) {
         case 'linear': return t;
@@ -942,6 +944,38 @@ export default function SliderStudio({ initialProject, onSave, onBack }: SliderS
         default: return 1 - Math.pow(1 - t, 3); // easeOut
       }
     };
+
+    // Timeline window: the layer is on screen from inDelay until the end of its
+    // in-animation, plus an optional out-animation tail (outDelay + outDuration).
+    // When no out animation is configured the layer stays visible until the
+    // slide itself ends.
+    const hasOut = (outPreset || 'none') !== 'none' && outDuration > 0;
+    const holdEnd = inDuration + outDelay;
+    const totalEnd = holdEnd + (hasOut ? outDuration : 0);
+
+    // In-animation completed — hold, then play the out-animation if configured.
+    // With NO exit animation the layer stays visible until the slide ends.
+    if (elapsed >= inDuration) {
+      if (!hasOut) return finalState;
+      if (elapsed < holdEnd) return finalState; // hold phase
+      if (elapsed >= totalEnd) return { ...finalState, opacity: 0 }; // window ended
+      const outProgress = Math.min(1, (elapsed - holdEnd) / outDuration);
+      const outEased = easingFn(outProgress);
+      const outState = { ...finalState, opacity: (1 - outEased) * layer.opacity };
+      switch (outPreset) {
+        case 'slideUp':    return { ...outState, y: -80 * outEased };
+        case 'slideDown':  return { ...outState, y: 80 * outEased };
+        case 'slideLeft':  return { ...outState, x: 120 * outEased };
+        case 'slideRight': return { ...outState, x: -120 * outEased };
+        case 'zoomIn':     return { ...outState, scale: 1 + 0.5 * outEased };
+        case 'zoomOut':    return { ...outState, scale: 1 - 0.6 * outEased };
+        case 'rotateIn':   return { ...outState, scale: 1 - 0.2 * outEased, rotate: layer.rotation - 20 * outEased };
+        default:           return outState; // fade-style exit
+      }
+    }
+
+    // During in-animation – interpolate by progress
+    const progress = elapsed / inDuration;
     const eased = easingFn(progress);
 
     switch (inPreset) {

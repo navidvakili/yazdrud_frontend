@@ -1151,6 +1151,57 @@ export default function InspectorPanel({
               </div>
             </div>
 
+            {/* Out-Animation */}
+            <div className="p-3 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-gray-200 dark:border-slate-800/80 space-y-3">
+              <div className="font-extrabold text-rose-500 dark:text-rose-400 flex items-center gap-1 text-[11px]">
+                <RotateCw className="w-3.5 h-3.5" />
+                <span>انیمیشن خروجی (Out-Animation)</span>
+              </div>
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                اگر «بدون خروج» باشد، لایه تا انتهای زمان اسلاید روی صفحه می‌ماند. برای محو شدن در زمان مشخص، نوع خروج را انتخاب و زمان آن را تنظیم کنید.
+              </p>
+
+              <div>
+                <label className="text-[10px] text-slate-500 dark:text-slate-400">نوع خروج</label>
+                <select
+                  value={selectedLayer.animation.outPreset || 'none'}
+                  onChange={e => updateAnimField('outPreset', e.target.value as AnimationPreset)}
+                  className="w-full p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-slate-900 dark:text-white font-sans text-xs cursor-pointer"
+                >
+                  <option value="none">بدون خروج (تا انتهای اسلاید بماند)</option>
+                  <option value="fadeIn">Fade Out (محو شدن)</option>
+                  <option value="slideUp">Slide Up (خروج به بالا)</option>
+                  <option value="slideDown">Slide Down (خروج به پایین)</option>
+                  <option value="slideLeft">Slide Left (خروج به چپ)</option>
+                  <option value="slideRight">Slide Right (خروج به راست)</option>
+                  <option value="zoomIn">Zoom In (کوچک و محو)</option>
+                  <option value="zoomOut">Zoom Out (بزرگ و محو)</option>
+                  <option value="rotateIn">Rotate (چرخش و محو)</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 font-mono">
+                <div>
+                  <label className="text-[10px] text-slate-500 dark:text-slate-400">تأخیر خروج (ثانیه)</label>
+                  <input
+                    type="number" dir="ltr" step="0.1" min="0"
+                    value={selectedLayer.animation.outDelay}
+                    onChange={e => updateAnimField('outDelay', Number(e.target.value))}
+                    className="w-full p-2 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-slate-900 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] text-slate-500 dark:text-slate-400">مدت خروج (ثانیه)</label>
+                  <input
+                    type="number" dir="ltr" step="0.1" min="0"
+                    value={selectedLayer.animation.outDuration}
+                    onChange={e => updateAnimField('outDuration', Number(e.target.value))}
+                    className="w-full p-2 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-slate-900 dark:text-white"
+                  />
+                </div>
+              </div>
+            </div>
+
             {/* Hover Effects */}
             <div className="p-3 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-gray-200 dark:border-slate-800/80 space-y-3">
               <div className="font-extrabold text-teal-600 dark:text-teal-400 flex items-center gap-1 text-[11px]">

@@ -201,6 +201,7 @@ export default function InteractivePreviewModal({
   const [deviceSize, setDeviceSize] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const [keyCounter, setKeyCounter] = useState(0);
   const [mousePos, setMousePos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [playbackTime, setPlaybackTime] = useState(0);
 
   const activeSlide: Slide = project.slides[currentSlideIndex] || project.slides[0];
 
@@ -215,6 +216,17 @@ export default function InteractivePreviewModal({
 
     return () => clearTimeout(timer);
   }, [isOpen, isPlaying, currentSlideIndex, activeSlide, project.slides.length]);
+
+  // Playback clock — drives per-layer visibility windows so layers leave the
+  // screen at the same time as in the editor timeline.
+  useEffect(() => {
+    if (!isOpen || !isPlaying) return;
+    setPlaybackTime(0);
+    const interval = setInterval(() => {
+      setPlaybackTime(t => Number((t + 0.05).toFixed(2)));
+    }, 50);
+    return () => clearInterval(interval);
+  }, [isOpen, isPlaying, currentSlideIndex, keyCounter]);
 
   // Execute slide-level 'slideLoad' interactions when the slide mounts
   useEffect(() => {
@@ -470,6 +482,21 @@ export default function InteractivePreviewModal({
               const animDuration = layer.animation.inDuration || 0.8;
               const animDelay = layer.animation.inDelay || 0;
 
+              // Exit window — the layer leaves the screen after its exit animation
+              const hasOut = (layer.animation.outPreset || 'none') !== 'none' && (layer.animation.outDuration || 0) > 0;
+              const windowEnd = hasOut
+                ? animDelay + animDuration + (layer.animation.outDelay || 0) + (layer.animation.outDuration || 0)
+                : null;
+              const isWindowEnded = windowEnd !== null && playbackTime >= windowEnd;
+
+              const inEase =
+                layer.animation.inEasing === 'bounce' ? [0.68, -0.55, 0.265, 1.55] as const
+                : layer.animation.inEasing === 'elastic' ? [0.68, -0.6, 0.32, 1.55] as const
+                : layer.animation.inEasing === 'easeInOut' ? [0.42, 0, 0.58, 1] as const
+                : layer.animation.inEasing === 'easeIn' ? [0.4, 0, 1, 1] as const
+                : layer.animation.inEasing === 'linear' ? 'linear'
+                : 'easeOut';
+
               // Animation variants
               const getInitialAnimation = () => {
                 const base = { rotate: layer.rotation };
@@ -510,17 +537,10 @@ export default function InteractivePreviewModal({
                 <motion.div
                   key={animKey}
                   initial={getInitialAnimation()}
-                  animate={{ opacity: layer.opacity, x: 0, y: 0, scale: 1, rotate: layer.rotation }}
-                  transition={{
-                    duration: animDuration,
-                    delay: animDelay,
-                    ease: layer.animation.inEasing === 'bounce' ? [0.68, -0.55, 0.265, 1.55] as const
-                      : layer.animation.inEasing === 'elastic' ? [0.68, -0.6, 0.32, 1.55] as const
-                      : layer.animation.inEasing === 'easeInOut' ? [0.42, 0, 0.58, 1] as const
-                      : layer.animation.inEasing === 'easeIn' ? [0.4, 0, 1, 1] as const
-                      : layer.animation.inEasing === 'linear' ? 'linear'
-                      : 'easeOut'
-                  }}
+                  animate={isWindowEnded ? { opacity: 0 } : { opacity: layer.opacity, x: 0, y: 0, scale: 1, rotate: layer.rotation }}
+                  transition={isWindowEnded
+                    ? { duration: Math.max(0.2, layer.animation.outDuration || 0.5), delay: 0, ease: 'easeIn' }
+                    : { duration: animDuration, delay: animDelay, ease: inEase }}
                   whileHover={
                     layer.animation.hoverEffect === 'glow'
                       ? { boxShadow: '0 0 25px rgba(56, 189, 248, 0.8)' }
