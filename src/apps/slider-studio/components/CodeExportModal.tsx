@@ -56,7 +56,6 @@ export default function CodeExportModal({ isOpen, onClose, project }: CodeExport
       transform: rotate(${l.rotation}deg);
       box-shadow: ${l.shadow || 'none'};
       transition: all 0.3s ease;
-      ${l.type === 'shape' ? `clip-path: ${SHAPE_CLIP_PATHS[l.shape ?? 'circle']};` : ''}
     }`
       )
       .join('\n')}
@@ -79,9 +78,9 @@ export default function CodeExportModal({ isOpen, onClose, project }: CodeExport
         const bcol = l.borderColor && l.borderColor !== 'transparent' ? l.borderColor : 'transparent';
         return `<div id="layer-${l.id}" style="position:relative;">
           ${bw > 0 && bcol !== 'transparent'
-            ? `<div style="position:absolute; inset:${-bw}px; background:${bcol}; clip-path:${clip};"></div>`
+            ? `<div style="position:absolute; inset:0; background:${bcol}; clip-path:${clip};"></div>`
             : ''}
-          <div style="position:absolute; inset:0; background:${l.backgroundGradient || l.backgroundColor}; opacity:${(l.backgroundOpacity ?? 100) / 100};"></div>
+          <div style="position:absolute; inset:${bw}px; background:${l.backgroundGradient || l.backgroundColor}; opacity:${(l.backgroundOpacity ?? 100) / 100}; clip-path:${clip};"></div>
         </div>`;
       }
       return `<div id="layer-${l.id}">${l.content}</div>`;

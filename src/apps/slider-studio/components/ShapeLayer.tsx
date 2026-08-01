@@ -26,16 +26,21 @@ export default function ShapeLayer({ layer, scaleFactor = 1 }: ShapeLayerProps) 
   const fillOpacity = (layer.backgroundOpacity ?? 100) / 100;
 
   return (
-    <div
-      className="w-full h-full"
-      style={{ position: 'relative', clipPath: clip, pointerEvents: 'none' }}
-    >
-      {/* Outline — a border-color shape slightly larger than the fill */}
+    <div className="w-full h-full" style={{ position: 'relative', pointerEvents: 'none' }}>
+      {/* Outline — border-color shape clipped to the full layer box */}
       {bw > 0 && borderColor && (
-        <div style={{ position: 'absolute', inset: -bw, background: borderColor, clipPath: clip }} />
+        <div style={{ position: 'absolute', inset: 0, background: borderColor, clipPath: clip }} />
       )}
-      {/* Fill */}
-      <div style={{ position: 'absolute', inset: 0, background: fill, opacity: fillOpacity }} />
+      {/* Fill — slightly inset so the outline ring stays visible inside the box */}
+      <div
+        style={{
+          position: 'absolute',
+          inset: bw,
+          background: fill,
+          opacity: fillOpacity,
+          clipPath: clip,
+        }}
+      />
     </div>
   );
 }
