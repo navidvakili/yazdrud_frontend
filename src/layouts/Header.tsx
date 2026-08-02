@@ -4,7 +4,7 @@
 
 import { useState } from 'react';
 import {
-  Search, X, Lock, Check, LogOut, Menu,
+  Search, X, Lock, Check, LogOut, Menu, Globe, Settings2, ChevronDown,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import type { User as UserType } from '@/src/shared-types';
@@ -12,6 +12,8 @@ import type { Tab } from '@/src/layouts/types';
 import type { RoleInfo } from '@/src/login/types';
 import type { MenuCategory, SubmenuItem } from './menuConfig';
 import ThemeToggle from './ThemeToggle';
+import { useLanguage } from '@/src/shared-utils/LanguageContext';
+import LanguageManagerModal from '@/src/shared-components/LanguageManagerModal';
 
 interface HeaderProps {
   user: UserType | null;
@@ -34,6 +36,14 @@ export default function Header({
 }: HeaderProps) {
   const [menuSearchQuery, setMenuSearchQuery] = useState('');
   const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const [showLangDropdown, setShowLangDropdown] = useState(false);
+  const [showLangManager, setShowLangManager] = useState(false);
+  const { languages, currentLang, setCurrentLang, getLanguage } = useLanguage();
+  // Only the user with username "support" can manage languages.
+  // NOTE: hasRole() is NOT used here because admin/support bypass all role
+  // checks (super-user), and the requirement is ONLY the support username.
+  const canManageLanguages = user?.username === 'support';
+  const currentLanguage = getLanguage(currentLang);
 
   return (
     <header className="p-3.5 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 shrink-0 flex items-center justify-between">
@@ -128,6 +138,92 @@ export default function Header({
           )}
         </div>
       </div>
+
+      {/* Language selector */}
+      {user && (
+        <div className="relative">
+          <button
+            onClick={() => setShowLangDropdown(!showLangDropdown)}
+            className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-white/5 p-1.5 pr-3 rounded-xl transition-all cursor-pointer outline-none select-none"
+            title="زبان محتوا"
+          >
+            <span className="flex items-center gap-1.5">
+              <Globe className="w-4 h-4 text-teal-500" />
+              <span className="hidden lg:flex flex-col items-start">
+                <span className="text-[9px] text-gray-400 font-bold">زبان محتوا</span>
+                <span className="text-[11px] font-black text-gray-900 dark:text-white font-sans uppercase leading-3">
+                  {currentLanguage?.code || currentLang || 'fa'}
+                  <span className="text-[9px] font-bold text-gray-400 mr-1">
+                    {currentLanguage?.name || ''}
+                  </span>
+                </span>
+              </span>
+              <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform ${showLangDropdown ? 'rotate-180' : ''}`} />
+            </span>
+          </button>
+
+          <AnimatePresence>
+            {showLangDropdown && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowLangDropdown(false)} />
+                <motion.div
+                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute left-0 mt-2 w-64 bg-white dark:bg-[#161618] border border-gray-150 dark:border-white/10 rounded-2xl shadow-xl z-50 py-2.5 text-right flex flex-col gap-0.5 overflow-hidden"
+                >
+                  <span className="px-4 pb-1.5 text-[9px] text-gray-400 font-extrabold border-b border-gray-100 dark:border-white/5 mb-1">
+                    زبان محتوای در حال نمایش — هر زبان محتوای جداگانه دارد
+                  </span>
+                  <div className="flex flex-col gap-0.5 max-h-72 overflow-y-auto px-1.5">
+                    {languages.length === 0 && (
+                      <span className="px-3 py-3 text-[10px] text-gray-400 text-center">
+                        در حال بارگذاری زبان‌ها...
+                      </span>
+                    )}
+                    {languages.map((lng) => (
+                      <button
+                        key={lng.id}
+                        onClick={() => {
+                          setCurrentLang(lng.code);
+                          setShowLangDropdown(false);
+                        }}
+                        className={`px-3 py-2 text-[11px] rounded-lg flex items-center justify-between w-full text-right cursor-pointer transition-colors ${currentLang === lng.code ? 'bg-teal-500/10 text-teal-600 dark:text-teal-400 font-extrabold' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5'
+                          }`}
+                      >
+                        <span className="flex items-center gap-2">
+                          <span className="w-6 h-6 rounded-md bg-gray-100 dark:bg-gray-850 text-[9px] font-black flex items-center justify-center font-sans uppercase">
+                            {lng.code}
+                          </span>
+                          <span>{lng.name}</span>
+                          {lng.is_default && (
+                            <span className="text-[8px] px-1 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold">
+                              پیش‌فرض
+                            </span>
+                          )}
+                        </span>
+                        {currentLang === lng.code && <Check className="w-3.5 h-3.5" />}
+                      </button>
+                    ))}
+                  </div>
+                  {canManageLanguages && (
+                    <button
+                      onClick={() => { setShowLangDropdown(false); setShowLangManager(true); }}
+                      className="mx-1.5 mt-1.5 px-3 py-2 text-[11px] text-teal-600 dark:text-teal-400 hover:bg-teal-500/10 flex items-center justify-between w-[calc(100%-12px)] text-right cursor-pointer rounded-lg transition-colors border-t border-gray-100 dark:border-white/5"
+                    >
+                      <span className="flex items-center gap-2">
+                        <Settings2 className="w-3.5 h-3.5" />
+                        مدیریت زبان‌ها
+                      </span>
+                    </button>
+                  )}
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
 
       {/* User capsule */}
       {user && (
@@ -225,6 +321,9 @@ export default function Header({
           </AnimatePresence>
         </div>
       )}
+
+      {/* Language manager modal */}
+      <LanguageManagerModal open={showLangManager} onClose={() => setShowLangManager(false)} />
     </header>
   );
 }

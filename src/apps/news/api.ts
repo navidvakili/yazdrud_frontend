@@ -16,6 +16,7 @@ export async function fetchNews(params: {
   status?: string;
   target_audience?: string;
   sort?: string;
+  lang?: string;
 } = {}): Promise<{
   data: NewsItem[];
   current_page: number;
@@ -24,7 +25,6 @@ export async function fetchNews(params: {
   total: number;
 }> {
   const query = new URLSearchParams();
-  query.set('lang', 'fa');
   if (params.page) query.set('page', String(params.page));
   if (params.per_page) query.set('per_page', String(params.per_page));
   if (params.search) query.set('search', params.search);
@@ -32,6 +32,7 @@ export async function fetchNews(params: {
   if (params.status) query.set('status', params.status);
   if (params.target_audience) query.set('target_audience', params.target_audience);
   if (params.sort) query.set('sort', params.sort);
+  if (params.lang) query.set('lang', params.lang);
 
   return API(`news?${query.toString()}`);
 }
@@ -53,8 +54,9 @@ export async function createNews(data: {
   is_pinned?: boolean;
   tags?: string[];
   attachments?: { name: string; size: string; url: string }[];
+  lang?: string;
 }): Promise<{ message: string; data: NewsItem }> {
-  return API('news', { ...data, lang: 'fa' }, 'POST');
+  return API('news', data, 'POST');
 }
 
 /** Update a news article */
@@ -70,7 +72,7 @@ export async function updateNews(id: number, data: Partial<{
   tags: string[];
   attachments: { name: string; size: string; url: string }[];
 }>): Promise<{ message: string; data: NewsItem }> {
-  return API(`news/${id}`, { ...data, lang: 'fa' }, 'PUT');
+  return API(`news/${id}`, data, 'PUT');
 }
 
 /** Delete a news article */
@@ -98,8 +100,9 @@ export async function incrementViews(id: number): Promise<{ data: { views_count:
 // ===== Categories =====
 
 /** Get all categories with news count */
-export async function fetchCategories(): Promise<{ data: NewsCategory[] }> {
-  return API('news-categories?lang=fa');
+export async function fetchCategories(lang?: string): Promise<{ data: NewsCategory[] }> {
+  const suffix = lang ? `?lang=${lang}` : '';
+  return API(`news-categories${suffix}`);
 }
 
 /** Create a new category */
@@ -108,8 +111,9 @@ export async function createCategory(data: {
   slug?: string;
   color?: string;
   description?: string;
+  lang?: string;
 }): Promise<{ message: string; data: NewsCategory }> {
-  return API('news-categories', { ...data, lang: 'fa' }, 'POST');
+  return API('news-categories', data, 'POST');
 }
 
 /** Update a category */
@@ -119,8 +123,9 @@ export async function updateCategory(id: number, data: Partial<{
   color: string;
   description: string;
   is_active: boolean;
+  lang?: string;
 }>): Promise<{ message: string; data: NewsCategory }> {
-  return API(`news-categories/${id}`, { ...data, lang: 'fa' }, 'PUT');
+  return API(`news-categories/${id}`, data, 'PUT');
 }
 
 /** Delete a category */

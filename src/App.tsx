@@ -21,6 +21,7 @@ import { loginApi, LoginForm, SessionWarningModal, useSessionWarning } from '@/s
 import { dashboardApi } from '@/src/dashboard';
 import { LogoutModal, StandbyModal, TabLimitAlert } from '@/src/shared-components';
 import { PermissionsProvider } from '@/src/shared-utils/PermissionsContext';
+import { LanguageProvider } from '@/src/shared-utils/LanguageContext';
 
 export default function App() {
   // ========== Core State ==========
@@ -353,6 +354,7 @@ export default function App() {
   return (
     <div className={`${theme} h-screen overflow-hidden bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100 flex flex-col transition-colors duration-300`}>
     <PermissionsProvider user={user}>
+    <LanguageProvider>
 
       {/* ===== Impersonation Banner ===== */}
       {isImpersonating && (
@@ -522,6 +524,7 @@ export default function App() {
         onRespond={handleWarningRespond}
         isLoading={warningRespondLoading}
       />
+    </LanguageProvider>
     </PermissionsProvider>
     </div>
   );

@@ -29,6 +29,33 @@ export interface ApiError {
 }
 
 // ============================================================
+// Language Types — انواع مربوط به زبان‌ها
+// ============================================================
+
+export interface Language {
+  id: number;
+  code: string;
+  name: string;
+  name_en: string | null;
+  dir: 'rtl' | 'ltr';
+  is_active: boolean;
+  is_default: boolean;
+  ordering: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface LanguagePayload {
+  code: string;
+  name: string;
+  name_en?: string | null;
+  dir?: 'rtl' | 'ltr';
+  is_active?: boolean;
+  is_default?: boolean;
+  ordering?: number;
+}
+
+// ============================================================
 // News Types — انواع مربوط به ماژول اخبار
 // ============================================================
 

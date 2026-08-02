@@ -11,7 +11,7 @@ import {
   Share2, FileText, Download, MessageSquare, BarChart2, Layers,
   CheckCircle2, X, Send, SlidersHorizontal, LayoutGrid, List,
   Flame, AlertCircle, ExternalLink, Info, Loader2, Upload, Image,
-  ChevronRight, ChevronLeft,
+  ChevronRight, ChevronLeft, Globe,
 } from 'lucide-react';
 import type { NewsItem, NewsCategory, User, PhotoReportImage } from '@/src/shared-types';
 import { decodeHtmlEntities } from '@/src/shared-utils';
@@ -26,6 +26,7 @@ import {
   fetchAnalytics, fetchComments, approveComment, deleteComment,
 } from './api';
 import { useAppPermissions } from '@/src/shared-utils/PermissionsContext';
+import { useLanguage } from '@/src/shared-utils/LanguageContext';
 
 interface NewsManagementProps {
   user?: User | null;
@@ -38,6 +39,8 @@ type SubTab = 'list' | 'editor' | 'categories' | 'comments' | 'analytics';
 
 export default function NewsManagement({ user, activeTabId, moduleId }: NewsManagementProps) {
   const { can } = useAppPermissions();
+  const { currentLang, getLanguage } = useLanguage();
+  const activeLanguage = getLanguage(currentLang);
   const isAdmin = user?.roles?.includes('admin') || user?.roles?.includes('support');
   const isEditor = user?.roles?.includes('editor');
   const roleCanEdit = isAdmin || isEditor;
@@ -135,6 +138,7 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
         page: currentPage,
         per_page: 12,
         sort: sortBy,
+        lang: currentLang,
       };
       if (searchQuery) params.search = searchQuery;
       if (selectedCatFilter !== 'all') params.category_id = selectedCatFilter;
@@ -149,16 +153,16 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
     } finally {
       setLoading(false);
     }
-  }, [currentPage, sortBy, searchQuery, selectedCatFilter, selectedStatusFilter]);
+  }, [currentPage, sortBy, searchQuery, selectedCatFilter, selectedStatusFilter, currentLang]);
 
   const loadCategories = useCallback(async () => {
     try {
-      const data = await fetchCategories();
+      const data = await fetchCategories(currentLang);
       setCategories(data.data);
     } catch (err: any) {
       console.error('Error loading categories:', err);
     }
-  }, []);
+  }, [currentLang]);
 
   useEffect(() => {
     loadNews();
@@ -200,7 +204,7 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
         setActiveReaderItem(prev => prev ? { ...prev, is_pinned: !prev.is_pinned } : null);
       }
       showToast(res.message || (wasPinned ? 'از خبر ویژه حذف شد' : 'به خبر ویژه اضافه شد'), 'success');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Toggle pin error:', err);
       showToast(err.message || 'خطا در تغییر وضعیت خبر ویژه', 'error');
     }
@@ -299,6 +303,7 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
         is_photo_report: formIsPhotoReport,
         photo_report_images: formIsPhotoReport ? formPhotoReportImages : undefined,
         tags: tagArray,
+        lang: currentLang,
       };
 
       if (editingNewsId) {
@@ -335,6 +340,7 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
         name: newCatName,
         color: newCatColor,
         description: newCatDesc || undefined,
+        lang: currentLang,
       });
       await loadCategories();
       setNewCatName('');
@@ -370,6 +376,7 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
         name: editCatName.trim(),
         description: editCatDesc || undefined,
         color: editCatColor || undefined,
+        lang: currentLang,
       });
       await loadCategories();
       handleCancelEditCategory();
@@ -502,6 +509,12 @@ export default function NewsManagement({ user, activeTabId, moduleId }: NewsMana
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
               پرتال مدیریت اخبار و اطلاعیه‌ها
             </h1>
+            {activeLanguage && (
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/10 border border-white/15 text-[11px] font-bold text-teal-200">
+                <Globe className="w-3.5 h-3.5 text-teal-300" />
+                {activeLanguage.code} • {activeLanguage.name}
+              </div>
+            )}
             <p className="text-xs sm:text-sm text-gray-300 max-w-2xl leading-relaxed">
               انتشار، آرشیو، دسته‌بندی و تحلیل بازخورد اطلاعیه‌های آموزشی، پژوهشی، فرهنگی و رویدادهای تخصصی
             </p>

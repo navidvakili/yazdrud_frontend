@@ -9,8 +9,11 @@ import ToastNotification from '@/src/shared-components/ToastNotification';
 import { fetchCurrentProject, updateProject } from './api';
 import SliderStudioEditor from './components/SliderStudio';
 import type { SliderProject } from '@/src/shared-types/slider-studio';
+import { useLanguage } from '@/src/shared-utils/LanguageContext';
 
 export default function SliderStudioApp() {
+  const { currentLang } = useLanguage();
+
   // ===== Editor state =====
   const [projectId, setProjectId] = useState<number | null>(null);
   const [projectData, setProjectData] = useState<SliderProject | null>(null);
@@ -32,7 +35,7 @@ export default function SliderStudioApp() {
 
     async function load() {
       try {
-        const res = await fetchCurrentProject();
+        const res = await fetchCurrentProject(currentLang);
         if (cancelled) return;
         const project = res?.data;
         if (project?.id) {
@@ -63,7 +66,7 @@ export default function SliderStudioApp() {
 
     load();
     return () => { cancelled = true; };
-  }, []);
+  }, [currentLang]);
 
   // ===== Save (always updates the existing single project) =====
   const handleSaveProject = async (project: SliderProject) => {
@@ -79,6 +82,7 @@ export default function SliderStudioApp() {
         description: project.description,
         project_data: JSON.stringify(project),
         is_active: true,
+        lang: currentLang,
       };
       await updateProject(projectId, payload);
       showToast('اسلایدر با موفقیت ذخیره شد.', 'success');
