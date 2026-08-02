@@ -16,6 +16,7 @@ import type { RoleInfo } from '@/src/login/types';
 import { MAX_TABS } from '@/src/shared-constants';
 import { useAppPermissions } from '@/src/shared-utils/PermissionsContext';
 import { MODULE_PERMISSIONS } from '@/src/shared-utils/permissions';
+import { useLanguage } from '@/src/shared-utils/LanguageContext';
 
 interface MenuAction {
   id: string;
@@ -58,6 +59,10 @@ export default function DashboardModule({
   if (!user) return null;
 
   const { can } = useAppPermissions();
+  const { currentLang, getLanguage } = useLanguage();
+
+  // زبان مبنا = زبان محتوای فعال؛ با تغییر زبان در بالای سایت به‌روز می‌شود
+  const baseLang = getLanguage(currentLang);
 
   // Use dynamic menu items if provided, otherwise fall back to built-in list
   const quickActions: MenuAction[] = allMenuItems || [
@@ -96,6 +101,14 @@ export default function DashboardModule({
             </p>
           </div>
           <div className="hidden sm:flex items-center gap-3">
+            <div className="p-3 rounded-2xl bg-white/70 dark:bg-white/5 backdrop-blur-md border border-gray-200/50 dark:border-white/10 text-center min-w-[80px] shadow-xs">
+              <span className="block text-sm sm:text-base font-black leading-none text-gray-900 dark:text-white">
+                {baseLang ? baseLang.name : 'فارسی'}
+              </span>
+              <span className="text-[8px] text-gray-500 dark:text-gray-400 font-bold block mt-1">
+                زبان مبنا{baseLang ? ` • ${baseLang.code}` : ''}
+              </span>
+            </div>
             <div className="p-3 rounded-2xl bg-white/70 dark:bg-white/5 backdrop-blur-md border border-gray-200/50 dark:border-white/10 text-center min-w-[80px] shadow-xs">
               <span className="block text-lg sm:text-xl font-black leading-none text-gray-900 dark:text-white">{toPersianDigits(MAX_TABS)}</span>
               <span className="text-[8px] text-gray-500 dark:text-gray-400 font-bold block mt-1">تب همزمان مجاز</span>
