@@ -16,6 +16,10 @@ export const AppModules: Record<string, LazyExoticComponent<ComponentType<any>>>
   'county-projects': lazy(() => import('./county-projects')),
   'slider-studio': lazy(() => import('./slider-studio')),
   'development-timeline': lazy(() => import('./development-timeline')),
+  gallery: lazy(() => import('./gallery')),
+  forms: lazy(() => import('./forms')),
+  navigation: lazy(() => import('./navigation')),
+  'page-builder': lazy(() => import('./page-builder')),
 };
 
 /**
@@ -49,6 +53,28 @@ export const moduleToAppMap: Record<string, string> = {
 
   // Development Timeline App
   'development-timeline': 'development-timeline',
+
+  // Gallery App (مدیریت دارایی‌های دیجیتال)
+  'gallery': 'gallery',
+  'dam': 'gallery',
+  'dam-studio': 'gallery',
+  'dam-assets': 'gallery',
+
+  // Forms App (فرم‌ساز و پرسشنامه‌ساز هوشمند)
+  'forms': 'forms',
+  'forms-studio': 'forms',
+  'form-builder': 'forms',
+  'survey-builder': 'forms',
+
+  // Navigation App (مدیریت و ساخت ناوبری)
+  'navigation': 'navigation',
+  'navigation-builder': 'navigation',
+  'nav-builder': 'navigation',
+  'menu-builder': 'navigation',
+
+  // Smart Page Builder App (صفحه ساز هوشمند)
+  'page-builder': 'page-builder',
+  'smart-page-builder': 'page-builder',
 
 };
 

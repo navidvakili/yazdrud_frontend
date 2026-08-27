@@ -339,7 +339,7 @@ export default function ProfileModule({ user, userRoles, onUpdateUser }: Profile
                       className="p-4 rounded-xl bg-gray-50 dark:bg-gray-850 border border-gray-100 dark:border-gray-800"
                     >
                       <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                        <div className="flex-1 grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs">
                           <div>
                             <span className="text-gray-400 dark:text-gray-500 block">مرورگر</span>
                             <span className="text-gray-800 dark:text-gray-200 font-medium flex items-center gap-1">
@@ -357,6 +357,12 @@ export default function ProfileModule({ user, userRoles, onUpdateUser }: Profile
                           <div>
                             <span className="text-gray-400 dark:text-gray-500 block">تاریخ لاگین</span>
                             <span className="text-gray-800 dark:text-gray-200 font-medium">{formatDateTime(session.login_at)}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-400 dark:text-gray-500 block">آخرین فعالیت</span>
+                            <span className="text-gray-800 dark:text-gray-200 font-medium">
+                              {session.last_used_at ? formatDateTime(session.last_used_at) : '—'}
+                            </span>
                           </div>
                         </div>
                         <button

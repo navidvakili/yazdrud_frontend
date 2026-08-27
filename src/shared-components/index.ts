@@ -9,3 +9,4 @@ export { default as WysiwygEditor } from './WysiwygEditor';
 export { default as TagInput } from './TagInput';
 export { default as MediaManager } from './MediaManager';
 export { default as LanguageManagerModal } from './LanguageManagerModal';
+export { ConfirmDialog } from './ConfirmDialog';

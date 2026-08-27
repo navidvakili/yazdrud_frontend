@@ -53,6 +53,8 @@ export interface ActiveSession {
   platform: string;
   login_at: string;
   updated_at: string;
+  /** آخرین باری که این نشست واقعاً یک درخواست API معتبر زده (throttled) — معیار Idle Timeout */
+  last_used_at: string | null;
   expires_at: string | null;
   is_current: boolean;
 }

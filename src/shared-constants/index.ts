@@ -10,6 +10,11 @@ export const BACKEND_API_URL = import.meta.env.DEV
 /** پیشوند API (BACKEND_API_URL + /api) */
 export const API_BASE_URL = `${BACKEND_API_URL}/api`;
 
+/** آدرس سایت عمومی — بر اساس محیط */
+export const PUBLIC_SITE_URL = import.meta.env.DEV
+    ? 'http://127.0.0.1:3000'
+    : 'https://yazdrud.ir';
+
 /** کلید ذخیره‌سازی توکن در localStorage */
 export const TOKEN_STRING = 'portal_token';
 

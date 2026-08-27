@@ -244,7 +244,7 @@ export default function AdminSessionsPanel() {
                                             </span>
                                         </div>
 
-                                        {/* Login date */}
+                                        {/* Login date + last activity */}
                                         <div className="md:col-span-2">
                                             <div className="flex items-center gap-1.5">
                                                 <Clock className="w-3.5 h-3.5 text-gray-400 shrink-0" />
@@ -252,6 +252,9 @@ export default function AdminSessionsPanel() {
                                                     {formatDateTime(session.login_at)}
                                                 </span>
                                             </div>
+                                            <span className="block text-[10px] text-gray-400 mt-0.5">
+                                                آخرین فعالیت: {session.last_used_at ? formatDateTime(session.last_used_at) : '—'}
+                                            </span>
                                         </div>
 
                                         {/* Role */}

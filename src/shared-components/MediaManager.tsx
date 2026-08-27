@@ -6,7 +6,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   X, Upload, Image as ImageIcon, FileText, Trash2, Search,
-  Grid3X3, Loader2, AlertCircle, CheckCircle2, Folder, Video as VideoIcon,
+  Grid3X3, Loader2, AlertCircle, CheckCircle2, Folder, Video as VideoIcon, Pencil, Save,
 } from 'lucide-react';
 import { APISendFiles } from '@/src/shared-utils/functions';
 import { API } from '@/src/shared-utils/functions';
@@ -20,6 +20,8 @@ interface MediaFile {
   type: string;
   created_at: string;
   path?: string;
+  title?: string | null;
+  description?: string | null;
 }
 
 /** Normalize storage URLs to the frontend's backend base URL */
@@ -43,6 +45,31 @@ function normalizeMediaFile(file: MediaFile): MediaFile {
   return { ...file, url: resolveMediaUrl(file.url) };
 }
 
+// ============================================================
+// پسوندهای اجرایی/خطرناک که هرگز اجازه آپلود ندارند (bat، exe و ...)
+// ============================================================
+const BLOCKED_EXTENSIONS = [
+  'bat', 'cmd', 'com', 'exe', 'scr', 'msi', 'msp', 'ps1', 'vbs', 'js',
+  'jse', 'jar', 'sh', 'php', 'html', 'htm', 'dll', 'sys', 'apk', 'reg',
+  'wsf', 'cpl', 'lnk', 'msc', 'hta', 'inf', 'drv', 'ocx', 'pif', 'scf',
+  'msh', 'app', 'gadget', 'iso',
+];
+
+// فرمت‌های مجاز برای آپلود (هماهنگ با اعتبارسنجی سمت سرور MediaController)
+const ALLOWED_ACCEPT =
+  '.jpg,.jpeg,.png,.gif,.webp,.svg,.pdf,.doc,.docx,.xls,.xlsx,.xlsm,.csv,.ppt,.pptx,.zip,.rar,.7z,.tar,.gz,image/*,video/*,.mp4,.webm,.mov,.avi,.mkv,.flv';
+
+/** پسوند فایل را (بدون نقطه، حروف کوچک) برمی‌گرداند */
+function getFileExtension(name: string): string {
+  const idx = name.lastIndexOf('.');
+  return idx === -1 ? '' : name.slice(idx + 1).toLowerCase();
+}
+
+/** آیا این فایل از نوع اجرایی/خطرناک است؟ */
+function isBlockedFile(file: File): boolean {
+  return BLOCKED_EXTENSIONS.includes(getFileExtension(file.name));
+}
+
 interface MediaManagerProps {
   open: boolean;
   onClose: () => void;
@@ -51,6 +78,10 @@ interface MediaManagerProps {
   filter?: 'image' | 'video' | 'all';
   /** عنوان دیالوگ */
   title?: string;
+  /** حالت چندانتخابی — خروجی از طریق onSelectMultiple (آرایه‌ای از فایل‌ها) */
+  multiSelect?: boolean;
+  /** وقتی multiSelect فعال است، لیست فایل‌های انتخاب‌شده به‌جای onSelect برمی‌گردد */
+  onSelectMultiple?: (files: MediaFile[]) => void;
 }
 
 export default function MediaManager({
@@ -59,6 +90,8 @@ export default function MediaManager({
   onSelect,
   filter = 'image',
   title = 'مدیریت رسانه',
+  multiSelect = false,
+  onSelectMultiple,
 }: MediaManagerProps) {
   const [files, setFiles] = useState<MediaFile[]>([]);
   const [loading, setLoading] = useState(false);
@@ -73,7 +106,15 @@ export default function MediaManager({
   const [total, setTotal] = useState(0);
   const [lastPage, setLastPage] = useState(1);
   const [selectedFile, setSelectedFile] = useState<MediaFile | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<MediaFile[]>([]);
   const [previewFile, setPreviewFile] = useState<MediaFile | null>(null);
+  // File waiting for delete confirmation dialog
+  const [deleteFile, setDeleteFile] = useState<MediaFile | null>(null);
+  // File being edited (title / description metadata)
+  const [editFile, setEditFile] = useState<MediaFile | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [savingMeta, setSavingMeta] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   // Drops stale async responses (rapid page clicks, reopen while a previous
@@ -86,6 +127,19 @@ export default function MediaManager({
   const isImage = (type: string) => type.startsWith('image/');
   const isVideo = (type: string) => type.startsWith('video/');
 
+  // انتخاب/لغو انتخاب در حالت چندانتخابی
+  const toggleSelectFile = (file: MediaFile) => {
+    setSelectedFiles(prev =>
+      prev.some(f => f.id === file.id)
+        ? prev.filter(f => f.id !== file.id)
+        : [...prev, file]
+    );
+  };
+
+  // آیا این فایل در حالت فعلی «انتخاب‌شده» است؟
+  const isFileSelected = (file: MediaFile) =>
+    multiSelect ? selectedFiles.some(f => f.id === file.id) : selectedFile?.id === file.id;
+
   // Load files
   const loadFiles = useCallback(async (requestedPage = 1, requestedSearch = '') => {
     const seq = ++loadSeqRef.current;
@@ -95,6 +149,10 @@ export default function MediaManager({
       const params = new URLSearchParams();
       params.set('per_page', String(perPage));
       params.set('page', String(requestedPage));
+      // فیلتر نوع فایل سمت سرور — تا صفحه‌بندی بر اساس همان نوع محاسبه شود
+      if (filter && filter !== 'all') {
+        params.set('type', filter);
+      }
       if (requestedSearch.trim() !== '') {
         params.set('search', requestedSearch.trim());
       }
@@ -118,7 +176,7 @@ export default function MediaManager({
     } finally {
       if (seq === loadSeqRef.current) setLoading(false);
     }
-  }, [perPage]);
+  }, [perPage, filter]);
 
   useEffect(() => {
     if (open) {
@@ -127,6 +185,7 @@ export default function MediaManager({
       setSearchQuery('');
       setDebouncedSearchQuery('');
       setSelectedFile(null);
+      setSelectedFiles([]);
       setError(null);
       setSuccessMsg(null);
       loadFiles(1, '');
@@ -152,7 +211,12 @@ export default function MediaManager({
   }, [open, page, debouncedSearchQuery, loadFiles]);
 
   // Upload file
-  const handleUpload = async (file: File) => {
+  const handleUpload = async (file: File): Promise<boolean> => {
+    // جلوگیری از آپلود فایل‌های غیرمجاز (bat، exe و ...)
+    if (isBlockedFile(file)) {
+      setError(`آپلود فایل «${file.name}» مجاز نیست. نوع فایل‌های اجرایی و خطرناک (مانند bat، exe و ...) قابل آپلود نیستند.`);
+      return false;
+    }
     setUploading(true);
     setUploadProgress(0);
     setError(null);
@@ -178,6 +242,7 @@ export default function MediaManager({
       await loadFiles(1, searchQuery);
 
       setTimeout(() => setSuccessMsg(null), 3000);
+      return true;
     } catch (err: any) {
       const apiMessage = err.message || '';
       // Check both direct errors (from API function) and response.data.errors (from APISendFiles prior fix)
@@ -191,23 +256,86 @@ export default function MediaManager({
         displayMessage = 'فرمت فایل مجاز نیست. فرمت‌های مجاز: تصویر (jpg,png,webp) و ویدئو (mp4,webm,mov)';
       }
       setError(displayMessage);
+      return false;
     } finally {
       setUploading(false);
       setUploadProgress(0);
     }
   };
 
-  // Delete file
+  // آپلود چند فایل به‌صورت همزمان — هر فایل در یک درخواست جداگانه آپلود می‌شود
+  const handleUploadMany = async (files: FileList | File[]) => {
+    const list = Array.from(files);
+    if (list.length === 0) return;
+
+    const blocked = list.filter(f => isBlockedFile(f));
+    if (blocked.length > 0) {
+      setError(`آپلود فایل‌های «${blocked.map(f => f.name).join('، ')}» مجاز نیست. نوع فایل‌های اجرایی و خطرناک (مانند bat، exe و ...) قابل آپلود نیستند.`);
+    }
+
+    let uploadedCount = 0;
+    for (const file of list.filter(f => !isBlockedFile(f))) {
+      const ok = await handleUpload(file);
+      if (ok) uploadedCount += 1;
+    }
+    if (uploadedCount > 1) {
+      setSuccessMsg(`${uploadedCount.toLocaleString('fa-IR')} فایل با موفقیت آپلود شد.`);
+      setTimeout(() => setSuccessMsg(null), 3000);
+    }
+  };
+
+  // Delete file (called from the confirmation dialog)
   const handleDelete = async (file: MediaFile) => {
-    if (!confirm(`آیا از حذف فایل «${file.name}» اطمینان دارید؟`)) return;
     try {
       await API(`media/${file.id}`, { url: file.url }, 'DELETE');
       setFiles(prev => prev.filter(f => f.id !== file.id));
       if (selectedFile?.id === file.id) setSelectedFile(null);
+      setDeleteFile(null);
       setSuccessMsg('فایل با موفقیت حذف شد.');
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err: any) {
       setError(err.message || 'خطا در حذف فایل');
+      setDeleteFile(null);
+    }
+  };
+
+  // Confirm delete — opens the confirmation dialog instead of native confirm()
+  const askDelete = (file: MediaFile) => {
+    setDeleteFile(file);
+  };
+
+  // Open the metadata edit dialog (title / description)
+  const openEdit = (file: MediaFile) => {
+    setEditFile(file);
+    setEditTitle(file.title || '');
+    setEditDescription(file.description || '');
+    setError(null);
+  };
+
+  // Save title / description metadata via PUT /media/{id}
+  const handleSaveMetadata = async () => {
+    if (!editFile) return;
+    setSavingMeta(true);
+    setError(null);
+    try {
+      const result = await API<{ data: MediaFile; message: string }>(
+        `media/${editFile.id}`,
+        {
+          title: editTitle.trim(),
+          description: editDescription.trim(),
+        },
+        'PUT'
+      );
+      const updated = normalizeMediaFile(result.data);
+      setFiles(prev => prev.map(f => (f.id === editFile.id ? updated : f)));
+      if (selectedFile?.id === editFile.id) setSelectedFile(updated);
+      setEditFile(null);
+      setSuccessMsg(result.message || 'اطلاعات فایل با موفقیت ذخیره شد.');
+      setTimeout(() => setSuccessMsg(null), 3000);
+    } catch (err: any) {
+      setError(err.message || 'خطا در ذخیره اطلاعات فایل');
+    } finally {
+      setSavingMeta(false);
     }
   };
 
@@ -215,8 +343,14 @@ export default function MediaManager({
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(false);
-    const file = e.dataTransfer.files[0];
-    if (file) handleUpload(file);
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length > 0) {
+      if (files.length === 1) {
+        handleUpload(files[0]);
+      } else {
+        handleUploadMany(files);
+      }
+    }
   };
 
   // Filter files by type only; search is handled server-side.
@@ -312,11 +446,24 @@ export default function MediaManager({
             <input
               ref={fileInputRef}
               type="file"
+              multiple
               className="hidden"
-              accept={filter === 'image' ? 'image/*' : filter === 'video' ? 'video/*' : undefined}
+              accept={
+                filter === 'image'
+                  ? 'image/*'
+                  : filter === 'video'
+                    ? 'video/*'
+                    : ALLOWED_ACCEPT
+              }
               onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) handleUpload(file);
+                const files = e.target.files;
+                if (files && files.length > 0) {
+                  if (files.length === 1) {
+                    handleUpload(files[0]);
+                  } else {
+                    handleUploadMany(files);
+                  }
+                }
                 e.target.value = '';
               }}
             />
@@ -393,15 +540,14 @@ export default function MediaManager({
                 {filteredFiles.map((file) => (
                   <div
                     key={file.id}
-                    className={`group relative rounded-2xl border-2 overflow-hidden transition-all ${
-                      selectedFile?.id === file.id
+                    className={`group relative rounded-2xl border-2 overflow-hidden transition-all ${isFileSelected(file)
                         ? 'border-teal-500 ring-2 ring-teal-500/20 shadow-lg'
                         : 'border-gray-100 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-md'
                     }`}
                   >
                     {/* Thumbnail */}
                     <div
-                      onClick={() => setSelectedFile(file)}
+                      onClick={() => (multiSelect ? toggleSelectFile(file) : setSelectedFile(file))}
                       className="aspect-square bg-gray-50 dark:bg-gray-800 flex items-center justify-center overflow-hidden cursor-pointer"
                     >
                       {isImage(file.type) ? (
@@ -427,7 +573,7 @@ export default function MediaManager({
                       ) : (
                         <div className="flex flex-col items-center gap-2 p-4">
                           <FileText className="w-8 h-8 text-gray-300 dark:text-gray-600" />
-                          <span className="text-[10px] text-gray-400 font-mono">{file.type.split('/').pop()}</span>
+                          <span className="text-[10px] text-gray-400 font-mono uppercase">{getFileExtension(file.name) || file.type.split('/').pop()}</span>
                         </div>
                       )}
                       {(isImage(file.type) || isVideo(file.type)) && (
@@ -445,26 +591,50 @@ export default function MediaManager({
                     {/* Info */}
                     <div className="p-2 space-y-1">
                       <p className="text-[10px] font-bold text-gray-700 dark:text-gray-300 truncate" title={file.name}>
-                        {file.name}
+                        {file.title || file.name}
                       </p>
                       <p className="text-[9px] text-gray-400 font-mono">{formatSize(file.size)}</p>
+                      {file.title && (
+                        <p className="text-[8px] text-teal-600 dark:text-teal-400 truncate" title={file.name}>
+                          {file.name}
+                        </p>
+                      )}
                     </div>
 
+                    {/* Edit metadata button */}
+                    {!multiSelect && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); openEdit(file); }}
+                        className="absolute bottom-2 left-2 p-1.5 rounded-full bg-slate-800/70 text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer hover:bg-teal-600"
+                        title="ویرایش عنوان و توضیح"
+                      >
+                        <Pencil className="w-3 h-3" />
+                      </button>
+                    )}
+
                     {/* Selection indicator */}
-                    {selectedFile?.id === file.id && (
+                    {isFileSelected(file) && (
                       <div className="absolute top-2 right-2 p-1 rounded-full bg-teal-500 text-white shadow-md">
-                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        {multiSelect ? (
+                          <span className="flex items-center justify-center w-3.5 h-3.5 text-[9px] font-black">
+                            {selectedFiles.findIndex(f => f.id === file.id) + 1}
+                          </span>
+                        ) : (
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                        )}
                       </div>
                     )}
 
                     {/* Delete button */}
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleDelete(file); }}
-                      className="absolute top-2 right-2 p-1 rounded-full bg-red-500/80 text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer hover:bg-red-600"
-                      title="حذف فایل"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
+                    {!multiSelect && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); askDelete(file); }}
+                        className="absolute top-2 right-2 p-1 rounded-full bg-red-500/80 text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer hover:bg-red-600"
+                        title="حذف فایل"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
@@ -511,12 +681,24 @@ export default function MediaManager({
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                {selectedFile && (
-                  <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                    <CheckCircle2 className="w-4 h-4 text-teal-500" />
-                    <span className="font-bold">انتخاب شده:</span>
-                    <span className="text-gray-900 dark:text-white font-semibold truncate max-w-[200px]">{selectedFile.name}</span>
-                  </div>
+                {multiSelect ? (
+                  selectedFiles.length > 0 && (
+                    <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                      <CheckCircle2 className="w-4 h-4 text-teal-500" />
+                      <span className="font-bold">انتخاب شده:</span>
+                      <span className="text-gray-900 dark:text-white font-semibold">
+                        {selectedFiles.length.toLocaleString('fa-IR')} فایل
+                      </span>
+                    </div>
+                  )
+                ) : (
+                  selectedFile && (
+                    <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                      <CheckCircle2 className="w-4 h-4 text-teal-500" />
+                      <span className="font-bold">انتخاب شده:</span>
+                      <span className="text-gray-900 dark:text-white font-semibold truncate max-w-[200px]">{selectedFile.name}</span>
+                    </div>
+                  )
                 )}
                 <button
                   onClick={onClose}
@@ -526,21 +708,28 @@ export default function MediaManager({
                 </button>
                 <button
                   onClick={() => {
-                    if (selectedFile) {
+                    if (multiSelect) {
+                      if (selectedFiles.length > 0) {
+                        onSelectMultiple?.(selectedFiles);
+                        onClose();
+                      }
+                    } else if (selectedFile) {
                       onSelect(selectedFile.url, selectedFile);
                       onClose();
                     }
                   }}
-                  disabled={!selectedFile}
+                  disabled={multiSelect ? selectedFiles.length === 0 : !selectedFile}
                   className="px-5 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  {selectedFile
-                    ? isImage(selectedFile.type)
-                      ? 'استفاده از تصویر'
-                      : isVideo(selectedFile.type)
-                      ? 'استفاده از ویدئو'
-                      : 'استفاده از فایل'
-                    : 'استفاده'}
+                  {multiSelect
+                    ? `استفاده از ${selectedFiles.length.toLocaleString('fa-IR')} فایل`
+                    : selectedFile
+                      ? isImage(selectedFile.type)
+                        ? 'استفاده از تصویر'
+                        : isVideo(selectedFile.type)
+                        ? 'استفاده از ویدئو'
+                        : 'استفاده از فایل'
+                      : 'استفاده'}
                 </button>
               </div>
             </div>
@@ -577,6 +766,120 @@ export default function MediaManager({
           )}
         </motion.div>
       </motion.div>
+
+      {/* Edit Metadata Dialog */}
+      <AnimatePresence>
+        {editFile && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+              onClick={() => setEditFile(null)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="relative bg-white dark:bg-[#161618] rounded-3xl p-6 w-full max-w-md shadow-2xl border border-gray-100 dark:border-white/10"
+            >
+              <div className="w-12 h-12 bg-teal-500/10 rounded-2xl flex items-center justify-center mb-4">
+                <Pencil className="w-5 h-5 text-teal-500" />
+              </div>
+              <h3 className="text-base font-black text-gray-900 dark:text-white mb-1">ویرایش اطلاعات فایل</h3>
+              <p className="text-xs text-gray-400 mb-5 truncate">{editFile.name}</p>
+
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-gray-600 dark:text-gray-300">عنوان (نمایش در ویجت مخزن اسناد)</label>
+                  <input
+                    type="text"
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    placeholder={editFile.name}
+                    className="w-full px-3 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 text-xs text-gray-900 dark:text-white focus:outline-none focus:border-teal-500"
+                  />
+                  {!editTitle.trim() && (
+                    <p className="text-[10px] text-gray-400">در صورت خالی بودن، نام فایل نمایش داده می‌شود.</p>
+                  )}
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-gray-600 dark:text-gray-300">توضیح (اختیاری)</label>
+                  <textarea
+                    value={editDescription}
+                    onChange={(e) => setEditDescription(e.target.value)}
+                    rows={3}
+                    placeholder="توضیح کوتاه درباره فایل..."
+                    className="w-full px-3 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 text-xs text-gray-900 dark:text-white focus:outline-none focus:border-teal-500 resize-none"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-2 justify-end mt-6">
+                <button
+                  onClick={() => setEditFile(null)}
+                  disabled={savingMeta}
+                  className="px-4 py-2.5 rounded-xl bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300 text-xs font-bold hover:bg-gray-200 dark:hover:bg-white/10 transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  انصراف
+                </button>
+                <button
+                  onClick={handleSaveMetadata}
+                  disabled={savingMeta}
+                  className="px-4 py-2.5 rounded-xl bg-teal-600 text-white text-xs font-black hover:bg-teal-500 transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                >
+                  {savingMeta ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                  ذخیره
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete Confirmation Dialog */}
+      <AnimatePresence>
+        {deleteFile && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+              onClick={() => setDeleteFile(null)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="relative bg-white dark:bg-[#161618] rounded-3xl p-6 w-full max-w-sm shadow-2xl border border-gray-100 dark:border-white/10"
+            >
+              <div className="w-12 h-12 bg-rose-500/10 rounded-2xl flex items-center justify-center mb-4">
+                <Trash2 className="w-5 h-5 text-rose-500" />
+              </div>
+              <h3 className="text-base font-black text-gray-900 dark:text-white mb-2">حذف فایل</h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-6 leading-relaxed">
+                آیا از حذف فایل «{deleteFile.name}» اطمینان دارید؟ این عمل قابل بازگشت نیست.
+              </p>
+              <div className="flex gap-2 justify-end">
+                <button
+                  onClick={() => setDeleteFile(null)}
+                  className="px-4 py-2.5 rounded-xl bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300 text-xs font-bold hover:bg-gray-200 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                >
+                  انصراف
+                </button>
+                <button
+                  onClick={() => handleDelete(deleteFile)}
+                  className="px-4 py-2.5 rounded-xl bg-rose-500 text-white text-xs font-black hover:bg-rose-400 transition-colors cursor-pointer"
+                >
+                  حذف
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </AnimatePresence>
   );
 }

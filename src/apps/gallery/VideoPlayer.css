@@ -1,0 +1,74 @@
+/* ============================================================
+   VideoPlayer — پر کردن کامل ظرف توسط پخش‌کننده video.js
+   video.js به‌طور پیش‌فرض پخش‌کننده را 320x180 می‌سازد و داخل
+   ظرف بزرگ، کوچک و گوشه‌نشین می‌شود. این قانون اندازه را به 100%
+   ظرف والد وادار می‌کند (inline-style های video.js را هم می‌پوشاند).
+   ============================================================ */
+.video-js {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* ============================================================
+   Seek bar — نوار جستجو به‌صورت واضح و استاندارد
+   مشکل: نوار seek پیش‌فرض video.js یک خط باریک ۳ پیکسلی سفید است
+   که روی پس‌زمینهٔ تیرهٔ lightbox (و بالای فوتر سیاه) دیده نمی‌شود
+   و دکمه‌های کنترل هم با نوار پایین ترکیب می‌شوند. راه‌حل:
+   - چیدمان پیش‌فرض تک‌ردیفهٔ video.js حفظ می‌شود (چیدمان بومی)
+   - ضخامت نوار جستجو افزایش می‌یابد + مسیر (track) قابل‌دیدن
+   - رنگ پیشرفت سبز فیروزه‌ای (هم‌رنگ accent برنامه)
+   - پس‌زمینهٔ نوار کنترل شفاف‌تر می‌شود تا از فوتر جدا دیده شود
+   ============================================================ */
+.video-js .vjs-control-bar {
+  /* جداسازی بصری نوار کنترل از فوتر سیاه زیر آن */
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0.25)) !important;
+}
+
+/* نوار جستجو: ضخیم‌تر + مسیر قابل‌دیدن */
+.video-js .vjs-progress-holder {
+  height: 0.8em !important; /* ~۸px به‌جای ۳px پیش‌فرض */
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.18) !important; /* track */
+}
+
+.video-js .vjs-progress-holder .vjs-play-progress {
+  background-color: #14b8a6 !important; /* teal-500 — واضح روی هر پس‌زمینه */
+  border-radius: 9999px;
+}
+
+.video-js .vjs-progress-holder .vjs-load-progress,
+.video-js .vjs-progress-holder .vjs-load-progress div {
+  background-color: rgba(255, 255, 255, 0.25) !important;
+  border-radius: 9999px;
+}
+
+/* دستگیره (knob) نوار جستجو — همرنگ نوار پیشرفت */
+.video-js .vjs-play-progress:before,
+.video-js .vjs-play-progress .vjs-svg-icon {
+  color: #14b8a6 !important;
+}
+
+/* ============================================================
+   Controls always visible — نوار کنترل همیشه نمایان بماند
+   video.js به‌طور پیش‌فرض هنگام پخش و عدم فعالیت کاربر، نوار
+   کنترل را مخفی می‌کند (opacity/visibility). در lightbox این
+   باعث می‌شود دکمه‌ها «دیده نشوند». این قوانین نوار کنترل را
+   همیشه ثابت و واضح نگه می‌دارند.
+   ============================================================ */
+.video-js .vjs-control-bar,
+.video-js.vjs-has-started.vjs-user-inactive .vjs-control-bar,
+.video-js.vjs-user-inactive .vjs-control-bar {
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: translateY(0) !important;
+}
+
+/* پس‌زمینهٔ تیرهٔ کامل برای خوانایی دکمه‌ها روی هر ویدئویی */
+.video-js .vjs-control-bar {
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.92), rgba(0, 0, 0, 0.45) 70%, rgba(0, 0, 0, 0.15)) !important;
+}
+
+/* برجسته‌کردن دکمه‌ها روی نوار کنترل */
+.video-js .vjs-control-bar .vjs-button {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+}

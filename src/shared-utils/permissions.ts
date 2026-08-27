@@ -72,4 +72,8 @@ export const MODULE_PERMISSIONS: Record<string, { view: string; create?: string;
   'county-projects': { view: 'county-projects.view', edit: 'county-projects.edit' },
   'slider-studio': { view: 'slider-studio.view', edit: 'slider-studio.edit' },
   'development-timeline': { view: 'development-timeline.view', create: 'development-timeline.create', edit: 'development-timeline.edit', delete: 'development-timeline.delete' },
+  gallery: { view: 'gallery.view', create: 'gallery.create', edit: 'gallery.edit', delete: 'gallery.delete', approve: 'gallery.approve' },
+  forms: { view: 'forms.view', create: 'forms.create', edit: 'forms.edit', delete: 'forms.delete', approve: 'forms.approve' },
+  navigation: { view: 'navigation.view', create: 'navigation.create', edit: 'navigation.edit', delete: 'navigation.delete', approve: 'navigation.approve' },
+  'page-builder': { view: 'page-builder.view', create: 'page-builder.create', edit: 'page-builder.edit', delete: 'page-builder.delete', approve: 'page-builder.approve' },
 };
