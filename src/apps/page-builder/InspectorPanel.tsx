@@ -459,6 +459,18 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
       });
     };
 
+    /** به‌روزرسانی سبک «فعال» — فقط وقتی conditionalDisplay.styleOnly فعال باشد اعمال می‌شود */
+    const handleActiveStyleChange = (key: keyof WidgetStyle, val: any) => {
+      const activeStyle = { ...(selectedWidget.settings.activeStyle || {}), [key]: val };
+      onUpdateWidget({
+        ...selectedWidget,
+        settings: {
+          ...selectedWidget.settings,
+          activeStyle
+        }
+      });
+    };
+
     /** به‌روزرسانی فیلدهای سفارشی (customProps) بلوک */
     const updateCustomProps = (patch: Record<string, any>) => {
       onUpdateWidget({
@@ -3433,6 +3445,71 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                         />
                       </div>
                     </div>
+
+                    {/* حالت: مخفی/نمایش بلوک، یا فقط تغییر رنگ (چیپ/تب فیلتر فعال) */}
+                    <div className="space-y-2 pt-2 border-t border-gray-200 dark:border-slate-800">
+                      <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">رفتار هنگام تطابق</label>
+                      <select
+                        value={selectedWidget.settings.conditionalDisplay?.styleOnly ? 'styleOnly' : 'hide'}
+                        onChange={(e) => handleConditionalChange('styleOnly', e.target.value === 'styleOnly')}
+                        className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 cursor-pointer"
+                      >
+                        <option value="hide">مخفی/نمایش کل بلوک (پیش‌فرض)</option>
+                        <option value="styleOnly">فقط تغییر رنگ — بلوک همیشه نمایش داده می‌شود (برای چیپ/تب فیلتر فعال)</option>
+                      </select>
+                    </div>
+
+                    {selectedWidget.settings.conditionalDisplay?.styleOnly && (
+                      <div className="space-y-3 p-3 rounded-2xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800">
+                        <label className="flex items-center gap-2 text-[11px] font-bold text-slate-700 dark:text-slate-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={selectedWidget.settings.conditionalDisplay?.matchWhenEmpty || false}
+                            onChange={(e) => handleConditionalChange('matchWhenEmpty', e.target.checked)}
+                            className="accent-teal-500 w-4 h-4 cursor-pointer"
+                          />
+                          <span>«فعال» یعنی هیچ فیلتری در URL نیست (برای چیپ «همه»، نه یک برچسب خاص)</span>
+                        </label>
+
+                        <p className="text-[10px] text-slate-400 leading-relaxed">
+                          رنگ‌های زیر فقط وقتی اعمال می‌شوند که این بلوک «فعال» تشخیص داده شود (طبق تنظیم بالا) — در غیر این صورت رنگ‌های معمولی این بلوک (در بخش «سبک» بالاتر) نمایش داده می‌شود.
+                        </p>
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="space-y-1.5">
+                            <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">رنگ پس‌زمینه (فعال)</label>
+                            <ColorBox
+                              value={selectedWidget.settings.activeStyle?.backgroundColor || '#0d9488'}
+                              onChange={(c) => handleActiveStyleChange('backgroundColor', c || undefined)}
+                              className="w-full h-9"
+                              clearable={!!selectedWidget.settings.activeStyle?.backgroundColor}
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">رنگ متن (فعال)</label>
+                            <ColorBox
+                              value={selectedWidget.settings.activeStyle?.textColor || '#ffffff'}
+                              onChange={(c) => handleActiveStyleChange('textColor', c || undefined)}
+                              className="w-full h-9"
+                              clearable={!!selectedWidget.settings.activeStyle?.textColor}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">ضخامت فونت (فعال)</label>
+                          <select
+                            value={selectedWidget.settings.activeStyle?.fontWeight || '900'}
+                            onChange={(e) => handleActiveStyleChange('fontWeight', e.target.value)}
+                            className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 cursor-pointer"
+                          >
+                            <option value="400">معمولی</option>
+                            <option value="700">درشت</option>
+                            <option value="900">خیلی درشت</option>
+                          </select>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -4199,6 +4276,63 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                 placeholder="مثال: 0 0 15px rgba(59,130,246,0.5)"
                 className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white font-mono focus:outline-none focus:border-teal-500"
               />
+            )}
+          </div>
+
+          {/* شرط نمایش سکشن بر اساس برچسب فیلتر URL */}
+          <div className="pt-3 border-t border-gray-200 dark:border-slate-800 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-black text-slate-900 dark:text-white">شرط نمایش سکشن (فیلتر URL)</span>
+              <input
+                type="checkbox"
+                checked={selectedSection.conditionalDisplay?.enabled || false}
+                onChange={(e) =>
+                  onUpdateSection({
+                    ...selectedSection,
+                    conditionalDisplay: { ...selectedSection.conditionalDisplay, enabled: e.target.checked },
+                  })
+                }
+                className="accent-teal-500 w-4 h-4 cursor-pointer"
+              />
+            </div>
+
+            {selectedSection.conditionalDisplay?.enabled && (
+              <div className="space-y-2 p-3 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800">
+                <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                  برچسب این سکشن (برای فیلتر با Query String)
+                </label>
+                <input
+                  type="text"
+                  dir="ltr"
+                  value={selectedSection.conditionalDisplay?.urlParamValue || ''}
+                  onChange={(e) =>
+                    onUpdateSection({
+                      ...selectedSection,
+                      conditionalDisplay: { ...selectedSection.conditionalDisplay, urlParamValue: e.target.value },
+                    })
+                  }
+                  placeholder="phd"
+                  className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                />
+                <p className="text-[10px] text-slate-400 leading-relaxed">
+                  اگر مقدار پارامتر URL برابر این برچسب بود، کل سکشن (تیتر + همهٔ محتوای داخلش) نمایش داده می‌شود؛ در غیر این صورت کاملاً مخفی می‌شود. اگر خالی بگذارید، این سکشن همیشه نمایش داده می‌شود.
+                </p>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-slate-400 shrink-0">نام پارامتر در URL:</span>
+                  <input
+                    type="text"
+                    dir="ltr"
+                    value={selectedSection.conditionalDisplay?.urlParamKey || 'filter'}
+                    onChange={(e) =>
+                      onUpdateSection({
+                        ...selectedSection,
+                        conditionalDisplay: { ...selectedSection.conditionalDisplay, urlParamKey: e.target.value },
+                      })
+                    }
+                    className="flex-1 px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-[11px] font-mono text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                  />
+                </div>
+              </div>
             )}
           </div>
 
