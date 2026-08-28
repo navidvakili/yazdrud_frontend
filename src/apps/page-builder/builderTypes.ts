@@ -13,6 +13,13 @@ export interface ConditionalDisplayRule {
   userRole?: UserRoleCondition;
   urlParamKey?: string;
   urlParamValue?: string;
+  /** اگر true باشد، این تنظیم به‌جای مخفی‌کردن ویجت هنگام عدم تطابق، فقط وقتی مقدار پارامتر
+   *  URL با urlParamValue تطابق دارد settings.activeStyle را روی ویجت اعمال می‌کند (ویجت
+   *  همیشه نمایش داده می‌شود) — برای چیپ/تب فیلتر که باید حالت «فعال» خودش را نشان دهد */
+  styleOnly?: boolean;
+  /** برای styleOnly: به‌جای تطابق با urlParamValue، «فعال» یعنی پارامتر URL خالی/غایب است —
+   *  برای چیپ «همه» که وقتی هیچ فیلتری ست نشده باید فعال به نظر برسد */
+  matchWhenEmpty?: boolean;
 }
 
 export type WidgetCategory = 'static' | 'dynamic' | 'layout';
@@ -252,6 +259,9 @@ export interface WidgetInstance {
     };
     conditionalDisplay: ConditionalDisplayRule;
     customProps?: Record<string, any>;
+    /** سبک جایگزین که فقط وقتی conditionalDisplay.styleOnly فعال و پارامتر URL منطبق باشد،
+     *  روی style ادغام می‌شود — برای نمایش حالت «فعال» چیپ/تب فیلتر */
+    activeStyle?: Partial<WidgetStyle>;
   };
 }
 

@@ -3381,7 +3381,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
               {/* Conditional Display Rule */}
               <div className="pt-3 border-t border-gray-200 dark:border-slate-800 space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-black text-slate-900 dark:text-white">شرط نمایش بر اساس نقش کاربر</span>
+                  <span className="text-xs font-black text-slate-900 dark:text-white">شرط نمایش (نقش کاربر / برچسب فیلتر)</span>
                   <input
                     type="checkbox"
                     checked={selectedWidget.settings.conditionalDisplay?.enabled || false}
@@ -3391,19 +3391,48 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                 </div>
 
                 {selectedWidget.settings.conditionalDisplay?.enabled && (
-                  <div className="space-y-2 p-3 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800">
-                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">نمایش فقط برای نقش:</label>
-                    <select
-                      value={selectedWidget.settings.conditionalDisplay?.userRole || 'all'}
-                      onChange={(e) => handleConditionalChange('userRole', e.target.value as UserRoleCondition)}
-                      className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 cursor-pointer"
-                    >
-                      <option value="all">همه کاربران (عمومی)</option>
-                      <option value="student">فقط دانشجویان</option>
-                      <option value="professor">فقط اساتید</option>
-                      <option value="admin">فقط مدیران سیستم</option>
-                      <option value="guest">فقط کاربران مهمان (وارد نشده)</option>
-                    </select>
+                  <div className="space-y-3 p-3 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800">
+                    <div className="space-y-2">
+                      <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">نمایش فقط برای نقش:</label>
+                      <select
+                        value={selectedWidget.settings.conditionalDisplay?.userRole || 'all'}
+                        onChange={(e) => handleConditionalChange('userRole', e.target.value as UserRoleCondition)}
+                        className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 cursor-pointer"
+                      >
+                        <option value="all">همه کاربران (عمومی)</option>
+                        <option value="student">فقط دانشجویان</option>
+                        <option value="professor">فقط اساتید</option>
+                        <option value="admin">فقط مدیران سیستم</option>
+                        <option value="guest">فقط کاربران مهمان (وارد نشده)</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-2 pt-2 border-t border-gray-200 dark:border-slate-800">
+                      <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                        برچسب‌های این بلوک (برای فیلتر با Query String)
+                      </label>
+                      <input
+                        type="text"
+                        dir="ltr"
+                        value={selectedWidget.settings.conditionalDisplay?.urlParamValue || ''}
+                        onChange={(e) => handleConditionalChange('urlParamValue', e.target.value)}
+                        placeholder="field-card degree-masters faculty-humanities"
+                        className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                      />
+                      <p className="text-[10px] text-slate-400 leading-relaxed">
+                        چند برچسب را با فاصله جدا کنید — هم به‌عنوان class روی همین بلوک اعمال می‌شوند، هم مبنای فیلتر قرار می‌گیرند: اگر مقدار پارامتر URL برابر یکی از این برچسب‌ها بود، بلوک نمایش داده می‌شود؛ اگر خالی بگذارید، این بلوک همیشه نمایش داده می‌شود.
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-slate-400 shrink-0">نام پارامتر در URL:</span>
+                        <input
+                          type="text"
+                          dir="ltr"
+                          value={selectedWidget.settings.conditionalDisplay?.urlParamKey || 'filter'}
+                          onChange={(e) => handleConditionalChange('urlParamKey', e.target.value)}
+                          className="flex-1 px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-[11px] font-mono text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                        />
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>

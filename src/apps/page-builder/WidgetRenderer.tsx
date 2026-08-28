@@ -3619,6 +3619,27 @@ export const RenderSectionReadOnly: React.FC<{
 }> = ({ section, depth = 0, currentUserRole = 'all', isEditorPreview = false, pageId, pageSlug, variables, dedicatedPageId }) => {
   if (depth > 6) return null;
 
+  // فیلتر کل سکشن بر اساس برچسب URL — همان مکانیزم ویجت‌ها (conditionalDisplay.urlParamKey/urlParamValue)،
+  // برای سکشن‌هایی که باید یکجا (تیتر + همهٔ کارت‌های داخلشان) مخفی/نمایان شوند
+  const [sectionUrlSearch, setSectionUrlSearch] = useState<string>(() => (typeof window !== 'undefined' ? window.location.search : ''));
+  useEffect(() => {
+    const onUrlChange = () => setSectionUrlSearch(window.location.search);
+    window.addEventListener('popstate', onUrlChange);
+    return () => window.removeEventListener('popstate', onUrlChange);
+  }, []);
+
+  const sectionCond = section.conditionalDisplay;
+  const sectionFilterTags = sectionCond?.urlParamValue?.trim();
+  const sectionFilterParamKey = sectionCond?.urlParamKey?.trim() || 'filter';
+  const sectionActiveFilterValue = new URLSearchParams(sectionUrlSearch).get(sectionFilterParamKey);
+
+  if (sectionCond?.enabled && sectionFilterTags && sectionActiveFilterValue && !isEditorPreview) {
+    const allowedTags = sectionFilterTags.split(/\s+/);
+    if (!allowedTags.includes(sectionActiveFilterValue)) {
+      return null;
+    }
+  }
+
   // پس‌زمینهٔ لایه‌ای سکشن — همان منطق buildSectionBackgroundImage در Canvas.tsx: گرادیان (یا رنگ ساده
   // به‌صورت لایهٔ گرادیان یکنواخت) همیشه روی تصویر قرار می‌گیرد، تصویر پایین‌ترین لایه است، وگرنه
   // (وقتی هر دو backgroundColor/backgroundImage به‌صورت جداگانه ست شوند) تصویر رنگ را کاملاً می‌پوشاند.
@@ -3932,8 +3953,28 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
   variables,
   dedicatedPageId
 }) => {
+  // خواندن Query String فعلی — برای فیلتر بر اساس برچسب (conditionalDisplay.urlParamKey/urlParamValue)
+  // با popstate به‌روز می‌شود تا تغییر آدرس (بازگشت/جلو مرورگر، یا لینک‌های فیلتر) بدون رفرش کامل اثر کند
+  const [urlSearch, setUrlSearch] = useState<string>(() => (typeof window !== 'undefined' ? window.location.search : ''));
+  useEffect(() => {
+    const onUrlChange = () => setUrlSearch(window.location.search);
+    window.addEventListener('popstate', onUrlChange);
+    return () => window.removeEventListener('popstate', onUrlChange);
+  }, []);
+
   // Check conditional display
   const cond = widget.settings.conditionalDisplay;
+  // برچسب‌های این ویجت (مثلاً "field-card degree-masters faculty-humanities") — هم برای فیلتر
+  // بر اساس URL استفاده می‌شوند، هم به‌عنوان class واقعی روی عنصر رندرشده اعمال می‌شوند
+  const filterTags = cond?.urlParamValue?.trim();
+  const filterParamKey = cond?.urlParamKey?.trim() || 'filter';
+  const activeFilterValue = new URLSearchParams(urlSearch).get(filterParamKey);
+  // آیا این ویجت «فعال» است؟ برای styleOnly (چیپ/تب فیلتر) — یا تطابق برچسب، یا (matchWhenEmpty)
+  // نبودِ هرگونه فیلتر در URL — بدون تأثیر بر نمایش/عدم‌نمایش ویجت
+  const isActiveTagMatch = cond?.matchWhenEmpty
+    ? !activeFilterValue
+    : !!(filterTags && activeFilterValue && filterTags.split(/\s+/).includes(activeFilterValue));
+
   if (cond && cond.enabled && !isEditorPreview) {
     if (cond.userRole && cond.userRole !== 'all') {
       if (currentUserRole !== 'all' && currentUserRole !== cond.userRole) {
@@ -3944,9 +3985,18 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
         );
       }
     }
+    if (filterTags && activeFilterValue && !cond.styleOnly) {
+      const allowedTags = filterTags.split(/\s+/);
+      if (!allowedTags.includes(activeFilterValue)) {
+        return null;
+      }
+    }
   }
 
-  const style = widget.settings.style || {};
+  const style: WidgetStyle =
+    cond?.enabled && cond?.styleOnly && isActiveTagMatch && widget.settings.activeStyle
+      ? { ...(widget.settings.style || {}), ...widget.settings.activeStyle }
+      : widget.settings.style || {};
   const binding = widget.settings.binding || { dataSource: 'none' };
   // برای خط جداکننده، borderWidth/borderColor/borderStyle/borderRadius معنای «رنگ/ضخامت/نوع
   // خودِ خط» را دارند (روی خودِ <hr> اعمال می‌شوند در case مربوطه) نه یک قاب دور بلوک —
@@ -3999,6 +4049,7 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
   const [accordionOpen, setAccordionOpen] = useState(false);
 
   // Dynamic Widget Rendering
+  const renderedWidget: React.ReactNode = (() => {
   switch (widget.type) {
     // -------------------------------------------------------------
     // STATIC WIDGETS
@@ -4414,4 +4465,18 @@ export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
         </div>
       );
   }
+  })();
+
+  // برچسب‌ها را به‌عنوان class واقعی روی یک عنصر دربرگیرنده اعمال می‌کنیم — فقط وقتی برچسبی
+  // ست شده باشد (بدون برچسب، هیچ عنصر اضافه‌ای دور ویجت اضافه نمی‌شود، یعنی صفر تغییر برای
+  // ویجت‌های فعلی که از این قابلیت استفاده نمی‌کنند)
+  if (filterTags) {
+    return (
+      <div className={filterTags} data-filter-tags={filterTags}>
+        {renderedWidget}
+      </div>
+    );
+  }
+
+  return renderedWidget;
 };
