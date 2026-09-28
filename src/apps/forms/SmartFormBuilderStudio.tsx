@@ -72,7 +72,7 @@ const FORM_STATUS_BADGES: Record<FormStatus, { label: string; className: string 
     className: 'bg-rose-50 dark:bg-rose-500/20 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-500/30'
   }
 };
-import { sampleForms, formTemplates, defaultTheme } from './mockData';
+import { defaultTheme } from './mockData';
 import { FormBuilderCanvas } from './FormBuilderCanvas';
 import { FormLogicEditor } from './FormLogicEditor';
 import { FormMessagesEditor } from './FormMessagesEditor';
@@ -138,7 +138,10 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
       })
       .catch(error => {
         console.error('Failed to load forms:', error);
-        if (!cancelled) setForms(sampleForms);
+        if (!cancelled) {
+          setForms([]);
+          showToast('خطا در دریافت فهرست فرم‌ها از سرور. لطفاً دوباره تلاش کنید.', 'error');
+        }
       })
       .finally(() => {
         if (!cancelled) setIsLoadingForms(false);
@@ -945,7 +948,39 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
         onClose={() => setIsAiModalOpen(false)}
         onFormGenerated={async newAiForm => {
           const generatedForm: FormDefinition = {
-            ...sampleForms[0],
+            slug: slugifyFormTitle(newAiForm.title || 'فرم هوش مصنوعی'),
+            title: 'فرم تولیدشده با هوش مصنوعی',
+            description: '',
+            type: 'form',
+            status: 'draft',
+            category: 'عمومی',
+            tags: [],
+            ownerName: 'مدیر سامانه',
+            version: 1,
+            layoutBlocks: [],
+            logicRules: [],
+            quizConfig: {
+              isQuiz: false,
+              showInstantResult: false,
+              allowNegativeScore: false,
+              randomizeQuestions: false,
+              gradeThresholds: []
+            },
+            theme: defaultTheme,
+            settings: {
+              allowAnonymous: true,
+              limitOnePerUser: false,
+              requireAuth: false,
+              enableCaptcha: true,
+              enableAutoSave: true,
+              showProgressBar: true,
+              showWelcomeScreen: false,
+              customSuccessMessage: 'اطلاعات شما با موفقیت ثبت شد.',
+              generateTrackingCode: true,
+              trackingCodePrefix: 'FRM-2026',
+              sendEmailNotification: false,
+              sendSmsNotification: false
+            },
             ...newAiForm,
             id: `form_${Date.now()}`,
             createdAt: '۱۴۰۵/۰۵/۱۰',

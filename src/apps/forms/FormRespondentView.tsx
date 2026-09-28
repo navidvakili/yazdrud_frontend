@@ -909,8 +909,8 @@ export const FormRespondentView: React.FC<FormRespondentViewProps> = ({
                     id={field.id}
                     checked={answers[field.id] === 'yes'}
                     onChange={v => handleInputChange(field.id, v ? 'yes' : 'no')}
-                    onLabel="بله"
-                    offLabel="خیر"
+                    onLabel={field.yesLabel || 'بله'}
+                    offLabel={field.noLabel || 'خیر'}
                   />
                 )}
 

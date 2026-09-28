@@ -427,7 +427,7 @@ export default function FormInspectorPanel({
                 >
                   <option value="">— بدون مقدار پیش‌فرض —</option>
                   {(selectedField.type === 'yesno'
-                    ? [{ id: 'yes', value: 'yes', label: 'بله' }, { id: 'no', value: 'no', label: 'خیر' }]
+                    ? [{ id: 'yes', value: 'yes', label: selectedField.yesLabel || 'بله' }, { id: 'no', value: 'no', label: selectedField.noLabel || 'خیر' }]
                     : selectedField.options || []
                   ).map(opt => (
                     <option key={opt.id} value={opt.value}>{opt.label}</option>
@@ -722,6 +722,38 @@ export default function FormInspectorPanel({
                     <option value="international">بین‌المللی با کد کشور (+98...)</option>
                     <option value="custom">آزاد و بدون اعتبارسنجی خودکار</option>
                   </select>
+                </div>
+              </div>
+            )}
+
+            {/* Yes/No (Two-state) Field Settings */}
+            {selectedField.type === 'yesno' && (
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      عنوان حالت «بله»:
+                    </label>
+                    <input
+                      type="text"
+                      value={selectedField.yesLabel || ''}
+                      onChange={e => updateProp('yesLabel', e.target.value || undefined)}
+                      placeholder="بله"
+                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      عنوان حالت «خیر»:
+                    </label>
+                    <input
+                      type="text"
+                      value={selectedField.noLabel || ''}
+                      onChange={e => updateProp('noLabel', e.target.value || undefined)}
+                      placeholder="خیر"
+                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl text-xs"
+                    />
+                  </div>
                 </div>
               </div>
             )}

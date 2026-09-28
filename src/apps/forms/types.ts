@@ -181,6 +181,10 @@ export interface FormField {
   choiceLayout?: 'vertical' | 'horizontal' | 'grid_2_col';
   defaultSelectedOptionId?: string;
 
+  // Yes/No (two-state) field
+  yesLabel?: string;
+  noLabel?: string;
+
   // File & Image & Signature
   allowMultipleUploads?: boolean;
   showImagePreview?: boolean;

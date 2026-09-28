@@ -855,8 +855,8 @@ export const FormBuilderCanvas: React.FC<FormBuilderCanvasProps> = ({
 
           {(field.type === 'yesno' || field.type === 'switch') && (() => {
             const isOn = field.type === 'yesno' ? field.defaultValue === 'yes' : !!field.defaultValue;
-            const onLabel = field.type === 'yesno' ? 'بله' : (field.placeholder || 'فعال');
-            const offLabel = field.type === 'yesno' ? 'خیر' : 'غیرفعال';
+            const onLabel = field.type === 'yesno' ? (field.yesLabel || 'بله') : (field.placeholder || 'فعال');
+            const offLabel = field.type === 'yesno' ? (field.noLabel || 'خیر') : 'غیرفعال';
             return (
               <div className="flex items-center gap-3">
                 <div className={`relative w-12 h-6 rounded-full shrink-0 ${isOn ? 'bg-teal-600' : 'bg-slate-300 dark:bg-slate-700'}`}>

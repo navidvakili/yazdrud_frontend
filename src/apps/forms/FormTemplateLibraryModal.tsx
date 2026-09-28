@@ -21,7 +21,7 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import { FormDefinition } from './types';
-import { sampleForms, formTemplates, defaultTheme } from './mockData';
+import { formTemplates, defaultTheme } from './mockData';
 
 interface FormTemplateLibraryModalProps {
   isOpen: boolean;
@@ -88,22 +88,7 @@ export default function FormTemplateLibraryModal({
 
   // Convert template to FormDefinition
   const handleLoadTemplate = (tplId: string) => {
-    const existing = sampleForms.find(f => f.id.includes(tplId) || tplId.includes(f.type));
-    if (existing) {
-      onSelectForm({
-        ...existing,
-        id: `form_${Date.now()}`,
-        title: `${existing.title} (الگو)`,
-        createdAt: '۱۴۰۵/۰۵/۱۰',
-        updatedAt: '۱۴۰۵/۰۵/۱۰',
-        viewsCount: 0,
-        submissionsCount: 0
-      });
-      onClose();
-      return;
-    }
-
-    // Generate fallback template
+    // Generate template
     const newForm: FormDefinition = {
       id: `form_${Date.now()}`,
       slug: `form-${Date.now()}`,
