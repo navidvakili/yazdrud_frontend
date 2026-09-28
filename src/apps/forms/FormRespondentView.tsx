@@ -14,8 +14,11 @@ import {
   RotateCcw,
   Send,
   HelpCircle,
-  RefreshCw
+  RefreshCw,
+  LocateFixed
 } from 'lucide-react';
+import type { Map as LeafletMap, Marker as LeafletMarker } from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import { FormDefinition, FormField, FormStep, LogicRule } from './types';
 
 interface FormRespondentViewProps {
@@ -27,6 +30,116 @@ interface FormRespondentViewProps {
   ) => Promise<{ trackingCode?: string; scoreTotal?: number; gradeLabel?: string } | void> | void;
   isEmbedPreview?: boolean;
 }
+
+const IRAN_PROVINCES = [
+  'آذربایجان شرقی', 'آذربایجان غربی', 'اردبیل', 'اصفهان', 'البرز', 'ایلام', 'بوشهر',
+  'تهران', 'چهارمحال و بختیاری', 'خراسان جنوبی', 'خراسان رضوی', 'خراسان شمالی',
+  'خوزستان', 'زنجان', 'سمنان', 'سیستان و بلوچستان', 'فارس', 'قزوین', 'قم', 'کردستان',
+  'کرمان', 'کرمانشاه', 'کهگیلویه و بویراحمد', 'گلستان', 'گیلان', 'لرستان', 'مازندران',
+  'مرکزی', 'هرمزگان', 'همدان', 'یزد',
+];
+
+/**
+ * انتخاب مختصات از روی نقشهٔ ماهواره‌ای (Esri World Imagery — رایگان، بدون کلید API).
+ * دقیقاً همان کامپوننت استفاده‌شده در فرم عمومی (public/FormPage.tsx)، اینجا هم تکرار شده
+ * چون دو پروژهٔ frontend/public جدا از هم بیلد می‌شوند و کدشان مشترک نیست.
+ */
+const GeoMapPicker: React.FC<{
+  lat?: number;
+  lng?: number;
+  accent: string;
+  onChange: (lat: number, lng: number) => void;
+}> = ({ lat, lng, accent, onChange }) => {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const mapRef = useRef<LeafletMap | null>(null);
+  const markerRef = useRef<LeafletMarker | null>(null);
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
+
+  useEffect(() => {
+    let cancelled = false;
+
+    import('leaflet').then((L) => {
+      if (cancelled || !containerRef.current || mapRef.current) return;
+
+      const defaultCenter: [number, number] = [32.4279, 53.688];
+      const startCenter: [number, number] = lat !== undefined && lng !== undefined ? [lat, lng] : defaultCenter;
+
+      const map = L.map(containerRef.current, {
+        center: startCenter,
+        zoom: lat !== undefined ? 15 : 5,
+      });
+      mapRef.current = map;
+
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles &copy; Esri',
+        maxZoom: 19,
+      }).addTo(map);
+
+      const pinIcon = L.divIcon({
+        html: `<i class="fa-solid fa-location-dot" style="font-size:28px;color:${accent};filter:drop-shadow(0 1px 2px rgba(0,0,0,.5))"></i>`,
+        className: '',
+        iconSize: [28, 28],
+        iconAnchor: [14, 28],
+      });
+
+      if (lat !== undefined && lng !== undefined) {
+        markerRef.current = L.marker([lat, lng], { icon: pinIcon, draggable: true }).addTo(map);
+        markerRef.current.on('dragend', () => {
+          const pos = markerRef.current!.getLatLng();
+          onChangeRef.current(pos.lat, pos.lng);
+        });
+      }
+
+      map.on('click', (e: any) => {
+        const { lat: clickLat, lng: clickLng } = e.latlng;
+        if (markerRef.current) {
+          markerRef.current.setLatLng([clickLat, clickLng]);
+        } else {
+          markerRef.current = L.marker([clickLat, clickLng], { icon: pinIcon, draggable: true }).addTo(map);
+          markerRef.current.on('dragend', () => {
+            const pos = markerRef.current!.getLatLng();
+            onChangeRef.current(pos.lat, pos.lng);
+          });
+        }
+        onChangeRef.current(clickLat, clickLng);
+      });
+    });
+
+    return () => {
+      cancelled = true;
+      mapRef.current?.remove();
+      mapRef.current = null;
+      markerRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!mapRef.current || lat === undefined || lng === undefined) return;
+    import('leaflet').then((L) => {
+      if (!mapRef.current) return;
+      mapRef.current.setView([lat, lng], 15);
+      if (markerRef.current) {
+        markerRef.current.setLatLng([lat, lng]);
+      } else {
+        const pinIcon = L.divIcon({
+          html: `<i class="fa-solid fa-location-dot" style="font-size:28px;color:${accent};filter:drop-shadow(0 1px 2px rgba(0,0,0,.5))"></i>`,
+          className: '',
+          iconSize: [28, 28],
+          iconAnchor: [14, 28],
+        });
+        markerRef.current = L.marker([lat, lng], { icon: pinIcon, draggable: true }).addTo(mapRef.current);
+        markerRef.current.on('dragend', () => {
+          const pos = markerRef.current!.getLatLng();
+          onChangeRef.current(pos.lat, pos.lng);
+        });
+      }
+    });
+  }, [lat, lng]);
+
+  return <div ref={containerRef} className="w-full h-56 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700" />;
+};
 
 export const FormRespondentView: React.FC<FormRespondentViewProps> = ({
   form,
@@ -41,6 +154,7 @@ export const FormRespondentView: React.FC<FormRespondentViewProps> = ({
   const [trackingCode, setTrackingCode] = useState('');
   const [finalScore, setFinalScore] = useState<number | undefined>(undefined);
   const [fileNames, setFileNames] = useState<Record<string, string>>({});
+  const [geoLocating, setGeoLocating] = useState<Record<string, boolean>>({});
   
   // Canvas refs for signatures
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -554,6 +668,96 @@ export const FormRespondentView: React.FC<FormRespondentViewProps> = ({
                     </table>
                   </div>
                 )}
+
+                {(field.type === 'address' || field.type === 'location') && (() => {
+                  const addr = (answers[field.id] && typeof answers[field.id] === 'object') ? answers[field.id] : {};
+                  const updateAddr = (key: string, val: any) => handleInputChange(field.id, { ...addr, [key]: val });
+                  const isLocating = !!geoLocating[field.id];
+                  const accent = form.theme.primaryColor || '#0d9488';
+                  return (
+                    <div className="space-y-2">
+                      <textarea
+                        rows={2}
+                        value={addr.full || ''}
+                        placeholder={field.placeholder || 'آدرس کامل را وارد کنید...'}
+                        onChange={e => updateAddr('full', e.target.value)}
+                        className="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                      />
+                      {field.includeProvince !== false && (
+                        <div className="grid grid-cols-2 gap-2">
+                          <select
+                            value={addr.province || ''}
+                            onChange={e => updateAddr('province', e.target.value)}
+                            className="w-full px-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm"
+                          >
+                            <option value="">— استان —</option>
+                            {IRAN_PROVINCES.map(p => (
+                              <option key={p} value={p}>{p}</option>
+                            ))}
+                          </select>
+                          <input
+                            type="text"
+                            value={addr.city || ''}
+                            onChange={e => updateAddr('city', e.target.value)}
+                            placeholder="شهر"
+                            className="w-full px-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm"
+                          />
+                        </div>
+                      )}
+                      {field.includePostalCode !== false && (
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          maxLength={10}
+                          value={addr.postalCode || ''}
+                          onChange={e => updateAddr('postalCode', e.target.value.replace(/\D/g, '').slice(0, 10))}
+                          placeholder="کد پستی ده‌رقمی"
+                          dir="ltr"
+                          className="w-full px-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm"
+                        />
+                      )}
+                      {field.includeGeoCoordinates !== false && (
+                        <div className="space-y-2">
+                          <GeoMapPicker
+                            lat={addr.lat}
+                            lng={addr.lng}
+                            accent={accent}
+                            onChange={(newLat, newLng) => handleInputChange(field.id, { ...addr, lat: newLat, lng: newLng })}
+                          />
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (!navigator.geolocation) return;
+                                setGeoLocating(prev => ({ ...prev, [field.id]: true }));
+                                navigator.geolocation.getCurrentPosition(
+                                  pos => {
+                                    handleInputChange(field.id, { ...addr, lat: pos.coords.latitude, lng: pos.coords.longitude });
+                                    setGeoLocating(prev => ({ ...prev, [field.id]: false }));
+                                  },
+                                  () => setGeoLocating(prev => ({ ...prev, [field.id]: false })),
+                                  { enableHighAccuracy: true, timeout: 10000 }
+                                );
+                              }}
+                              disabled={isLocating}
+                              className="px-3 py-1.5 rounded-lg text-[11px] font-bold text-white flex items-center gap-1.5 disabled:opacity-60"
+                              style={{ backgroundColor: accent }}
+                            >
+                              <LocateFixed className={`w-3.5 h-3.5 ${isLocating ? 'animate-spin' : ''}`} />
+                              {isLocating ? 'در حال دریافت موقعیت...' : 'استفاده از موقعیت فعلی من'}
+                            </button>
+                            <span className="text-[10px] text-slate-400">یا روی نقشه کلیک کنید / پین را جابه‌جا کنید</span>
+                            {addr.lat && addr.lng && (
+                              <span className="text-[11px] font-mono text-slate-500" dir="ltr">
+                                {addr.lat.toFixed(5)}, {addr.lng.toFixed(5)}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 {field.type === 'file' && (
                   <div className="border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl p-6 text-center hover:border-teal-500 transition-colors">
