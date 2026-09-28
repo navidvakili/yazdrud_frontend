@@ -96,12 +96,12 @@ export const SubmissionsManager: React.FC<SubmissionsManagerProps> = ({
     const includeScore = form.quizConfig.isQuiz;
     const columns: { header: string; key: string; width: number }[] = [
       { header: 'کد پیگیری', key: 'trackingCode', width: 24 },
-      { header: 'نام پاسخ‌دهنده', key: 'respondentName', width: 24 },
-      { header: 'نقش', key: 'respondentRole', width: 18 },
       { header: 'تاریخ ثبت', key: 'submittedAt', width: 22 },
       ...(includeScore ? [{ header: 'نمره آزمون', key: 'scoreTotal', width: 14 }] : []),
-      ...form.fields.map(field => ({
-        header: field.label,
+      ...form.fields.map((field, idx) => ({
+        // برخی فیلدها (مثلاً hidden یا فیلدهای سیستمی) ممکن است label خالی داشته باشند —
+        // بدون این fallback، عنوان ستون در اکسل کاملاً خالی می‌ماند
+        header: field.label?.trim() || field.placeholder?.trim() || `فیلد ${idx + 1}`,
         key: `field_${field.id}`,
         width: field.type === 'textarea' || field.type === 'matrix' ? 34 : 22
       }))
@@ -157,8 +157,6 @@ export const SubmissionsManager: React.FC<SubmissionsManagerProps> = ({
       });
       const row = sheet.addRow({
         trackingCode: s.trackingCode,
-        respondentName: s.respondentName || 'ناشناس',
-        respondentRole: s.respondentRole || 'کاربر',
         submittedAt: formatJalaliDateTime(s.submittedAt),
         scoreTotal: includeScore ? s.scoreTotal ?? '-' : undefined,
         ...fieldValues
