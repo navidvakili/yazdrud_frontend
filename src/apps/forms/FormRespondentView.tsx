@@ -45,6 +45,19 @@ const toLatinDigits = (str: string): string =>
     .replace(/[۰-۹]/g, d => String(d.charCodeAt(0) - '۰'.charCodeAt(0)))
     .replace(/[٠-٩]/g, d => String(d.charCodeAt(0) - '٠'.charCodeAt(0)));
 
+/** کاراکترهای غیرمجاز را همان لحظهٔ تایپ حذف می‌کند — بر اساس charTypeAllowed تنظیم‌شده روی فیلد */
+const CHAR_TYPE_FILTERS: Record<string, RegExp> = {
+  persian_letters: /[^؀-ۿ\s]/g,
+  english_letters: /[^A-Za-z\s]/g,
+  numeric: /[^0-9۰-۹]/g,
+  alphanumeric: /[^A-Za-z0-9؀-ۿ۰-۹\s]/g,
+};
+const filterByCharType = (value: string, charType?: string): string => {
+  if (!charType || charType === 'any') return value;
+  const pattern = CHAR_TYPE_FILTERS[charType];
+  return pattern ? value.replace(pattern, '') : value;
+};
+
 /** پیکربندی مَسک و اعتبارسنجی برای هر «قالب و فرمت شماره» تعریف‌شده روی فیلد phone در فرم‌ساز */
 const PHONE_FORMAT_CONFIG: Record<'iran_mobile' | 'iran_landline' | 'international', {
   maxDigits: number;
@@ -293,6 +306,13 @@ export const FormRespondentView: React.FC<FormRespondentViewProps> = ({
 
       if (val && rules?.minLength && typeof val === 'string' && val.length < rules.minLength) {
         newErrors[field.id] = `حداقل ${rules.minLength} کاراکتر وارد کنید.`;
+      }
+
+      if (val && field.charTypeAllowed && field.charTypeAllowed !== 'any' && typeof val === 'string') {
+        const filtered = filterByCharType(val, field.charTypeAllowed);
+        if (filtered !== val) {
+          newErrors[field.id] = field.validation?.customErrorMessage || 'کاراکتر غیرمجاز وارد شده است.';
+        }
       }
 
       if (val && field.type === 'phone' && rules?.phoneFormat && rules.phoneFormat !== 'custom' && typeof val === 'string') {
@@ -562,7 +582,7 @@ export const FormRespondentView: React.FC<FormRespondentViewProps> = ({
                     type="text"
                     placeholder={field.placeholder}
                     value={answers[field.id] || ''}
-                    onChange={e => handleInputChange(field.id, e.target.value)}
+                    onChange={e => handleInputChange(field.id, filterByCharType(e.target.value, field.charTypeAllowed))}
                     className="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                   />
                 )}
@@ -573,7 +593,7 @@ export const FormRespondentView: React.FC<FormRespondentViewProps> = ({
                     rows={4}
                     placeholder={field.placeholder}
                     value={answers[field.id] || ''}
-                    onChange={e => handleInputChange(field.id, e.target.value)}
+                    onChange={e => handleInputChange(field.id, filterByCharType(e.target.value, field.charTypeAllowed))}
                     className="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                   />
                 )}
