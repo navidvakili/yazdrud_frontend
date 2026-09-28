@@ -169,10 +169,11 @@ export default function FormInspectorPanel({
   const handleAddOption = () => {
     const currentOptions = selectedField.options || [];
     const newIdx = currentOptions.length + 1;
+    const newLabel = `گزینه ${newIdx}`;
     const newOpt = {
       id: `opt_${Date.now()}`,
-      label: `گزینه ${newIdx}`,
-      value: `val_${newIdx}`
+      label: newLabel,
+      value: newLabel
     };
     updateProp('options', [...currentOptions, newOpt]);
   };

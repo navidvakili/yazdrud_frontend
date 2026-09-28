@@ -224,7 +224,7 @@ export const FormBuilderCanvas: React.FC<FormBuilderCanvasProps> = ({
       options: ['گزینه ۱', 'گزینه ۲', 'گزینه ۳'].map((lbl, idx) => ({
         id: `opt_${Date.now()}_${idx}`,
         label: lbl,
-        value: `val_${idx + 1}`
+        value: lbl
       }))
     };
 

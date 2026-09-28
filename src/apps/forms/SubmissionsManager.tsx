@@ -14,7 +14,7 @@ import {
   ShieldCheck,
   Tag
 } from 'lucide-react';
-import { FormDefinition, FormSubmission } from './types';
+import { FormDefinition, FormField, FormSubmission } from './types';
 
 interface SubmissionsManagerProps {
   form: FormDefinition;
@@ -51,12 +51,29 @@ const parseUserAgent = (ua?: string): { browser: string; os: string } => {
   return { browser, os };
 };
 
-/** تبدیل مقدار یک پاسخ به رشتهٔ قابل‌نمایش برای خروجی اکسل */
-const formatAnswerForExcel = (value: any): string => {
+/**
+ * برچسب گزینه بر اساس مقدار ذخیره‌شده — فیلدهای select/radio/multiselect
+ * مقدار (value) گزینه را در پاسخ ذخیره می‌کنند نه برچسب (label) قابل‌نمایش آن را؛
+ * yesno هم گزینه‌هایش را در field.options ندارد و اینجا جداگانه مپ می‌شود.
+ */
+const resolveOptionLabel = (field: FormField | undefined, rawValue: any): string => {
+  if (!field) return String(rawValue);
+  const options = field.type === 'yesno'
+    ? [{ value: 'yes', label: 'بله' }, { value: 'no', label: 'خیر' }]
+    : field.options;
+  if (!options || options.length === 0) return String(rawValue);
+  const match = options.find(o => o.value === rawValue);
+  return match ? match.label : String(rawValue);
+};
+
+/** تبدیل مقدار یک پاسخ به رشتهٔ قابل‌نمایش — برای فیلدهای چند‌انتخابی، برچسب گزینه نمایش داده می‌شود نه مقدار خام آن */
+const formatAnswerValue = (field: FormField | undefined, value: any): string => {
   if (value === undefined || value === null || value === '') return '-';
-  if (Array.isArray(value)) return value.map(v => (typeof v === 'object' ? JSON.stringify(v) : String(v))).join('، ');
+  if (Array.isArray(value)) {
+    return value.map(v => (typeof v === 'object' ? JSON.stringify(v) : resolveOptionLabel(field, v))).join('، ');
+  }
   if (typeof value === 'object') return JSON.stringify(value);
-  return String(value);
+  return resolveOptionLabel(field, value);
 };
 
 export const SubmissionsManager: React.FC<SubmissionsManagerProps> = ({
@@ -136,7 +153,7 @@ export const SubmissionsManager: React.FC<SubmissionsManagerProps> = ({
     filteredSubmissions.forEach((s, idx) => {
       const fieldValues: Record<string, string> = {};
       form.fields.forEach(field => {
-        fieldValues[`field_${field.id}`] = formatAnswerForExcel(s.answers[field.id]);
+        fieldValues[`field_${field.id}`] = formatAnswerValue(field, s.answers[field.id]);
       });
       const row = sheet.addRow({
         trackingCode: s.trackingCode,
@@ -347,7 +364,7 @@ export const SubmissionsManager: React.FC<SubmissionsManagerProps> = ({
                 {Object.entries(selectedSubmission.answers).map(([fId, val], idx) => {
                   const field = form.fields.find(f => f.id === fId);
                   const isMultiline = field?.type === 'textarea';
-                  const displayValue = typeof val === 'object' ? JSON.stringify(val) : String(val);
+                  const displayValue = formatAnswerValue(field, val);
                   return (
                     <div
                       key={idx}
