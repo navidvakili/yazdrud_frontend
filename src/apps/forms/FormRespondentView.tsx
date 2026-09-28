@@ -60,6 +60,8 @@ const filterByCharType = (value: string, charType?: string): string => {
 };
 
 /** پیکربندی مَسک و اعتبارسنجی برای هر «قالب و فرمت شماره» تعریف‌شده روی فیلد phone در فرم‌ساز */
+const FREE_EMAIL_PROVIDERS = ['gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com', 'live.com', 'icloud.com', 'aol.com', 'mail.com', 'protonmail.com', 'yandex.com'];
+
 const PHONE_FORMAT_CONFIG: Record<'iran_mobile' | 'iran_landline' | 'international', {
   maxDigits: number;
   pattern: RegExp;
@@ -457,6 +459,17 @@ export const FormRespondentView: React.FC<FormRespondentViewProps> = ({
         const config = PHONE_FORMAT_CONFIG[rules.phoneFormat];
         if (!config.pattern.test(val.replace(/\s/g, ''))) {
           newErrors[field.id] = rules.customErrorMessage || config.errorMessage;
+        }
+      }
+
+      if (val && field.type === 'email' && typeof val === 'string') {
+        const domain = val.split('@')[1]?.toLowerCase().trim();
+        if (domain) {
+          if (rules?.allowedDomains && rules.allowedDomains.length > 0 && !rules.allowedDomains.some(d => domain === d.toLowerCase().trim())) {
+            newErrors[field.id] = rules.customErrorMessage || `ایمیل باید از یکی از این دامنه‌ها باشد: ${rules.allowedDomains.join('، ')}`;
+          } else if (rules?.blockFreeEmailProviders && FREE_EMAIL_PROVIDERS.includes(domain)) {
+            newErrors[field.id] = rules.customErrorMessage || 'استفاده از ایمیل‌های عمومی رایگان (Gmail، Yahoo و...) مجاز نیست.';
+          }
         }
       }
     });

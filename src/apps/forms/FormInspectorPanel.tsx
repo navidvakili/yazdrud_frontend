@@ -419,13 +419,63 @@ export default function FormInspectorPanel({
               <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
                 مقدار پیش‌فرض (Default Value):
               </label>
-              <input
-                type="text"
-                value={selectedField.defaultValue || ''}
-                onChange={e => updateProp('defaultValue', e.target.value)}
-                placeholder="مقداری که به طور خودکار در فیلد قرار می‌گیرد..."
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
-              />
+              {selectedField.type === 'select' || selectedField.type === 'radio' || selectedField.type === 'yesno' ? (
+                <select
+                  value={selectedField.defaultValue || ''}
+                  onChange={e => updateProp('defaultValue', e.target.value || undefined)}
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                >
+                  <option value="">— بدون مقدار پیش‌فرض —</option>
+                  {(selectedField.type === 'yesno'
+                    ? [{ id: 'yes', value: 'yes', label: 'بله' }, { id: 'no', value: 'no', label: 'خیر' }]
+                    : selectedField.options || []
+                  ).map(opt => (
+                    <option key={opt.id} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              ) : selectedField.type === 'multiselect' ? (
+                <div className="space-y-1">
+                  {(selectedField.options || []).length === 0 && (
+                    <p className="text-[10px] text-slate-400">ابتدا از تب «گزینه‌ها» چند گزینه اضافه کنید.</p>
+                  )}
+                  {(selectedField.options || []).map(opt => {
+                    const current: string[] = Array.isArray(selectedField.defaultValue) ? selectedField.defaultValue : [];
+                    const checked = current.includes(opt.value);
+                    return (
+                      <label key={opt.id} className="p-2 bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-lg flex items-center justify-between cursor-pointer">
+                        <span className="text-xs text-slate-700 dark:text-slate-300">{opt.label}</span>
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={e => {
+                            const next = e.target.checked ? [...current, opt.value] : current.filter(v => v !== opt.value);
+                            updateProp('defaultValue', next.length > 0 ? next : undefined);
+                          }}
+                          className="w-4 h-4 text-teal-600 rounded"
+                        />
+                      </label>
+                    );
+                  })}
+                </div>
+              ) : selectedField.type === 'checkbox' || selectedField.type === 'switch' ? (
+                <label className="p-2.5 bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl flex items-center justify-between cursor-pointer">
+                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300">به‌صورت پیش‌فرض فعال/تیک‌خورده باشد</span>
+                  <input
+                    type="checkbox"
+                    checked={!!selectedField.defaultValue}
+                    onChange={e => updateProp('defaultValue', e.target.checked)}
+                    className="w-4 h-4 text-teal-600 rounded"
+                  />
+                </label>
+              ) : (
+                <input
+                  type="text"
+                  value={selectedField.defaultValue || ''}
+                  onChange={e => updateProp('defaultValue', e.target.value)}
+                  placeholder="مقداری که به طور خودکار در فیلد قرار می‌گیرد..."
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                />
+              )}
             </div>
 
             {/* Field States toggles */}
