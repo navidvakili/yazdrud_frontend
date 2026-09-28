@@ -100,6 +100,9 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
   const [activeFormId, setActiveFormId] = useState<string | null>(null);
   const [scrollToFieldId, setScrollToFieldId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'builder' | 'logic' | 'messages' | 'submissions' | 'analytics'>('builder');
+  // وقتی از دکمهٔ «پاسخ‌ها» روی کارت فرم باز شود، فقط فهرست پاسخ‌ها نمایش داده می‌شود
+  // و کل رابط ویرایش فرم (نوار افزودن سریع، سوییچ تب‌ها، دکمه‌های ذخیره/پیش‌نمایش) پنهان می‌ماند.
+  const [submissionsOnlyView, setSubmissionsOnlyView] = useState(false);
 
   // Breakpoints / Viewport width
   const [activeBreakpoint, setActiveBreakpoint] = useState<'1240' | '1024' | '768' | '380'>('1240');
@@ -405,7 +408,10 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
           {activeForm && (
             <button
               onClick={() => {
-                requestLeaveFormEditor(() => setActiveFormId(null), true);
+                requestLeaveFormEditor(() => {
+                  setActiveFormId(null);
+                  setSubmissionsOnlyView(false);
+                }, true);
               }}
               className="p-2 rounded-xl bg-teal-50 dark:bg-teal-500/20 hover:bg-teal-100 dark:hover:bg-teal-500/30 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-500/30 transition-colors cursor-pointer"
               title="بازگشت به فهرست فرم‌ها"
@@ -417,7 +423,16 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
             F
           </div>
           <div>
-            {activeForm ? (
+            {activeForm && submissionsOnlyView ? (
+              <>
+                <h2 className="w-64 md:w-96 text-xs font-black text-slate-900 dark:text-white truncate">
+                  {activeForm.title}
+                </h2>
+                <span className="px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 text-[10px] border border-indigo-200 dark:border-indigo-500/30 font-bold">
+                  مشاهدهٔ پاسخ‌ها
+                </span>
+              </>
+            ) : activeForm ? (
               <>
                 <input
                   type="text"
@@ -448,7 +463,7 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
         </div>
 
         {/* Center Breakpoint & Design Mode Badge */}
-        {activeForm && (
+        {activeForm && !submissionsOnlyView && (
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-950 p-1 rounded-2xl border border-gray-200 dark:border-slate-800 text-xs">
               {(['1240', '1024', '768', '380'] as const).map(bp => (
@@ -470,7 +485,7 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
 
         {/* Right Header Actions */}
         <div className="flex items-center gap-2">
-          {activeForm && (
+          {activeForm && !submissionsOnlyView && (
             <button
               onClick={() => void handleSaveActiveForm()}
               disabled={!unsavedFormIds[activeForm.id] || isSavingForm}
@@ -482,15 +497,17 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
             </button>
           )}
 
-          <button
-            onClick={() => setIsAiModalOpen(true)}
-            className="px-3.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-gray-200 dark:border-slate-700 font-bold text-xs transition-colors flex items-center gap-1.5 cursor-pointer"
-          >
-            <Wand2 className="w-4 h-4 text-amber-500" />
-            <span>دستیار هوش مصنوعی</span>
-          </button>
+          {!submissionsOnlyView && (
+            <button
+              onClick={() => setIsAiModalOpen(true)}
+              className="px-3.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-gray-200 dark:border-slate-700 font-bold text-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+            >
+              <Wand2 className="w-4 h-4 text-amber-500" />
+              <span>دستیار هوش مصنوعی</span>
+            </button>
+          )}
 
-          {activeForm && (
+          {activeForm && !submissionsOnlyView && (
             <button
               onClick={() => setIsSettingsModalOpen(true)}
               className="px-3.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-gray-200 dark:border-slate-700 font-bold text-xs transition-colors flex items-center gap-1.5 cursor-pointer"
@@ -500,7 +517,7 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
             </button>
           )}
 
-          {activeForm && (
+          {activeForm && !submissionsOnlyView && (
             <button
               onClick={() => setIsPreviewModalOpen(true)}
               className="px-4 py-1.5 rounded-xl bg-teal-600 dark:bg-teal-500 hover:bg-teal-700 dark:hover:bg-teal-400 text-white dark:text-slate-950 font-black text-xs transition-all shadow-md shadow-teal-500/20 flex items-center gap-1.5 cursor-pointer"
@@ -513,6 +530,14 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
       </div>
 
       {/* 2. SUB-TOOLBAR FOR PALETTE SHORTCUTS & STUDIO WORKSPACE TABS */}
+      {activeForm && submissionsOnlyView ? (
+        <div className="h-11 border-b border-gray-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-4 flex items-center text-xs z-10 shrink-0">
+          <span className="text-slate-500 font-bold text-[11px] flex items-center gap-1.5">
+            <Inbox className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+            پاسخ‌های دریافتی این فرم ({submissions.filter(s => s.formId === activeForm.id).length})
+          </span>
+        </div>
+      ) : (
       <div className="h-11 border-b border-gray-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-4 flex items-center justify-between text-xs z-10 shrink-0">
         {/* Left Quick Add Elements Menu */}
         {activeForm ? (
@@ -610,6 +635,7 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
           </div>
         )}
       </div>
+      )}
 
       {/* 3. MAIN WORKSPACE / TAB CONTENT */}
       {activeForm ? (
@@ -861,16 +887,31 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
                     </button>
                   </div>
 
-                  <button
-                    onClick={() => {
-                      setActiveFormId(formItem.id);
-                      setActiveTab('builder');
-                    }}
-                    className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all shadow-md shadow-teal-500/20 cursor-pointer"
-                  >
-                    <Edit className="w-4 h-4" />
-                    <span>ویرایش در بوم استودیو</span>
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => {
+                        setActiveFormId(formItem.id);
+                        setActiveTab('submissions');
+                        setSubmissionsOnlyView(true);
+                      }}
+                      className="px-2 py-1.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 font-bold text-[10px] rounded-lg flex items-center gap-1 transition-all cursor-pointer"
+                      title="مشاهده پاسخ‌های دریافتی"
+                    >
+                      <Inbox className="w-3.5 h-3.5" />
+                      <span>پاسخ‌ها</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setActiveFormId(formItem.id);
+                        setActiveTab('builder');
+                        setSubmissionsOnlyView(false);
+                      }}
+                      className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all shadow-md shadow-teal-500/20 cursor-pointer"
+                    >
+                      <Edit className="w-4 h-4" />
+                      <span>ویرایش در بوم استودیو</span>
+                    </button>
+                  </div>
                 </div>
               </div>
               ))}
