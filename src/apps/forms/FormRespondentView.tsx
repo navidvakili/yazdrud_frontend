@@ -368,8 +368,8 @@ export const FormRespondentView: React.FC<FormRespondentViewProps> = ({
 
             return (
               <div key={field.id} className={`${colSpan} space-y-2`}>
-                <label className="block text-sm font-semibold text-slate-800 dark:text-slate-200">
-                  {field.label}
+                <label htmlFor={field.id} className="block text-sm font-semibold text-slate-800 dark:text-slate-200">
+                  {field.label?.trim() || field.placeholder?.trim() || 'این فیلد'}
                   {field.validation?.required && <span className="text-red-500 mr-1">*</span>}
                   {field.points && (
                     <span className="text-xs text-indigo-600 dark:text-indigo-400 font-normal mr-2">
@@ -385,6 +385,7 @@ export const FormRespondentView: React.FC<FormRespondentViewProps> = ({
                 {/* Render specific field input */}
                 {field.type === 'text' && (
                   <input
+                    id={field.id}
                     type="text"
                     placeholder={field.placeholder}
                     value={answers[field.id] || ''}
@@ -395,6 +396,7 @@ export const FormRespondentView: React.FC<FormRespondentViewProps> = ({
 
                 {field.type === 'textarea' && (
                   <textarea
+                    id={field.id}
                     rows={4}
                     placeholder={field.placeholder}
                     value={answers[field.id] || ''}
@@ -405,6 +407,7 @@ export const FormRespondentView: React.FC<FormRespondentViewProps> = ({
 
                 {field.type === 'phone' && (
                   <input
+                    id={field.id}
                     type="tel"
                     placeholder={field.placeholder || '۰۹۱۲۳۴۵۶۷۸۹'}
                     value={answers[field.id] || ''}
@@ -415,6 +418,7 @@ export const FormRespondentView: React.FC<FormRespondentViewProps> = ({
 
                 {field.type === 'email' && (
                   <input
+                    id={field.id}
                     type="email"
                     placeholder={field.placeholder || 'example@domain.com'}
                     value={answers[field.id] || ''}
@@ -425,6 +429,7 @@ export const FormRespondentView: React.FC<FormRespondentViewProps> = ({
 
                 {field.type === 'select' && (
                   <select
+                    id={field.id}
                     value={answers[field.id] || ''}
                     onChange={e => handleInputChange(field.id, e.target.value)}
                     className="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
