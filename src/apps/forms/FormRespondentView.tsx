@@ -15,7 +15,8 @@ import {
   Send,
   HelpCircle,
   RefreshCw,
-  LocateFixed
+  LocateFixed,
+  ChevronDown
 } from 'lucide-react';
 import type { Map as LeafletMap, Marker as LeafletMarker } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -192,6 +193,143 @@ const GeoMapPicker: React.FC<{
   }, [lat, lng]);
 
   return <div ref={containerRef} className="w-full h-56 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700" />;
+};
+
+const CUSTOM_OPTION_VALUE = '__custom_other__';
+const selectInputClass = 'w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent';
+
+/**
+ * فیلد منوی کشویی — دو تنظیم فرم‌ساز که در این پیش‌نمایش اصلاً اعمال نمی‌شدند را پیاده می‌کند:
+ * allowSearchOptions (کمبوباکس با جستجو) و allowCreateCustomOption (گزینهٔ «سایر»).
+ */
+const SelectField: React.FC<{
+  field: FormField;
+  value: any;
+  onChange: (v: any) => void;
+}> = ({ field, value, onChange }) => {
+  const options = field.options || [];
+  const allowCustom = !!field.allowCreateCustomOption;
+  const isSearchable = !!field.allowSearchOptions;
+
+  const matchedOption = options.find(o => o.value === value);
+  const [customMode, setCustomMode] = useState(allowCustom && !!value && !matchedOption);
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!isSearchable) return;
+    const handler = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [isSearchable]);
+
+  const selectCustom = () => {
+    setCustomMode(true);
+    setOpen(false);
+    onChange('');
+  };
+  const selectOption = (v: string) => {
+    setCustomMode(false);
+    setOpen(false);
+    setSearch('');
+    onChange(v);
+  };
+
+  if (isSearchable) {
+    const filtered = options.filter(o => o.label.toLowerCase().includes(search.toLowerCase()));
+    const displayText = customMode ? 'سایر (مقدار دلخواه)' : matchedOption?.label || '';
+    return (
+      <div className="space-y-2">
+        <div ref={containerRef} className="relative">
+          <button
+            id={field.id}
+            type="button"
+            onClick={() => setOpen(o => !o)}
+            className={`${selectInputClass} text-right flex items-center justify-between gap-2`}
+          >
+            <span className={displayText ? '' : 'text-slate-400'}>{displayText || field.placeholder || 'انتخاب کنید...'}</span>
+            <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+          </button>
+          {open && (
+            <div className="absolute z-20 mt-1 w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg max-h-64 flex flex-col overflow-hidden">
+              <div className="p-2 border-b border-slate-100 dark:border-slate-800 shrink-0">
+                <input
+                  autoFocus
+                  type="text"
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  placeholder="جستجو در گزینه‌ها..."
+                  className="w-full px-3 py-1.5 text-xs border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none"
+                />
+              </div>
+              <div className="overflow-y-auto">
+                {filtered.length === 0 && <p className="p-3 text-xs text-slate-400 text-center">موردی یافت نشد</p>}
+                {filtered.map(opt => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => selectOption(opt.value)}
+                    className={`w-full text-right px-3 py-2 text-xs hover:bg-slate-50 dark:hover:bg-slate-800 block ${opt.value === value ? 'font-bold text-teal-600 dark:text-teal-400' : 'text-slate-700 dark:text-slate-200'}`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+                {allowCustom && (
+                  <button
+                    type="button"
+                    onClick={selectCustom}
+                    className="w-full text-right px-3 py-2 text-xs hover:bg-slate-50 dark:hover:bg-slate-800 border-t border-slate-100 dark:border-slate-800 text-slate-500"
+                  >
+                    سایر (تایپ کنید)
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+        {customMode && (
+          <input
+            type="text"
+            autoFocus
+            value={value || ''}
+            placeholder="مقدار دلخواه خود را بنویسید..."
+            onChange={e => onChange(e.target.value)}
+            className={selectInputClass}
+          />
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <select
+        id={field.id}
+        value={customMode ? CUSTOM_OPTION_VALUE : value || ''}
+        onChange={e => (e.target.value === CUSTOM_OPTION_VALUE ? selectCustom() : selectOption(e.target.value))}
+        className={selectInputClass}
+      >
+        <option value="">{field.placeholder || 'انتخاب کنید...'}</option>
+        {options.map(opt => (
+          <option key={opt.id} value={opt.value}>{opt.label}</option>
+        ))}
+        {allowCustom && <option value={CUSTOM_OPTION_VALUE}>سایر (تایپ کنید)</option>}
+      </select>
+      {customMode && (
+        <input
+          type="text"
+          autoFocus
+          value={value || ''}
+          placeholder="مقدار دلخواه خود را بنویسید..."
+          onChange={e => onChange(e.target.value)}
+          className={selectInputClass}
+        />
+      )}
+    </div>
+  );
 };
 
 export const FormRespondentView: React.FC<FormRespondentViewProps> = ({
@@ -626,19 +764,11 @@ export const FormRespondentView: React.FC<FormRespondentViewProps> = ({
                 )}
 
                 {field.type === 'select' && (
-                  <select
-                    id={field.id}
-                    value={answers[field.id] || ''}
-                    onChange={e => handleInputChange(field.id, e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                  >
-                    <option value="">{field.placeholder || 'انتخاب کنید...'}</option>
-                    {field.options?.map(opt => (
-                      <option key={opt.id} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
+                  <SelectField
+                    field={field}
+                    value={answers[field.id]}
+                    onChange={v => handleInputChange(field.id, v)}
+                  />
                 )}
 
                 {field.type === 'radio' && (
