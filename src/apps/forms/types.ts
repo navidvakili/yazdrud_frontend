@@ -153,7 +153,6 @@ export interface FormField {
   disabled?: boolean;
   readOnly?: boolean;
   hidden?: boolean;
-  accessRoles?: string[]; // e.g. ['admin', 'manager', 'student', 'all']
 
   // Specific Type Configurations
   // Text & Textarea

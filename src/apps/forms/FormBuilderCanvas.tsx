@@ -715,9 +715,6 @@ export const FormBuilderCanvas: React.FC<FormBuilderCanvasProps> = ({
             >
               <GripVertical className="w-4 h-4" />
             </div>
-            <span className="text-[11px] font-black text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-500/20 px-2.5 py-0.5 rounded-lg border border-teal-200 dark:border-teal-500/30">
-              Q{displayIndex + 1}
-            </span>
             <h4 className="text-xs font-black text-slate-900 dark:text-white">
               {field.label}
             </h4>
