@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import ExcelJS from 'exceljs';
+import type { Map as LeafletMap } from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import {
   Inbox,
   Search,
@@ -66,14 +68,107 @@ const resolveOptionLabel = (field: FormField | undefined, rawValue: any): string
   return match ? match.label : String(rawValue);
 };
 
+/** پاسخ فیلدهای address/location یک آبجکت است: { full, province, city, postalCode, lat, lng } */
+const isAddressAnswer = (field: FormField | undefined, value: any): boolean =>
+  (field?.type === 'address' || field?.type === 'location') && value && typeof value === 'object';
+
+/** نسخهٔ متنیِ خوانا از پاسخ آدرس — برای خروجی اکسل که نمی‌تواند نقشه نمایش دهد */
+const formatAddressAsText = (value: any): string => {
+  const parts: string[] = [];
+  if (value.full) parts.push(String(value.full));
+  if (value.province) parts.push(`استان: ${value.province}`);
+  if (value.city) parts.push(`شهر: ${value.city}`);
+  if (value.postalCode) parts.push(`کدپستی: ${value.postalCode}`);
+  if (value.lat && value.lng) parts.push(`مختصات: ${value.lat}, ${value.lng}`);
+  return parts.length > 0 ? parts.join(' — ') : '-';
+};
+
 /** تبدیل مقدار یک پاسخ به رشتهٔ قابل‌نمایش — برای فیلدهای چند‌انتخابی، برچسب گزینه نمایش داده می‌شود نه مقدار خام آن */
 const formatAnswerValue = (field: FormField | undefined, value: any): string => {
   if (value === undefined || value === null || value === '') return '-';
+  if (isAddressAnswer(field, value)) return formatAddressAsText(value);
   if (Array.isArray(value)) {
     return value.map(v => (typeof v === 'object' ? JSON.stringify(v) : resolveOptionLabel(field, v))).join('، ');
   }
   if (typeof value === 'object') return JSON.stringify(value);
   return resolveOptionLabel(field, value);
+};
+
+/**
+ * نمایش فقط‌خواندنیِ یک نقطه روی نقشهٔ ماهواره‌ای (Esri World Imagery) — بدون امکان
+ * کلیک/جابه‌جایی، صرفاً برای دیدن مکان ثبت‌شده در یک پاسخ. leaflet با import پویا
+ * بارگذاری می‌شود تا فقط وقتی واقعاً یک پاسخ دارای مختصات باز می‌شود، دانلود شود.
+ */
+const ReadOnlyMapView: React.FC<{ lat: number; lng: number }> = ({ lat, lng }) => {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const mapRef = useRef<LeafletMap | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    import('leaflet').then(L => {
+      if (cancelled || !containerRef.current || mapRef.current) return;
+      const map = L.map(containerRef.current, {
+        center: [lat, lng],
+        zoom: 15,
+        dragging: true,
+        scrollWheelZoom: false,
+      });
+      mapRef.current = map;
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles &copy; Esri',
+        maxZoom: 19,
+      }).addTo(map);
+      const pinIcon = L.divIcon({
+        html: `<i class="fa-solid fa-location-dot" style="font-size:26px;color:#0d9488;filter:drop-shadow(0 1px 2px rgba(0,0,0,.5))"></i>`,
+        className: '',
+        iconSize: [26, 26],
+        iconAnchor: [13, 26],
+      });
+      L.marker([lat, lng], { icon: pinIcon, interactive: false }).addTo(map);
+    });
+    return () => {
+      cancelled = true;
+      mapRef.current?.remove();
+      mapRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lat, lng]);
+
+  return <div ref={containerRef} className="w-full h-48 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800" />;
+};
+
+/** نمایش ساختاریافتهٔ پاسخ فیلد آدرس/لوکیشن در مودال جزئیات — به‌جای dump خام JSON */
+const AddressAnswerCard: React.FC<{ value: any }> = ({ value }) => {
+  const rows: { label: string; text: string }[] = [];
+  if (value.full) rows.push({ label: 'آدرس کامل', text: value.full });
+  if (value.province) rows.push({ label: 'استان', text: value.province });
+  if (value.city) rows.push({ label: 'شهر', text: value.city });
+  if (value.postalCode) rows.push({ label: 'کد پستی', text: value.postalCode });
+
+  return (
+    <div className="space-y-2">
+      {rows.length > 0 ? (
+        <div className="grid grid-cols-2 gap-2">
+          {rows.map(r => (
+            <div key={r.label} className="p-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+              <span className="block text-[10px] text-slate-400">{r.label}</span>
+              <span className="text-teal-700 dark:text-teal-300 font-semibold">{r.text}</span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <span className="text-slate-400">-</span>
+      )}
+      {value.lat && value.lng && (
+        <>
+          <ReadOnlyMapView lat={value.lat} lng={value.lng} />
+          <span className="block text-[10px] text-slate-400 font-mono" dir="ltr">
+            {value.lat}, {value.lng}
+          </span>
+        </>
+      )}
+    </div>
+  );
 };
 
 export const SubmissionsManager: React.FC<SubmissionsManagerProps> = ({
@@ -362,6 +457,7 @@ export const SubmissionsManager: React.FC<SubmissionsManagerProps> = ({
                 {Object.entries(selectedSubmission.answers).map(([fId, val], idx) => {
                   const field = form.fields.find(f => f.id === fId);
                   const isMultiline = field?.type === 'textarea';
+                  const isAddress = isAddressAnswer(field, val);
                   const displayValue = formatAnswerValue(field, val);
                   return (
                     <div
@@ -371,7 +467,9 @@ export const SubmissionsManager: React.FC<SubmissionsManagerProps> = ({
                       <span className="font-bold text-slate-800 dark:text-slate-200 block">
                         {field ? field.label : fId}:
                       </span>
-                      {isMultiline ? (
+                      {isAddress ? (
+                        <AddressAnswerCard value={val} />
+                      ) : isMultiline ? (
                         <p className="text-teal-700 dark:text-teal-300 font-semibold whitespace-pre-wrap">
                           {displayValue}
                         </p>
