@@ -204,6 +204,40 @@ const selectInputClass = 'w-full px-4 py-2.5 rounded-xl border border-slate-300 
  * فیلد منوی کشویی — دو تنظیم فرم‌ساز که در این پیش‌نمایش اصلاً اعمال نمی‌شدند را پیاده می‌کند:
  * allowSearchOptions (کمبوباکس با جستجو) و allowCreateCustomOption (گزینهٔ «سایر»).
  */
+/** ترکیب کلاس چیدمان گزینه‌های فیلدهای چندگزینه‌ای (رادیو/چک‌باکس گروهی) بر اساس تنظیم choiceLayout */
+const choiceLayoutClass = (layout?: 'vertical' | 'horizontal' | 'grid_2_col'): string =>
+  layout === 'horizontal' ? 'flex flex-wrap gap-4'
+    : layout === 'grid_2_col' ? 'grid grid-cols-2 gap-2'
+    : 'space-y-2';
+
+/** کلید دو‌حالته (سوییچ) — برای فیلدهای yesno و switch به‌جای دکمه‌های رادیویی */
+const ToggleSwitch: React.FC<{
+  id?: string;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  onLabel?: string;
+  offLabel?: string;
+}> = ({ id, checked, onChange, onLabel, offLabel }) => (
+  <div className="flex items-center gap-3">
+    <button
+      id={id}
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      onClick={() => onChange(!checked)}
+      className={`relative w-12 h-6 rounded-full transition-colors shrink-0 ${checked ? 'bg-teal-600' : 'bg-slate-300 dark:bg-slate-700'}`}
+    >
+      <span
+        className="absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all"
+        style={{ right: checked ? '2px' : '26px' }}
+      />
+    </button>
+    {(onLabel || offLabel) && (
+      <span className="text-sm font-bold text-slate-700 dark:text-slate-300">{checked ? onLabel : offLabel}</span>
+    )}
+  </div>
+);
+
 const SelectField: React.FC<{
   field: FormField;
   value: any;
@@ -785,7 +819,7 @@ export const FormRespondentView: React.FC<FormRespondentViewProps> = ({
                 )}
 
                 {field.type === 'radio' && (
-                  <div className="space-y-2 pt-1">
+                  <div className={`pt-1 ${choiceLayoutClass(field.choiceLayout)}`}>
                     {field.options?.map(opt => (
                       <label
                         key={opt.id}
@@ -805,6 +839,45 @@ export const FormRespondentView: React.FC<FormRespondentViewProps> = ({
                       </label>
                     ))}
                   </div>
+                )}
+
+                {field.type === 'checkbox' && (() => {
+                  const selected: string[] = Array.isArray(answers[field.id]) ? answers[field.id] : [];
+                  return (
+                    <div className={`pt-1 ${choiceLayoutClass(field.choiceLayout)}`}>
+                      {field.options?.map(opt => {
+                        const isChecked = selected.includes(opt.value);
+                        return (
+                          <label
+                            key={opt.id}
+                            className="flex items-center gap-3 p-3 rounded-xl border border-slate-200 dark:border-slate-700/60 hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition-colors"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={() =>
+                                handleInputChange(field.id, isChecked ? selected.filter(v => v !== opt.value) : [...selected, opt.value])
+                              }
+                              className="w-4 h-4 text-teal-600 rounded focus:ring-teal-500 border-slate-300"
+                            />
+                            <span className="text-sm text-slate-700 dark:text-slate-300 font-medium">
+                              {opt.label}
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+
+                {field.type === 'switch' && (
+                  <ToggleSwitch
+                    id={field.id}
+                    checked={!!answers[field.id]}
+                    onChange={v => handleInputChange(field.id, v)}
+                    onLabel={field.placeholder || 'فعال'}
+                    offLabel="غیرفعال"
+                  />
                 )}
 
                 {field.type === 'rating' && (
@@ -832,25 +905,13 @@ export const FormRespondentView: React.FC<FormRespondentViewProps> = ({
                 )}
 
                 {field.type === 'yesno' && (
-                  <div className="flex gap-4 pt-1">
-                    {[
-                      { label: 'بله', val: 'yes' },
-                      { label: 'خیر', val: 'no' }
-                    ].map(opt => (
-                      <button
-                        type="button"
-                        key={opt.val}
-                        onClick={() => handleInputChange(field.id, opt.val)}
-                        className={`flex-1 py-2.5 rounded-xl border font-bold text-sm transition-all ${
-                          answers[field.id] === opt.val
-                            ? 'bg-teal-600 border-teal-600 text-white shadow'
-                            : 'border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50'
-                        }`}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
+                  <ToggleSwitch
+                    id={field.id}
+                    checked={answers[field.id] === 'yes'}
+                    onChange={v => handleInputChange(field.id, v ? 'yes' : 'no')}
+                    onLabel="بله"
+                    offLabel="خیر"
+                  />
                 )}
 
                 {field.type === 'matrix' && field.matrixRows && field.matrixCols && (
