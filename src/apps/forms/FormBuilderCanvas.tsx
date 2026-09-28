@@ -807,6 +807,24 @@ export const FormBuilderCanvas: React.FC<FormBuilderCanvasProps> = ({
             </div>
           )}
 
+          {(field.type === 'date' || field.type === 'datetime' || field.type === 'time') && (() => {
+            const isTime = field.type === 'time';
+            const calendarLabel = !isTime && (field.calendarType || 'jalali') === 'gregorian' ? ' (میلادی)' : !isTime ? ' (شمسی)' : '';
+            let previewText = field.placeholder || (isTime ? 'انتخاب ساعت...' : 'انتخاب تاریخ...');
+            if (field.defaultDateOption === 'today') previewText = isTime ? 'اکنون' : 'امروز';
+            else if (field.defaultDateOption === 'custom' && field.defaultValue) previewText = field.defaultValue;
+            return (
+              <div className="px-3 py-2 bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 text-slate-400 flex items-center gap-2">
+                {isTime ? (
+                  <Clock className="w-4 h-4 shrink-0" style={{ color: field.iconColor || '#94a3b8' }} />
+                ) : (
+                  <Calendar className="w-4 h-4 shrink-0" style={{ color: field.iconColor || '#94a3b8' }} />
+                )}
+                <span>{previewText}{calendarLabel}</span>
+              </div>
+            );
+          })()}
+
           {field.type === 'textarea' && (
             <div className="px-3 py-3 bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 text-slate-400 h-16">
               {field.placeholder || 'کادر متن چندخطی و توضیحات تفصیلی...'}

@@ -488,18 +488,6 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
 
         {/* Right Header Actions */}
         <div className="flex items-center gap-2">
-          {activeForm && !submissionsOnlyView && (
-            <button
-              onClick={() => void handleSaveActiveForm()}
-              disabled={!unsavedFormIds[activeForm.id] || isSavingForm}
-              className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-200 disabled:text-slate-400 dark:disabled:bg-slate-800 dark:disabled:text-slate-500 text-white font-bold text-xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed"
-              title="ذخیره تغییرات فرم"
-            >
-              <Save className="w-4 h-4" />
-              <span>{isSavingForm ? 'در حال ذخیره...' : 'ذخیره فرم'}</span>
-            </button>
-          )}
-
           {!submissionsOnlyView && (
             <button
               onClick={() => setIsAiModalOpen(true)}
@@ -527,6 +515,18 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
             >
               <Play className="w-4 h-4" />
               <span>پیش‌نمایش زنده</span>
+            </button>
+          )}
+
+          {activeForm && !submissionsOnlyView && (
+            <button
+              onClick={() => void handleSaveActiveForm()}
+              disabled={!unsavedFormIds[activeForm.id] || isSavingForm}
+              className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-200 disabled:text-slate-400 dark:disabled:bg-slate-800 dark:disabled:text-slate-500 text-white font-bold text-xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed"
+              title="ذخیره تغییرات فرم"
+            >
+              <Save className="w-4 h-4" />
+              <span>{isSavingForm ? 'در حال ذخیره...' : 'ذخیره فرم'}</span>
             </button>
           )}
         </div>

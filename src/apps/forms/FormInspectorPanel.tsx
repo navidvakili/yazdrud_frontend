@@ -824,22 +824,24 @@ export default function FormInspectorPanel({
             {/* Date & Time Field Settings */}
             {['date', 'time', 'datetime'].includes(selectedField.type) && (
               <div className="space-y-3">
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    نوع تقویم:
-                  </label>
-                  <select
-                    value={selectedField.calendarType || 'jalali'}
-                    onChange={e => updateProp('calendarType', e.target.value as any)}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl text-xs"
-                  >
-                    <option value="jalali">تقویم شمسی (خورشیدی هجری)</option>
-                    <option value="gregorian">تقویم میلادی (Gregorian)</option>
-                  </select>
-                </div>
+                {selectedField.type !== 'time' && (
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      نوع تقویم:
+                    </label>
+                    <select
+                      value={selectedField.calendarType || 'jalali'}
+                      onChange={e => updateProp('calendarType', e.target.value as any)}
+                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl text-xs"
+                    >
+                      <option value="jalali">تقویم شمسی (خورشیدی هجری)</option>
+                      <option value="gregorian">تقویم میلادی (Gregorian)</option>
+                    </select>
+                  </div>
+                )}
 
                 <IconColorPicker
-                  label="رنگ آیکون تقویم"
+                  label={selectedField.type === 'time' ? 'رنگ آیکون ساعت' : 'رنگ آیکون تقویم'}
                   value={selectedField.iconColor}
                   defaultColor="#94a3b8"
                   onChange={c => updateProp('iconColor', c)}
@@ -847,7 +849,7 @@ export default function FormInspectorPanel({
 
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    مقدار تاریخ پیش‌فرض:
+                    {selectedField.type === 'time' ? 'مقدار ساعت پیش‌فرض:' : 'مقدار تاریخ پیش‌فرض:'}
                   </label>
                   <select
                     value={selectedField.defaultDateOption || 'none'}
@@ -855,32 +857,58 @@ export default function FormInspectorPanel({
                     className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl text-xs"
                   >
                     <option value="none">خالی</option>
-                    <option value="today">تاریخ روز جاری (امروز)</option>
-                    <option value="custom">تاریخ ثابت سفارشی</option>
+                    <option value="today">{selectedField.type === 'time' ? 'ساعت لحظه‌ای (اکنون)' : 'تاریخ روز جاری (امروز)'}</option>
+                    <option value="custom">{selectedField.type === 'time' ? 'ساعت ثابت سفارشی' : 'تاریخ ثابت سفارشی'}</option>
                   </select>
                 </div>
 
-                <div className="space-y-2 pt-1 border-t border-gray-100 dark:border-slate-800">
-                  <label className="p-2.5 bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl flex items-center justify-between cursor-pointer">
-                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300">عدم اجازه انتخاب تاریخ‌های گذشته</span>
+                {selectedField.defaultDateOption === 'custom' && (
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      {selectedField.type === 'time' ? 'ساعت ثابت:' : 'تاریخ ثابت:'}
+                    </label>
                     <input
-                      type="checkbox"
-                      checked={selectedField.validation?.disallowPastDates || false}
-                      onChange={e => updateValidation('disallowPastDates', e.target.checked)}
-                      className="w-4 h-4 text-teal-600 rounded"
+                      type={selectedField.type === 'time' ? 'time' : 'date'}
+                      value={selectedField.defaultValue || ''}
+                      onChange={e => updateProp('defaultValue', e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl text-xs dir-ltr text-left"
                     />
-                  </label>
+                    {selectedField.type !== 'time' && (
+                      <p className="text-[10px] text-slate-400 mt-1">مقدار به میلادی ثبت می‌شود؛ در خروجی طبق نوع تقویم انتخابی نمایش داده خواهد شد.</p>
+                    )}
+                  </div>
+                )}
 
-                  <label className="p-2.5 bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl flex items-center justify-between cursor-pointer">
-                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300">عدم اجازه انتخاب تاریخ‌های آینده</span>
-                    <input
-                      type="checkbox"
-                      checked={selectedField.validation?.disallowFutureDates || false}
-                      onChange={e => updateValidation('disallowFutureDates', e.target.checked)}
-                      className="w-4 h-4 text-teal-600 rounded"
-                    />
-                  </label>
-                </div>
+                {selectedField.type !== 'time' && (
+                  <div className="space-y-2 pt-1 border-t border-gray-100 dark:border-slate-800">
+                    <label className="p-2.5 bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl flex items-center justify-between cursor-pointer">
+                      <span className="text-xs font-bold text-slate-700 dark:text-slate-300">عدم اجازه انتخاب تاریخ‌های گذشته</span>
+                      <input
+                        type="checkbox"
+                        checked={selectedField.validation?.disallowPastDates || false}
+                        onChange={e => {
+                          updateValidation('disallowPastDates', e.target.checked);
+                          if (e.target.checked) updateValidation('disallowFutureDates', false);
+                        }}
+                        className="w-4 h-4 text-teal-600 rounded"
+                      />
+                    </label>
+
+                    <label className="p-2.5 bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl flex items-center justify-between cursor-pointer">
+                      <span className="text-xs font-bold text-slate-700 dark:text-slate-300">عدم اجازه انتخاب تاریخ‌های آینده</span>
+                      <input
+                        type="checkbox"
+                        checked={selectedField.validation?.disallowFutureDates || false}
+                        onChange={e => {
+                          updateValidation('disallowFutureDates', e.target.checked);
+                          if (e.target.checked) updateValidation('disallowPastDates', false);
+                        }}
+                        className="w-4 h-4 text-teal-600 rounded"
+                      />
+                    </label>
+                    <p className="text-[10px] text-slate-400">این دو گزینه هم‌زمان قابل‌فعال‌شدن نیستند — با انتخاب یکی، دیگری خاموش می‌شود.</p>
+                  </div>
+                )}
               </div>
             )}
 

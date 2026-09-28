@@ -20,7 +20,28 @@ import {
 } from 'lucide-react';
 import type { Map as LeafletMap, Marker as LeafletMarker } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { DateObject } from 'react-multi-date-picker';
+import persianCalendar from 'react-date-object/calendars/persian';
+import gregorianCalendar from 'react-date-object/calendars/gregorian';
+import { JalaliDatepicker } from '../../shared-components';
+import { toPersianDigits, toEnglishDigits } from '../../shared-utils';
 import { FormDefinition, FormField, FormStep, LogicRule } from './types';
+
+/** «امروز» به تقویم شمسی، به‌صورت رشتهٔ YYYY/MM/DD با رقم فارسی */
+const todayJalaliString = (): string => toPersianDigits(new DateObject({ calendar: persianCalendar }).format('YYYY/MM/DD'));
+
+/** «امروز» به فرمت ISO میلادی (YYYY-MM-DD) — برای ورودی‌های native تقویم میلادی */
+const todayIsoString = (): string => new Date().toISOString().slice(0, 10);
+
+/** تبدیل تاریخ ثابت میلادی (ISO، از ورودی native تاریخ در فرم‌ساز) به رشتهٔ شمسی YYYY/MM/DD */
+const gregorianIsoToJalaliString = (iso: string): string => {
+  try {
+    const g = new DateObject({ date: iso, format: 'YYYY-MM-DD', calendar: gregorianCalendar });
+    return toPersianDigits(g.convert(persianCalendar).format('YYYY/MM/DD'));
+  } catch {
+    return '';
+  }
+};
 
 interface FormRespondentViewProps {
   form: FormDefinition;
@@ -375,7 +396,23 @@ export const FormRespondentView: React.FC<FormRespondentViewProps> = ({
 }) => {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, any>>({});
+  const [answers, setAnswers] = useState<Record<string, any>>(() => {
+    const defaults: Record<string, any> = {};
+    form.fields.forEach(f => {
+      if (f.defaultValue !== undefined && f.defaultValue !== null) defaults[f.id] = f.defaultValue;
+      if ((f.type === 'date' || f.type === 'datetime') && f.defaultDateOption && f.defaultDateOption !== 'none') {
+        const isJalali = (f.calendarType || 'jalali') === 'jalali';
+        if (f.defaultDateOption === 'today') {
+          defaults[f.id] = isJalali ? todayJalaliString() : todayIsoString();
+        } else if (f.defaultDateOption === 'custom' && f.defaultValue) {
+          defaults[f.id] = isJalali ? gregorianIsoToJalaliString(f.defaultValue) : f.defaultValue;
+        }
+      } else if (f.type === 'time' && f.defaultDateOption === 'today') {
+        defaults[f.id] = new Date().toTimeString().slice(0, 5);
+      }
+    });
+    return defaults;
+  });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [trackingCode, setTrackingCode] = useState('');
@@ -503,6 +540,29 @@ export const FormRespondentView: React.FC<FormRespondentViewProps> = ({
             newErrors[field.id] = rules.customErrorMessage || `ایمیل باید از یکی از این دامنه‌ها باشد: ${rules.allowedDomains.join('، ')}`;
           } else if (rules?.blockFreeEmailProviders && FREE_EMAIL_PROVIDERS.includes(domain)) {
             newErrors[field.id] = rules.customErrorMessage || 'استفاده از ایمیل‌های عمومی رایگان (Gmail، Yahoo و...) مجاز نیست.';
+          }
+        }
+      }
+
+      if (val && (field.type === 'date' || field.type === 'datetime') && typeof val === 'string' && (rules?.disallowPastDates || rules?.disallowFutureDates)) {
+        const isJalali = (field.calendarType || 'jalali') === 'jalali';
+        let isoDate: string | null = null;
+        if (isJalali) {
+          try {
+            const d = new DateObject({ calendar: persianCalendar, date: toEnglishDigits(val), format: 'YYYY/MM/DD' });
+            isoDate = d.convert(gregorianCalendar).format('YYYY-MM-DD');
+          } catch {
+            isoDate = null;
+          }
+        } else {
+          isoDate = val.slice(0, 10);
+        }
+        if (isoDate) {
+          const today = todayIsoString();
+          if (rules?.disallowPastDates && isoDate < today) {
+            newErrors[field.id] = rules.customErrorMessage || 'امکان انتخاب تاریخ‌های گذشته وجود ندارد.';
+          } else if (rules?.disallowFutureDates && isoDate > today) {
+            newErrors[field.id] = rules.customErrorMessage || 'امکان انتخاب تاریخ‌های آینده وجود ندارد.';
           }
         }
       }
@@ -807,6 +867,42 @@ export const FormRespondentView: React.FC<FormRespondentViewProps> = ({
                     value={answers[field.id] || ''}
                     onChange={e => handleInputChange(field.id, e.target.value)}
                     className="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm dir-ltr text-right focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                  />
+                )}
+
+                {(field.type === 'date' || field.type === 'datetime') && (() => {
+                  const isJalali = (field.calendarType || 'jalali') === 'jalali';
+                  if (isJalali) {
+                    return (
+                      <JalaliDatepicker
+                        value={answers[field.id] || ''}
+                        onChange={v => handleInputChange(field.id, v)}
+                        iconColor={field.iconColor}
+                        minDate={field.validation?.disallowPastDates ? todayJalaliString() : undefined}
+                        maxDate={field.validation?.disallowFutureDates ? todayJalaliString() : undefined}
+                      />
+                    );
+                  }
+                  return (
+                    <input
+                      id={field.id}
+                      type={field.type === 'datetime' ? 'datetime-local' : 'date'}
+                      value={answers[field.id] || ''}
+                      min={field.validation?.disallowPastDates ? todayIsoString() : undefined}
+                      max={field.validation?.disallowFutureDates ? todayIsoString() : undefined}
+                      onChange={e => handleInputChange(field.id, e.target.value)}
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                    />
+                  );
+                })()}
+
+                {field.type === 'time' && (
+                  <input
+                    id={field.id}
+                    type="time"
+                    value={answers[field.id] || ''}
+                    onChange={e => handleInputChange(field.id, e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                   />
                 )}
 
