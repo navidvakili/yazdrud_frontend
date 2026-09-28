@@ -1473,28 +1473,30 @@ export default function FormInspectorPanel({
               </div>
             )}
 
-            {/* Min / Max for numbers / currency */}
-            {['number', 'slider', 'currency', 'percentage'].includes(selectedField.type) && (
+            {/* Min / Max for numbers / currency / rating */}
+            {['number', 'slider', 'currency', 'percentage', 'rating'].includes(selectedField.type) && (
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    حداقل مقدار عددی:
+                    {selectedField.type === 'rating' ? 'حداقل نمره:' : 'حداقل مقدار عددی:'}
                   </label>
                   <input
                     type="number"
                     value={selectedField.validation?.min !== undefined ? selectedField.validation?.min : ''}
                     onChange={e => updateValidation('min', e.target.value !== '' ? Number(e.target.value) : undefined)}
+                    placeholder={selectedField.type === 'rating' ? '۱' : undefined}
                     className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl text-xs"
                   />
                 </div>
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    حداکثر مقدار عددی:
+                    {selectedField.type === 'rating' ? 'حداکثر نمره:' : 'حداکثر مقدار عددی:'}
                   </label>
                   <input
                     type="number"
                     value={selectedField.validation?.max !== undefined ? selectedField.validation?.max : ''}
                     onChange={e => updateValidation('max', e.target.value !== '' ? Number(e.target.value) : undefined)}
+                    placeholder={selectedField.type === 'rating' ? '۵' : undefined}
                     className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl text-xs"
                   />
                 </div>

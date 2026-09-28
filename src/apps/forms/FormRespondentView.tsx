@@ -6,6 +6,7 @@ import {
   ArrowLeft,
   Upload,
   Star,
+  Heart,
   Printer,
   QrCode,
   Sparkles,
@@ -976,29 +977,82 @@ export const FormRespondentView: React.FC<FormRespondentViewProps> = ({
                   />
                 )}
 
-                {field.type === 'rating' && (
-                  <div className="flex items-center gap-2 pt-2">
-                    {[1, 2, 3, 4, 5].map(starVal => (
-                      <button
-                        type="button"
-                        key={starVal}
-                        onClick={() => handleInputChange(field.id, starVal)}
-                        className="p-1 hover:scale-110 transition-transform"
-                      >
-                        <Star
-                          className={`w-8 h-8 ${
-                            (answers[field.id] || 0) >= starVal ? '' : 'text-slate-300 dark:text-slate-700'
-                          }`}
-                          style={
-                            (answers[field.id] || 0) >= starVal
-                              ? { color: field.iconColor || '#fbbf24', fill: field.iconColor || '#fbbf24' }
-                              : undefined
-                          }
-                        />
-                      </button>
-                    ))}
-                  </div>
-                )}
+                {field.type === 'rating' && (() => {
+                  const min = field.validation?.min ?? 1;
+                  const max = field.validation?.max ?? 5;
+                  const rating = Number(answers[field.id]) || 0;
+                  const color = field.iconColor || '#fbbf24';
+                  const iconType = field.ratingIconType || 'star';
+                  const range = Array.from({ length: Math.max(1, max - min + 1) }, (_, i) => min + i);
+
+                  let ratingControl: React.ReactNode;
+                  if (iconType === 'emoji') {
+                    const mid = Math.round((min + max) / 2);
+                    const emojiOptions = [{ v: min, e: '🙁' }, { v: mid, e: '😐' }, { v: max, e: '🙂' }];
+                    ratingControl = (
+                      <div className="flex items-center gap-3">
+                        {emojiOptions.map(opt => (
+                          <button
+                            key={opt.v}
+                            type="button"
+                            onClick={() => handleInputChange(field.id, opt.v)}
+                            className={`text-3xl leading-none transition-transform hover:scale-110 rounded-full p-1 ${rating === opt.v ? 'ring-2' : 'opacity-40'}`}
+                            style={rating === opt.v ? { ['--tw-ring-color' as any]: color } : undefined}
+                          >
+                            {opt.e}
+                          </button>
+                        ))}
+                      </div>
+                    );
+                  } else if (iconType === 'number') {
+                    ratingControl = (
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {range.map(n => (
+                          <button
+                            key={n}
+                            type="button"
+                            onClick={() => handleInputChange(field.id, n)}
+                            className="w-9 h-9 rounded-lg text-sm font-bold border transition-colors"
+                            style={rating === n ? { backgroundColor: color, borderColor: color, color: '#fff' } : { borderColor: '#cbd5e1' }}
+                          >
+                            {n}
+                          </button>
+                        ))}
+                      </div>
+                    );
+                  } else {
+                    const Icon = iconType === 'heart' ? Heart : Star;
+                    ratingControl = (
+                      <div className="flex items-center gap-2 pt-2">
+                        {range.map(n => (
+                          <button
+                            type="button"
+                            key={n}
+                            onClick={() => handleInputChange(field.id, n)}
+                            className="p-1 hover:scale-110 transition-transform"
+                          >
+                            <Icon
+                              className={`w-8 h-8 ${rating >= n ? '' : 'text-slate-300 dark:text-slate-700'}`}
+                              style={rating >= n ? { color, fill: color } : undefined}
+                            />
+                          </button>
+                        ))}
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="space-y-1">
+                      {ratingControl}
+                      {(field.startRatingLabel || field.endRatingLabel) && (
+                        <div className="flex items-center justify-between text-[11px] text-slate-400 max-w-[220px]">
+                          <span>{field.startRatingLabel}</span>
+                          <span>{field.endRatingLabel}</span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 {field.type === 'yesno' && (
                   <ToggleSwitch

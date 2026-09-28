@@ -21,6 +21,7 @@ import {
   Search,
   GripVertical,
   Star,
+  Heart,
   ChevronDown,
   Award,
   MoveUp,
@@ -888,18 +889,46 @@ export const FormBuilderCanvas: React.FC<FormBuilderCanvasProps> = ({
             );
           })()}
 
-          {field.type === 'rating' && (
-            <div className="flex items-center gap-2 py-1">
-              {[1, 2, 3, 4, 5].map(st => (
-                <Star
-                  key={st}
-                  className={`w-5 h-5 ${st <= 4 ? '' : 'text-slate-300 dark:text-slate-700'}`}
-                  style={st <= 4 ? { color: field.iconColor || '#fbbf24', fill: field.iconColor || '#fbbf24' } : undefined}
-                />
-              ))}
-              <span className="text-xs text-slate-400 mr-2">(۴ از ۵)</span>
-            </div>
-          )}
+          {field.type === 'rating' && (() => {
+            const min = field.validation?.min ?? 1;
+            const max = field.validation?.max ?? 5;
+            const range = Array.from({ length: Math.max(1, max - min + 1) }, (_, i) => min + i);
+            const filledCount = Math.max(1, range.length - 1);
+            const color = field.iconColor || '#fbbf24';
+            const iconType = field.ratingIconType || 'star';
+
+            if (iconType === 'emoji') {
+              return <div className="text-xl py-1">🙁 &nbsp; 😐 &nbsp; 🙂</div>;
+            }
+            if (iconType === 'number') {
+              return (
+                <div className="flex items-center gap-1.5 py-1">
+                  {range.map(n => (
+                    <div
+                      key={n}
+                      className="w-6 h-6 rounded text-[10px] font-bold flex items-center justify-center border"
+                      style={n === range[range.length - 1] ? { backgroundColor: color, borderColor: color, color: '#fff' } : { borderColor: '#cbd5e1', color: '#94a3b8' }}
+                    >
+                      {n}
+                    </div>
+                  ))}
+                </div>
+              );
+            }
+            const Icon = iconType === 'heart' ? Heart : Star;
+            return (
+              <div className="flex items-center gap-2 py-1">
+                {range.map((n, idx) => (
+                  <Icon
+                    key={n}
+                    className={`w-5 h-5 ${idx < filledCount ? '' : 'text-slate-300 dark:text-slate-700'}`}
+                    style={idx < filledCount ? { color, fill: color } : undefined}
+                  />
+                ))}
+                <span className="text-xs text-slate-400 mr-2">({filledCount} از {range.length})</span>
+              </div>
+            );
+          })()}
 
           {field.type === 'matrix' && (
             <div className="overflow-x-auto">
