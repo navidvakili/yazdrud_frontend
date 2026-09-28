@@ -34,7 +34,6 @@ export type FieldType =
   | 'address'
   | 'currency'
   | 'percentage'
-  | 'cascading'
   | 'signature'
   | 'captcha'
   | 'security'
@@ -239,9 +238,6 @@ export interface FormField {
   securityCodeLength?: number;
   securityCaseSensitive?: boolean;
 
-  // Dependencies & Cascading
-  cascadingParentId?: string;
-  cascadingData?: Record<string, string[]>; // e.g. {"تهران": ["تهران", "ری"], "اصفهان": ["اصفهان", "کاشان"]}
   className?: string;
 }
 

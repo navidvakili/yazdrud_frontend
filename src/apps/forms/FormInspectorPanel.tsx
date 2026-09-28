@@ -433,7 +433,7 @@ export default function FormInspectorPanel({
                     <option key={opt.id} value={opt.value}>{opt.label}</option>
                   ))}
                 </select>
-              ) : selectedField.type === 'multiselect' ? (
+              ) : selectedField.type === 'multiselect' || selectedField.type === 'checkbox' ? (
                 <div className="space-y-1">
                   {(selectedField.options || []).length === 0 && (
                     <p className="text-[10px] text-slate-400">ابتدا از تب «گزینه‌ها» چند گزینه اضافه کنید.</p>
@@ -457,9 +457,9 @@ export default function FormInspectorPanel({
                     );
                   })}
                 </div>
-              ) : selectedField.type === 'checkbox' || selectedField.type === 'switch' ? (
+              ) : selectedField.type === 'switch' ? (
                 <label className="p-2.5 bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl flex items-center justify-between cursor-pointer">
-                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300">به‌صورت پیش‌فرض فعال/تیک‌خورده باشد</span>
+                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300">به‌صورت پیش‌فرض فعال باشد</span>
                   <input
                     type="checkbox"
                     checked={!!selectedField.defaultValue}
