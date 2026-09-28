@@ -39,6 +39,46 @@ const IRAN_PROVINCES = [
   'مرکزی', 'هرمزگان', 'همدان', 'یزد',
 ];
 
+/** ارقام فارسی/عربی را به ارقام لاتین تبدیل می‌کند — چون خیلی از کیبوردهای فارسی رقم می‌فرستند */
+const toLatinDigits = (str: string): string =>
+  str
+    .replace(/[۰-۹]/g, d => String(d.charCodeAt(0) - '۰'.charCodeAt(0)))
+    .replace(/[٠-٩]/g, d => String(d.charCodeAt(0) - '٠'.charCodeAt(0)));
+
+/** پیکربندی مَسک و اعتبارسنجی برای هر «قالب و فرمت شماره» تعریف‌شده روی فیلد phone در فرم‌ساز */
+const PHONE_FORMAT_CONFIG: Record<'iran_mobile' | 'iran_landline' | 'international', {
+  maxDigits: number;
+  pattern: RegExp;
+  placeholder: string;
+  mask: (digits: string) => string;
+  errorMessage: string;
+}> = {
+  iran_mobile: {
+    maxDigits: 11,
+    pattern: /^09\d{9}$/,
+    placeholder: '0912 345 6789',
+    mask: d => [d.slice(0, 4), d.slice(4, 7), d.slice(7, 11)].filter(Boolean).join(' '),
+    errorMessage: 'شمارهٔ موبایل معتبر نیست — باید با ۰۹ شروع شود و ۱۱ رقم باشد.',
+  },
+  iran_landline: {
+    maxDigits: 11,
+    pattern: /^0\d{9,10}$/,
+    placeholder: '021 1234 5678',
+    mask: d => {
+      const areaLen = d.length > 10 ? 4 : 3;
+      return [d.slice(0, areaLen), d.slice(areaLen, areaLen + 4), d.slice(areaLen + 4)].filter(Boolean).join(' ');
+    },
+    errorMessage: 'شمارهٔ تلفن ثابت معتبر نیست — باید با پیش‌شمارهٔ شهر (۰) شروع شود.',
+  },
+  international: {
+    maxDigits: 15,
+    pattern: /^\+\d{6,15}$/,
+    placeholder: '+98 912 345 6789',
+    mask: d => `+${[d.slice(0, 2), d.slice(2, 5), d.slice(5, 8), d.slice(8, 12)].filter(Boolean).join(' ')}`,
+    errorMessage: 'شمارهٔ بین‌المللی معتبر نیست — باید با + و کد کشور شروع شود.',
+  },
+};
+
 /**
  * انتخاب مختصات از روی نقشهٔ ماهواره‌ای (Esri World Imagery — رایگان، بدون کلید API).
  * دقیقاً همان کامپوننت استفاده‌شده در فرم عمومی (public/FormPage.tsx)، اینجا هم تکرار شده
@@ -226,6 +266,18 @@ export const FormRespondentView: React.FC<FormRespondentViewProps> = ({
     }
   };
 
+  /** مَسک زندهٔ فیلد شماره تلفن — روی هر ضربهٔ کیبورد بر اساس phoneFormat فرمت می‌شود */
+  const handlePhoneChange = (field: FormField, rawInput: string) => {
+    const format = field.validation?.phoneFormat;
+    if (!format || format === 'custom') {
+      handleInputChange(field.id, rawInput);
+      return;
+    }
+    const config = PHONE_FORMAT_CONFIG[format];
+    const digits = toLatinDigits(rawInput).replace(/\D/g, '').slice(0, config.maxDigits);
+    handleInputChange(field.id, config.mask(digits));
+  };
+
   const validateStep = () => {
     const newErrors: Record<string, string> = {};
 
@@ -241,6 +293,13 @@ export const FormRespondentView: React.FC<FormRespondentViewProps> = ({
 
       if (val && rules?.minLength && typeof val === 'string' && val.length < rules.minLength) {
         newErrors[field.id] = `حداقل ${rules.minLength} کاراکتر وارد کنید.`;
+      }
+
+      if (val && field.type === 'phone' && rules?.phoneFormat && rules.phoneFormat !== 'custom' && typeof val === 'string') {
+        const config = PHONE_FORMAT_CONFIG[rules.phoneFormat];
+        if (!config.pattern.test(val.replace(/\s/g, ''))) {
+          newErrors[field.id] = rules.customErrorMessage || config.errorMessage;
+        }
       }
     });
 
@@ -519,16 +578,21 @@ export const FormRespondentView: React.FC<FormRespondentViewProps> = ({
                   />
                 )}
 
-                {field.type === 'phone' && (
-                  <input
-                    id={field.id}
-                    type="tel"
-                    placeholder={field.placeholder || '۰۹۱۲۳۴۵۶۷۸۹'}
-                    value={answers[field.id] || ''}
-                    onChange={e => handleInputChange(field.id, e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm dir-ltr text-right focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                  />
-                )}
+                {field.type === 'phone' && (() => {
+                  const phoneFormat = field.validation?.phoneFormat;
+                  const phoneConfig = phoneFormat && phoneFormat !== 'custom' ? PHONE_FORMAT_CONFIG[phoneFormat] : null;
+                  return (
+                    <input
+                      id={field.id}
+                      type="tel"
+                      placeholder={field.placeholder || phoneConfig?.placeholder || '۰۹۱۲۳۴۵۶۷۸۹'}
+                      value={answers[field.id] || ''}
+                      onChange={e => handlePhoneChange(field, e.target.value)}
+                      dir="ltr"
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm text-right focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                    />
+                  );
+                })()}
 
                 {field.type === 'email' && (
                   <input
