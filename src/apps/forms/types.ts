@@ -25,7 +25,6 @@ export type FieldType =
   | 'richtext'
   | 'slider'
   | 'rating'
-  | 'matrix'
   | 'likert'
   | 'ranking'
   | 'yesno'
@@ -48,17 +47,6 @@ export interface FieldOption {
   score?: number; // Score points for quiz
 }
 
-export interface MatrixRow {
-  id: string;
-  label: string;
-}
-
-export interface MatrixColumn {
-  id: string;
-  label: string;
-  score?: number;
-}
-
 export interface FieldValidation {
   required?: boolean;
   minLength?: number;
@@ -75,6 +63,7 @@ export interface FieldValidation {
   allowedDomains?: string[]; // e.g. ['ut.ac.ir', 'university.ac.ir']
   blockFreeEmailProviders?: boolean;
   phoneFormat?: 'iran_mobile' | 'iran_landline' | 'international' | 'custom';
+  allowedUrlProtocols?: string[]; // e.g. ['https', 'http', 'ftp']
   passwordRules?: {
     minLength: number;
     requireUppercase?: boolean;
@@ -138,8 +127,6 @@ export interface FormField {
   helpText?: string;
   defaultValue?: any;
   options?: FieldOption[];
-  matrixRows?: MatrixRow[];
-  matrixCols?: MatrixColumn[];
   validation?: FieldValidation;
   columnWidth?: '100%' | '50%' | '33%' | '25%'; // Responsive width
   stepId?: string; // Step page assignment

@@ -49,7 +49,7 @@ export const AiFormAssistantModal: React.FC<AiFormAssistantModalProps> = ({
 تو باید یک ساختار JSON معتبر شامل عنوان (title)، توضیح (description)، و لیستی از سوالات (fields) تولید کنی.
 هر field باید شامل موارد زیر باشد:
 - id: رشته یکتا مثل f_1, f_2
-- type: یکی از 'text' | 'textarea' | 'number' | 'email' | 'phone' | 'select' | 'radio' | 'checkbox' | 'rating' | 'yesno' | 'matrix' | 'file' | 'date'
+- type: یکی از 'text' | 'textarea' | 'number' | 'email' | 'phone' | 'select' | 'radio' | 'checkbox' | 'rating' | 'yesno' | 'file' | 'date'
 - label: متن سوال به فارسی
 - placeholder: متن راهنما یا نمونه
 - validation: { required: boolean }

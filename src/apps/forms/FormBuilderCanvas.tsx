@@ -11,7 +11,6 @@ import {
   CheckSquare,
   CircleDot,
   CheckCircle2,
-  Table,
   Upload,
   SlidersHorizontal,
   PenTool,
@@ -91,7 +90,6 @@ const FIELD_PALETTE: {
     category: 'ارزشیابی، فایل و پیشرفته',
     items: [
       { type: 'rating', label: 'نمره‌دهی ستاره‌ای (Rating)', icon: Star, color: 'text-amber-500', desc: 'رضایت‌سنجی ۱ تا ۵ ستاره یا قلب' },
-      { type: 'matrix', label: 'ماتریس لیکرت (Likert Table)', icon: Table, color: 'text-teal-500', desc: 'ارزیابی چند معیار همزمان' },
       { type: 'slider', label: 'اسلایدر پیوسته عددی', icon: SlidersHorizontal, color: 'text-indigo-500', desc: 'انتخاب بازه‌ای از مقادیر' },
       { type: 'file', label: 'بارگذاری مدارک و فایل', icon: Upload, color: 'text-orange-500', desc: 'PDF، تصویر، زیپ با محدودیت حجم' },
       { type: 'signature', label: 'امضای دیجیتال کاربر', icon: PenTool, color: 'text-emerald-500', desc: 'تاییدیه با قلم لمسی یا ماوس' },
@@ -930,32 +928,6 @@ export const FormBuilderCanvas: React.FC<FormBuilderCanvasProps> = ({
             );
           })()}
 
-          {field.type === 'matrix' && (
-            <div className="overflow-x-auto">
-              <table className="w-full text-[11px] text-right">
-                <thead>
-                  <tr className="border-b border-gray-200 dark:border-slate-800 text-slate-500">
-                    <th className="py-1">معیار</th>
-                    <th className="py-1 text-center">عالی</th>
-                    <th className="py-1 text-center">خوب</th>
-                    <th className="py-1 text-center">متوسط</th>
-                    <th className="py-1 text-center">ضعیف</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(field.matrixRows || [{ id: '1', label: 'کیفیت تدریس' }]).map(r => (
-                    <tr key={r.id} className="border-b border-gray-100 dark:border-slate-800/50">
-                      <td className="py-1.5 font-bold text-slate-700 dark:text-slate-300">{r.label}</td>
-                      <td className="py-1.5 text-center"><div className="w-3.5 h-3.5 rounded-full border border-gray-300 dark:border-slate-700 mx-auto"></div></td>
-                      <td className="py-1.5 text-center"><div className="w-3.5 h-3.5 rounded-full border border-gray-300 dark:border-slate-700 mx-auto"></div></td>
-                      <td className="py-1.5 text-center"><div className="w-3.5 h-3.5 rounded-full border border-gray-300 dark:border-slate-700 mx-auto"></div></td>
-                      <td className="py-1.5 text-center"><div className="w-3.5 h-3.5 rounded-full border border-gray-300 dark:border-slate-700 mx-auto"></div></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
 
           {['file', 'image'].includes(field.type) && (
             <div className="border border-dashed border-gray-300 dark:border-slate-700 rounded-xl p-4 text-center text-slate-400">

@@ -225,45 +225,7 @@ export default function FormInspectorPanel({
     setDragOverOptionIndex(null);
   };
 
-  // Matrix Row & Col Handlers
-  const handleAddMatrixRow = () => {
-    const rows = selectedField.matrixRows || [];
-    const newRow = { id: `r_${Date.now()}`, label: `معیار ${rows.length + 1}` };
-    updateProp('matrixRows', [...rows, newRow]);
-  };
-
-  const handleUpdateMatrixRow = (index: number, label: string) => {
-    const rows = [...(selectedField.matrixRows || [])];
-    rows[index] = { ...rows[index], label };
-    updateProp('matrixRows', rows);
-  };
-
-  const handleDeleteMatrixRow = (index: number) => {
-    const rows = [...(selectedField.matrixRows || [])];
-    rows.splice(index, 1);
-    updateProp('matrixRows', rows);
-  };
-
-  const handleAddMatrixCol = () => {
-    const cols = selectedField.matrixCols || [];
-    const newCol = { id: `c_${Date.now()}`, label: `سطح ${cols.length + 1}`, score: cols.length + 1 };
-    updateProp('matrixCols', [...cols, newCol]);
-  };
-
-  const handleUpdateMatrixCol = (index: number, label: string, score?: number) => {
-    const cols = [...(selectedField.matrixCols || [])];
-    cols[index] = { ...cols[index], label, score: score !== undefined ? score : cols[index].score };
-    updateProp('matrixCols', cols);
-  };
-
-  const handleDeleteMatrixCol = (index: number) => {
-    const cols = [...(selectedField.matrixCols || [])];
-    cols.splice(index, 1);
-    updateProp('matrixCols', cols);
-  };
-
   const isChoiceField = ['select', 'radio', 'checkbox'].includes(selectedField.type);
-  const isMatrixField = selectedField.type === 'matrix';
 
   const typeNameFa: Record<string, string> = {
     text: 'متن کوتاه',
@@ -334,7 +296,7 @@ export default function FormInspectorPanel({
       <div className="flex border-b border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs overflow-x-auto scrollbar-none">
         {[
           { id: 'general', label: 'عمومی', icon: Type },
-          ...(isChoiceField || isMatrixField ? [{ id: 'options', label: 'گزینه‌ها', icon: Layers }] : []),
+          ...(isChoiceField ? [{ id: 'options', label: 'گزینه‌ها', icon: Layers }] : []),
           { id: 'validation', label: 'اعتبار', icon: CheckSquare },
           { id: 'layout', label: 'ظاهر', icon: Layout },
           { id: 'advanced', label: 'پیشرفته', icon: Sparkles }
@@ -613,6 +575,34 @@ export default function FormInspectorPanel({
             {/* Number, Slider, Currency, Percentage */}
             {['number', 'slider', 'currency', 'percentage'].includes(selectedField.type) && (
               <div className="space-y-3">
+                {selectedField.type === 'slider' && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        حداقل مقدار اسلایدر:
+                      </label>
+                      <input
+                        type="number"
+                        value={selectedField.validation?.min !== undefined ? selectedField.validation?.min : 0}
+                        onChange={e => updateValidation('min', e.target.value !== '' ? Number(e.target.value) : undefined)}
+                        placeholder="0"
+                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        حداکثر مقدار اسلایدر:
+                      </label>
+                      <input
+                        type="number"
+                        value={selectedField.validation?.max !== undefined ? selectedField.validation?.max : 100}
+                        onChange={e => updateValidation('max', e.target.value !== '' ? Number(e.target.value) : undefined)}
+                        placeholder="100"
+                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl text-xs"
+                      />
+                    </div>
+                  </div>
+                )}
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
@@ -755,6 +745,43 @@ export default function FormInspectorPanel({
                     />
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* URL Field Settings */}
+            {selectedField.type === 'url' && (
+              <div className="space-y-2">
+                <span className="font-bold text-xs text-slate-700 dark:text-slate-300 block">پروتکل‌های مجاز پیوند:</span>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {[
+                    { id: 'https', label: 'https://' },
+                    { id: 'http', label: 'http://' },
+                    { id: 'ftp', label: 'ftp://' },
+                    { id: 'ftps', label: 'ftps://' },
+                    { id: 'mailto', label: 'mailto:' },
+                    { id: 'tel', label: 'tel:' }
+                  ].map(proto => {
+                    const current = selectedField.validation?.allowedUrlProtocols || ['https', 'http'];
+                    const checked = current.includes(proto.id);
+                    return (
+                      <label key={proto.id} className="p-2 bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-lg flex items-center justify-between cursor-pointer text-[11px]" dir="ltr">
+                        <span className="font-mono text-slate-600 dark:text-slate-300">{proto.label}</span>
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={e => {
+                            const next = e.target.checked
+                              ? [...current, proto.id]
+                              : current.filter(p => p !== proto.id);
+                            updateValidation('allowedUrlProtocols', next.length > 0 ? next : ['https', 'http']);
+                          }}
+                          className="w-3.5 h-3.5 text-teal-600 rounded"
+                        />
+                      </label>
+                    );
+                  })}
+                </div>
+                <p className="text-[10px] text-slate-400">پیوندهایی که با پروتکل انتخاب‌نشده شروع شوند، یا اصلاً قالب یک پیوند معتبر را نداشته باشند، رد می‌شوند.</p>
               </div>
             )}
 
@@ -1361,64 +1388,6 @@ export default function FormInspectorPanel({
               </div>
             )}
 
-            {/* Matrix rows & cols */}
-            {isMatrixField && (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-xs">سطرهای ماتریس (معیارها):</span>
-                    <button
-                      onClick={handleAddMatrixRow}
-                      className="px-2 py-1 bg-teal-50 text-teal-600 rounded-lg text-[10px] font-bold cursor-pointer hover:bg-teal-100"
-                    >
-                      + سطر جدید
-                    </button>
-                  </div>
-                  <div className="space-y-1">
-                    {(selectedField.matrixRows || []).map((r, i) => (
-                      <div key={r.id || i} className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-950 p-1.5 rounded-lg border border-gray-200 dark:border-slate-800">
-                        <input
-                          type="text"
-                          value={r.label}
-                          onChange={e => handleUpdateMatrixRow(i, e.target.value)}
-                          className="flex-1 px-2 py-1 text-xs bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded"
-                        />
-                        <button onClick={() => handleDeleteMatrixRow(i)} className="text-slate-400 hover:text-rose-500 p-1">
-                          <Trash2 className="w-3 h-3" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-xs">ستون‌های ماتریس (طیف پاسخ):</span>
-                    <button
-                      onClick={handleAddMatrixCol}
-                      className="px-2 py-1 bg-teal-50 text-teal-600 rounded-lg text-[10px] font-bold cursor-pointer hover:bg-teal-100"
-                    >
-                      + ستون جدید
-                    </button>
-                  </div>
-                  <div className="space-y-1">
-                    {(selectedField.matrixCols || []).map((c, i) => (
-                      <div key={c.id || i} className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-950 p-1.5 rounded-lg border border-gray-200 dark:border-slate-800">
-                        <input
-                          type="text"
-                          value={c.label}
-                          onChange={e => handleUpdateMatrixCol(i, e.target.value)}
-                          className="flex-1 px-2 py-1 text-xs bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded"
-                        />
-                        <button onClick={() => handleDeleteMatrixCol(i)} className="text-slate-400 hover:text-rose-500 p-1">
-                          <Trash2 className="w-3 h-3" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         )}
 

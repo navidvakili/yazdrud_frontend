@@ -198,7 +198,7 @@ export const SubmissionsManager: React.FC<SubmissionsManagerProps> = ({
         // بدون این fallback، عنوان ستون در اکسل کاملاً خالی می‌ماند
         header: field.label?.trim() || field.placeholder?.trim() || `فیلد ${idx + 1}`,
         key: `field_${field.id}`,
-        width: field.type === 'textarea' || field.type === 'matrix' ? 34 : 22
+        width: field.type === 'textarea' ? 34 : 22
       }))
     ];
     const colCount = columns.length;

@@ -260,6 +260,98 @@ const ToggleSwitch: React.FC<{
   </div>
 );
 
+/** کادر امضای دیجیتال با ترسیم — هم ماوس هم لمسی (موبایل/تبلت) */
+const SignatureCanvasField: React.FC<{
+  value: string;
+  onChange: (dataUrl: string) => void;
+  height: number;
+  color?: string;
+}> = ({ value, onChange, height, color }) => {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const isDrawingRef = useRef(false);
+  const hasDrawnRef = useRef(false);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const container = containerRef.current;
+    if (!canvas || !container) return;
+    const width = container.clientWidth || 400;
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = color || '#0f172a';
+    if (value) {
+      const img = new Image();
+      img.onload = () => ctx.drawImage(img, 0, 0, width, height);
+      img.src = value;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const getPos = (e: React.MouseEvent | React.TouchEvent) => {
+    const canvas = canvasRef.current!;
+    const rect = canvas.getBoundingClientRect();
+    const point = 'touches' in e ? e.touches[0] : e;
+    return { x: point.clientX - rect.left, y: point.clientY - rect.top };
+  };
+
+  const start = (e: React.MouseEvent | React.TouchEvent) => {
+    isDrawingRef.current = true;
+    const ctx = canvasRef.current?.getContext('2d');
+    const { x, y } = getPos(e);
+    ctx?.beginPath();
+    ctx?.moveTo(x, y);
+  };
+  const move = (e: React.MouseEvent | React.TouchEvent) => {
+    if (!isDrawingRef.current) return;
+    if ('touches' in e) e.preventDefault();
+    const ctx = canvasRef.current?.getContext('2d');
+    const { x, y } = getPos(e);
+    ctx?.lineTo(x, y);
+    ctx?.stroke();
+    hasDrawnRef.current = true;
+  };
+  const end = () => {
+    if (!isDrawingRef.current) return;
+    isDrawingRef.current = false;
+    if (hasDrawnRef.current && canvasRef.current) {
+      onChange(canvasRef.current.toDataURL('image/png'));
+    }
+  };
+  const clear = () => {
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext('2d');
+    if (canvas && ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+    hasDrawnRef.current = false;
+    onChange('');
+  };
+
+  return (
+    <div className="space-y-2">
+      <div ref={containerRef} className="border border-slate-300 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 overflow-hidden" style={{ height }}>
+        <canvas
+          ref={canvasRef}
+          className="w-full h-full cursor-crosshair touch-none"
+          onMouseDown={start}
+          onMouseMove={move}
+          onMouseUp={end}
+          onMouseLeave={end}
+          onTouchStart={start}
+          onTouchMove={move}
+          onTouchEnd={end}
+        />
+      </div>
+      <button type="button" onClick={clear} className="text-xs text-red-500 hover:underline">
+        پاک‌سازی امضا
+      </button>
+    </div>
+  );
+};
+
 const SelectField: React.FC<{
   field: FormField;
   value: any;
@@ -420,10 +512,6 @@ export const FormRespondentView: React.FC<FormRespondentViewProps> = ({
   const [finalScore, setFinalScore] = useState<number | undefined>(undefined);
   const [fileNames, setFileNames] = useState<Record<string, string>>({});
   const [geoLocating, setGeoLocating] = useState<Record<string, boolean>>({});
-  
-  // Canvas refs for signatures
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [isDrawing, setIsDrawing] = useState(false);
 
   const steps = form.steps.length > 0 ? form.steps : [{ id: 's_default', title: 'تکمیل فرم', order: 1 }];
   const currentStep = steps[currentStepIndex];
@@ -633,46 +721,6 @@ export const FormRespondentView: React.FC<FormRespondentViewProps> = ({
     return form.quizConfig.gradeThresholds.find(
       gt => finalScore >= gt.minScore && finalScore <= gt.maxScore
     );
-  };
-
-  // Signature canvas handlers
-  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    setIsDrawing(true);
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    const rect = canvas.getBoundingClientRect();
-    ctx.beginPath();
-    ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
-  };
-
-  const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isDrawing) return;
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    const rect = canvas.getBoundingClientRect();
-    ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
-    ctx.stroke();
-  };
-
-  const stopDrawing = (fieldId: string) => {
-    setIsDrawing(false);
-    const canvas = canvasRef.current;
-    if (canvas) {
-      handleInputChange(fieldId, canvas.toDataURL());
-    }
-  };
-
-  const clearCanvas = (fieldId: string) => {
-    const canvas = canvasRef.current;
-    if (canvas) {
-      const ctx = canvas.getContext('2d');
-      ctx?.clearRect(0, 0, canvas.width, canvas.height);
-      handleInputChange(fieldId, '');
-    }
   };
 
   if (isSubmitted) {
@@ -1054,6 +1102,27 @@ export const FormRespondentView: React.FC<FormRespondentViewProps> = ({
                   );
                 })()}
 
+                {field.type === 'slider' && (
+                  <div className="flex items-center gap-3">
+                    <input
+                      id={field.id}
+                      type="range"
+                      dir="ltr"
+                      min={field.validation?.min ?? 0}
+                      max={field.validation?.max ?? 100}
+                      value={answers[field.id] ?? field.validation?.min ?? 0}
+                      onChange={e => handleInputChange(field.id, Number(e.target.value))}
+                      className="flex-1"
+                      // علت dir="ltr" + scaleX(-1): مرورگرهای مبتنی بر Chromium جهت داخلی
+                      // رنجر را مطابق dir="rtl" صفحه اصلاح نمی‌کنند و کلیک باعث پرش می‌شود
+                      style={{ accentColor: '#0d9488', transform: 'scaleX(-1)' }}
+                    />
+                    <span className="text-xs font-mono font-bold text-slate-700 dark:text-slate-300 w-10 text-center">
+                      {answers[field.id] ?? field.validation?.min ?? 0}
+                    </span>
+                  </div>
+                )}
+
                 {field.type === 'yesno' && (
                   <ToggleSwitch
                     id={field.id}
@@ -1064,48 +1133,6 @@ export const FormRespondentView: React.FC<FormRespondentViewProps> = ({
                   />
                 )}
 
-                {field.type === 'matrix' && field.matrixRows && field.matrixCols && (
-                  <div className="overflow-x-auto border border-slate-200 dark:border-slate-700 rounded-xl mt-2">
-                    <table className="w-full text-sm text-right">
-                      <thead className="bg-slate-50 dark:bg-slate-800 text-xs text-slate-600 dark:text-slate-300 font-bold">
-                        <tr>
-                          <th className="p-3">معیار ارزیابی</th>
-                          {field.matrixCols.map(col => (
-                            <th key={col.id} className="p-3 text-center">
-                              {col.label}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-                        {field.matrixRows.map(row => (
-                          <tr key={row.id}>
-                            <td className="p-3 font-medium text-slate-800 dark:text-slate-200">
-                              {row.label}
-                            </td>
-                            {field.matrixCols!.map(col => (
-                              <td key={col.id} className="p-3 text-center">
-                                <input
-                                  type="radio"
-                                  name={`${field.id}_${row.id}`}
-                                  checked={answers[field.id]?.[row.id] === col.id}
-                                  onChange={() => {
-                                    const currentMatrix = answers[field.id] || {};
-                                    handleInputChange(field.id, {
-                                      ...currentMatrix,
-                                      [row.id]: col.id
-                                    });
-                                  }}
-                                  className="w-4 h-4 text-teal-600"
-                                />
-                              </td>
-                            ))}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
 
                 {(field.type === 'address' || field.type === 'location') && (() => {
                   const addr = (answers[field.id] && typeof answers[field.id] === 'object') ? answers[field.id] : {};
@@ -1224,28 +1251,54 @@ export const FormRespondentView: React.FC<FormRespondentViewProps> = ({
                   </div>
                 )}
 
-                {field.type === 'signature' && (
-                  <div className="space-y-2">
-                    <div className="border border-slate-300 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 overflow-hidden">
-                      <canvas
-                        ref={canvasRef}
-                        width={500}
-                        height={120}
-                        onMouseDown={startDrawing}
-                        onMouseMove={draw}
-                        onMouseUp={() => stopDrawing(field.id)}
-                        className="w-full cursor-crosshair touch-none"
+                {field.type === 'signature' && (() => {
+                  const padType = field.signaturePadType || 'draw';
+                  if (padType === 'type') {
+                    return (
+                      <input
+                        type="text"
+                        value={answers[field.id] || ''}
+                        placeholder={field.placeholder || 'نام خود را به‌عنوان امضا تایپ کنید...'}
+                        onChange={e => handleInputChange(field.id, e.target.value)}
+                        className="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                        style={{ fontFamily: "'Lucida Handwriting', 'Brush Script MT', cursive", fontSize: '1.4rem', color: field.iconColor || '#0f172a' }}
                       />
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => clearCanvas(field.id)}
-                      className="text-xs text-red-500 hover:underline"
-                    >
-                      پاک‌سازی امضا
-                    </button>
-                  </div>
-                )}
+                    );
+                  }
+                  if (padType === 'upload') {
+                    return (
+                      <div className="border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl p-6 text-center hover:border-teal-500 transition-colors">
+                        <Upload className="w-8 h-8 mx-auto mb-2" style={{ color: field.iconColor || '#94a3b8' }} />
+                        <label className="cursor-pointer text-xs font-semibold text-teal-600 dark:text-teal-400 hover:underline">
+                          بارگذاری تصویر امضای اسکن‌شده
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={e => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                setFileNames(prev => ({ ...prev, [field.id]: file.name }));
+                                handleInputChange(field.id, file.name);
+                              }
+                            }}
+                          />
+                        </label>
+                        {fileNames[field.id] && (
+                          <p className="text-xs text-emerald-600 font-medium mt-2">فایل انتخاب شد: {fileNames[field.id]}</p>
+                        )}
+                      </div>
+                    );
+                  }
+                  return (
+                    <SignatureCanvasField
+                      value={typeof answers[field.id] === 'string' ? answers[field.id] : ''}
+                      onChange={dataUrl => handleInputChange(field.id, dataUrl)}
+                      height={field.signatureCanvasHeight || 160}
+                      color={field.iconColor}
+                    />
+                  );
+                })()}
 
                 {field.type === 'security' && field.securityType !== 'honeypot' && (
                   <div
