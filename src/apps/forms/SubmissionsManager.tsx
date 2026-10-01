@@ -9,6 +9,7 @@ import {
   Clock,
   Download,
   Eye,
+  FileText,
   FileSpreadsheet,
   Printer,
   UserCheck,
@@ -87,6 +88,12 @@ const formatAddressAsText = (value: any): string => {
 const formatAnswerValue = (field: FormField | undefined, value: any): string => {
   if (value === undefined || value === null || value === '') return '-';
   if (isAddressAnswer(field, value)) return formatAddressAsText(value);
+  if (isFileAnswer(field, value)) {
+    // data: URLهای امضای ترسیمی می‌توانند چندهزار کاراکتر باشند — در خروجی اکسل به‌جای
+    // آن متن حجیم، فقط یک برچسب کوتاه نوشته می‌شود؛ برای فایل/تصویر آپلودشده همان لینک
+    // واقعی نوشته می‌شود که اکسل آن را خودکار قابل‌کلیک می‌کند
+    return value.startsWith('data:') ? 'فایل پیوست (امضای ترسیمی)' : value;
+  }
   if (Array.isArray(value)) {
     return value.map(v => (typeof v === 'object' ? JSON.stringify(v) : resolveOptionLabel(field, v))).join('، ');
   }
@@ -167,6 +174,61 @@ const AddressAnswerCard: React.FC<{ value: any }> = ({ value }) => {
           </span>
         </>
       )}
+    </div>
+  );
+};
+
+/**
+ * پاسخ فیلدهای file/image و امضای ترسیمی/آپلودی یک URL (یا data: URL برای امضای ترسیمی) است —
+ * نه یک آبجکت مثل آدرس. امضای تایپی («type») فقط متن ساده است، نه فایل.
+ */
+const isFileAnswer = (field: FormField | undefined, value: any): boolean => {
+  if (!field || typeof value !== 'string' || !value) return false;
+  if (field.type === 'file' || field.type === 'image') return true;
+  if (field.type === 'signature') return field.signaturePadType !== 'type';
+  return false;
+};
+
+const IMAGE_EXT_PATTERN = /\.(png|jpe?g|gif|webp|svg)(\?|#|$)/i;
+const isImageLikeUrl = (value: string): boolean => value.startsWith('data:image') || IMAGE_EXT_PATTERN.test(value);
+
+const fileNameFromUrl = (value: string): string => {
+  if (value.startsWith('data:')) return 'امضا.png';
+  try {
+    const path = new URL(value).pathname;
+    return decodeURIComponent(path.split('/').pop() || value);
+  } catch {
+    return value.split('/').pop() || value;
+  }
+};
+
+/** نمایش پاسخ فایل/تصویر/امضا در مودال جزئیات — پیش‌نمایش تصویر (در صورت وجود) + دکمهٔ دانلود، به‌جای چاپ خام URL */
+const FileAnswerCard: React.FC<{ value: string }> = ({ value }) => {
+  const isImage = isImageLikeUrl(value);
+  const name = fileNameFromUrl(value);
+  return (
+    <div className="flex items-center gap-3">
+      {isImage ? (
+        <a href={value} target="_blank" rel="noreferrer">
+          <img src={value} alt={name} className="w-20 h-20 object-cover rounded-lg border border-slate-200 dark:border-slate-800" />
+        </a>
+      ) : (
+        <div className="w-12 h-12 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-center shrink-0">
+          <FileText className="w-5 h-5 text-slate-400" />
+        </div>
+      )}
+      <div className="min-w-0 flex-1">
+        <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 truncate" title={name}>{name}</p>
+        <a
+          href={value}
+          download={name}
+          target="_blank"
+          rel="noreferrer"
+          className="text-[11px] font-bold text-teal-600 dark:text-teal-400 hover:underline flex items-center gap-1 mt-0.5"
+        >
+          <Download className="w-3 h-3" /> دانلود فایل
+        </a>
+      </div>
     </div>
   );
 };
@@ -458,6 +520,7 @@ export const SubmissionsManager: React.FC<SubmissionsManagerProps> = ({
                   const field = form.fields.find(f => f.id === fId);
                   const isMultiline = field?.type === 'textarea';
                   const isAddress = isAddressAnswer(field, val);
+                  const isFile = isFileAnswer(field, val);
                   const displayValue = formatAnswerValue(field, val);
                   return (
                     <div
@@ -469,6 +532,8 @@ export const SubmissionsManager: React.FC<SubmissionsManagerProps> = ({
                       </span>
                       {isAddress ? (
                         <AddressAnswerCard value={val} />
+                      ) : isFile ? (
+                        <FileAnswerCard value={val} />
                       ) : isMultiline ? (
                         <p className="text-teal-700 dark:text-teal-300 font-semibold whitespace-pre-wrap">
                           {displayValue}
