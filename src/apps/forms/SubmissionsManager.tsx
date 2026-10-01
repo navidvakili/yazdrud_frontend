@@ -84,6 +84,15 @@ const formatAddressAsText = (value: any): string => {
   return parts.length > 0 ? parts.join(' — ') : '-';
 };
 
+/** پسوند واحد فیلدهای عددی/اسلایدر/ارزی/درصدی — همان چیزی که در خروجی فرم کنار مقدار نشان داده می‌شود */
+const unitSuffixFor = (field: FormField | undefined): string | null => {
+  if (!field) return null;
+  if (field.type === 'percentage') return '٪';
+  if (field.type === 'currency') return field.currencyUnit || 'تومان';
+  if (field.type === 'number' || field.type === 'slider') return field.numberUnit || null;
+  return null;
+};
+
 /** تبدیل مقدار یک پاسخ به رشتهٔ قابل‌نمایش — برای فیلدهای چند‌انتخابی، برچسب گزینه نمایش داده می‌شود نه مقدار خام آن */
 const formatAnswerValue = (field: FormField | undefined, value: any): string => {
   if (value === undefined || value === null || value === '') return '-';
@@ -98,6 +107,10 @@ const formatAnswerValue = (field: FormField | undefined, value: any): string => 
     return value.map(v => (typeof v === 'object' ? JSON.stringify(v) : resolveOptionLabel(field, v))).join('، ');
   }
   if (typeof value === 'object') return JSON.stringify(value);
+  if (typeof value === 'number') {
+    const unit = unitSuffixFor(field);
+    return unit ? `${value} ${unit}` : String(value);
+  }
   return resolveOptionLabel(field, value);
 };
 

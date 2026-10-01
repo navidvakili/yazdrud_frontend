@@ -1117,8 +1117,9 @@ export const FormRespondentView: React.FC<FormRespondentViewProps> = ({
                       // رنجر را مطابق dir="rtl" صفحه اصلاح نمی‌کنند و کلیک باعث پرش می‌شود
                       style={{ accentColor: '#0d9488', transform: 'scaleX(-1)' }}
                     />
-                    <span className="text-xs font-mono font-bold text-slate-700 dark:text-slate-300 w-10 text-center">
+                    <span className="text-xs font-mono font-bold text-slate-700 dark:text-slate-300 text-center whitespace-nowrap">
                       {answers[field.id] ?? field.validation?.min ?? 0}
+                      {field.numberUnit ? ` ${field.numberUnit}` : ''}
                     </span>
                   </div>
                 )}
