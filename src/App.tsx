@@ -417,9 +417,14 @@ export default function App() {
             handleUnpinMenu={handleUnpinMenu}
           />
 
-          {/* Canvas — all tabs kept alive, only active one visible */}
-          <main className="flex-1 overflow-y-auto p-4 sm:p-6 pb-20 custom-scrollbar">
-            <div>
+          {/* Canvas — all tabs kept alive, only active one visible.
+              overflow-hidden here (not overflow-y-auto): app-like modules like the forms
+              studio render at h-full and manage their own internal panel scrolling — if
+              this outer <main> also scrolled, you'd have to scroll the whole page to reach
+              a sidebar. The actual scroll container is the inner div below instead, so
+              simple content modules (no explicit height) still scroll exactly as before. */}
+          <main className="flex-1 overflow-hidden">
+            <div className="h-full overflow-y-auto p-4 sm:p-6 pb-20 custom-scrollbar">
               {/* Dashboard — only when no active tab */}
               {activeTabId === null && (
                 <ModuleRenderer
@@ -443,7 +448,7 @@ export default function App() {
               {tabs.map(tab => (
                 <div
                   key={`${tab.id}_${tabRefreshKeys[tab.id] || 0}`}
-                  className={activeTabId === tab.id ? '' : 'hidden'}
+                  className={activeTabId === tab.id ? 'h-full flex flex-col' : 'hidden'}
                 >
                   <ModuleRenderer
                     tabId={tab.id}
