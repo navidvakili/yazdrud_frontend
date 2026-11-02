@@ -15,7 +15,9 @@ import {
   UserCheck,
   MessageSquare,
   ShieldCheck,
-  Tag
+  Tag,
+  ChevronRight,
+  ChevronLeft
 } from 'lucide-react';
 import { FormDefinition, FormField, FormSubmission } from './types';
 
@@ -246,12 +248,16 @@ const FileAnswerCard: React.FC<{ value: string }> = ({ value }) => {
   );
 };
 
+/** تعداد ردیف در هر صفحهٔ جدول پاسخ‌ها — جستجو و خروجی اکسل مستقل از این، روی کل فهرست فیلترشده کار می‌کنند */
+const PAGE_SIZE = 25;
+
 export const SubmissionsManager: React.FC<SubmissionsManagerProps> = ({
   form,
   submissions
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSubmission, setSelectedSubmission] = useState<FormSubmission | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const filteredSubmissions = submissions.filter(sub => {
     const matchesSearch =
@@ -261,6 +267,16 @@ export const SubmissionsManager: React.FC<SubmissionsManagerProps> = ({
 
     return matchesSearch;
   });
+
+  const totalPages = Math.max(1, Math.ceil(filteredSubmissions.length / PAGE_SIZE));
+  // وقتی جستجو نتیجه را کوچک‌تر می‌کند یا پاسخ‌ها تغییر می‌کنند، صفحهٔ جاری ممکن است
+  // از بازهٔ معتبر خارج شده باشد — به‌جای صفحهٔ خالی، همیشه به آخرین صفحهٔ معتبر برمی‌گردد
+  const safePage = Math.min(currentPage, totalPages);
+  const pageSubmissions = filteredSubmissions.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
 
   const handleExportExcel = async () => {
     const includeScore = form.quizConfig.isQuiz;
@@ -407,14 +423,14 @@ export const SubmissionsManager: React.FC<SubmissionsManagerProps> = ({
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-            {filteredSubmissions.length === 0 ? (
+            {pageSubmissions.length === 0 ? (
               <tr>
                 <td colSpan={6} className="p-8 text-center text-slate-400">
                   هیچ پاسخی با مشخصات جستجو شده یافت نشد.
                 </td>
               </tr>
             ) : (
-              filteredSubmissions.map(sub => (
+              pageSubmissions.map(sub => (
                 <tr
                   key={sub.id}
                   className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors"
@@ -451,6 +467,57 @@ export const SubmissionsManager: React.FC<SubmissionsManagerProps> = ({
           </tbody>
         </table>
       </div>
+
+      {/* Pagination */}
+      {filteredSubmissions.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+          <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
+            نمایش {(safePage - 1) * PAGE_SIZE + 1} تا {Math.min(safePage * PAGE_SIZE, filteredSubmissions.length)} از {filteredSubmissions.length} پاسخ
+          </span>
+
+          {totalPages > 1 && (
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={safePage === 1}
+                className="w-8 h-8 rounded-lg border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                title="صفحه قبل"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter(p => p === 1 || p === totalPages || Math.abs(p - safePage) <= 1)
+                .map((p, idx, arr) => (
+                  <React.Fragment key={p}>
+                    {idx > 0 && arr[idx - 1] !== p - 1 && (
+                      <span className="w-8 h-8 flex items-center justify-center text-slate-400 text-xs">…</span>
+                    )}
+                    <button
+                      onClick={() => setCurrentPage(p)}
+                      className={`w-8 h-8 rounded-lg text-xs font-bold transition-colors ${
+                        p === safePage
+                          ? 'bg-teal-600 text-white'
+                          : 'border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  </React.Fragment>
+                ))}
+
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={safePage === totalPages}
+                className="w-8 h-8 rounded-lg border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                title="صفحه بعد"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Submission Details Modal */}
       {selectedSubmission && (

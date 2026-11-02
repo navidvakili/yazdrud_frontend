@@ -251,6 +251,30 @@ export const fetchSubmissions = async (
   return { data: res.data.map(toFormSubmission), total: res.total };
 };
 
+/**
+ * همهٔ پاسخ‌های یک فرم، صرف‌نظر از تعداد — بک‌اند هر صفحه را حداکثر ۵۰۰ رکورد
+ * برمی‌گرداند (FormController::submissions)، پس برای فرم‌هایی با بیش از ۵۰۰ پاسخ
+ * (مثل نهضت ملی مسکن) باید صفحه‌به‌صفحه واکشی و به هم الحاق شود، وگرنه ۵۰۰ تای
+ * اول (بر اساس جدیدترین submitted_at) بی‌صدا جایگزین کل فهرست می‌شود.
+ */
+export const fetchAllSubmissions = async (
+  formId: string | number,
+  params: { status?: string } = {}
+): Promise<{ data: FormSubmission[]; total: number }> => {
+  const perPage = 500;
+  let page = 1;
+  let all: FormSubmission[] = [];
+  let total = 0;
+  while (true) {
+    const res = await fetchSubmissions(formId, { page, per_page: perPage, status: params.status });
+    all = all.concat(res.data);
+    total = res.total;
+    if (res.data.length < perPage || all.length >= total) break;
+    page += 1;
+  }
+  return { data: all, total };
+};
+
 export const submitForm = async (
   formId: string | number,
   data: {

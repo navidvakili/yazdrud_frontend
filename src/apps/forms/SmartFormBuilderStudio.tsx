@@ -81,7 +81,7 @@ import { FormSettingsModal } from './FormSettingsModal';
 import { AiFormAssistantModal } from './AiFormAssistantModal';
 import FormTemplateLibraryModal from './FormTemplateLibraryModal';
 import { FormRespondentView } from './FormRespondentView';
-import { createForm, deleteForm, fetchForms, fetchSubmissions, submitForm, updateForm, updateFormStatus, cloneForm as cloneFormApi, duplicateForm as duplicateFormApi, slugifyFormTitle } from './api';
+import { createForm, deleteForm, fetchForms, fetchAllSubmissions, submitForm, updateForm, updateFormStatus, cloneForm as cloneFormApi, duplicateForm as duplicateFormApi, slugifyFormTitle } from './api';
 import { ConfirmDialog } from '@/src/shared-components/ConfirmDialog';
 import ToastNotification from '@/src/shared-components/ToastNotification';
 import { useLanguage } from '@/src/shared-utils/LanguageContext';
@@ -160,7 +160,7 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
     }
 
     let cancelled = false;
-    fetchSubmissions(activeFormId, { per_page: 500 })
+    fetchAllSubmissions(activeFormId)
       .then(result => {
         if (!cancelled) setSubmissions(result.data);
       })
@@ -1044,7 +1044,7 @@ export const SmartFormBuilderStudio: React.FC<SmartFormBuilderStudioProps> = ({ 
                       else submissionAnswers[f.id] = answers[f.id];
                     });
                     const submission = await submitForm(activeForm.id, { answers: submissionAnswers, security_challenges: securityChallenges });
-                    const result = await fetchSubmissions(activeForm.id, { per_page: 500 });
+                    const result = await fetchAllSubmissions(activeForm.id);
                     setSubmissions(result.data);
                     return {
                       trackingCode: submission.tracking_code,
